@@ -19,17 +19,18 @@ provider=sqlite
 directory=${workdir}/var/lib/rstudio-server
 END
 
-# Set OMP_NUM_THREADS to prevent OpenBLAS (and any other OpenMP-enhanced
-# libraries used by R) from spawning more threads than the number of processors
-# allocated to the job.
-#
-# Set R_LIBS_USER to a path specific to rocker/rstudio to avoid conflicts with
-# personal libraries from any R installation in the host environment
 
 cat > "${workdir}/rsession.sh" <<END
 #!/bin/sh
-export OMP_NUM_THREADS=${SLURM_JOB_CPUS_PER_NODE:-$(nproc 2> /dev/null || echo "1")}
-export RSESSION_LOG_FILE="$workdir/rsession.log"
+
+# Set OMP_NUM_THREADS to prevent OpenBLAS (and any other OpenMP-enhanced
+# libraries used by R) from spawning more threads than the number of processors
+# allocated to the job.
+OMP_NUM_THREADS=${SLURM_JOB_CPUS_PER_NODE:-$(nproc 2> /dev/null || echo "1")}
+export OMP_NUM_THREADS
+
+RSESSION_LOG_FILE="$workdir/rsession.log"
+export RSESSION_LOG_FILE
 
 exec &>>"\$RSESSION_LOG_FILE"
 
@@ -45,7 +46,7 @@ RSTUDIO_USER=$(id --user --name)
 RSTUDIO_PASSWORD=$(openssl rand -base64 15)
 
 # set up authentication helper
-#export RSTUDIO_AUTH="$workdir/auth"
+#RSTUDIO_AUTH="$workdir/auth"
 RSTUDIO_AUTH="pam-helper"  # Use custom pam-helper file (borrowed from rocker) in /usr/lib/rstudio-server/bin/pam-helper
 
 export RSTUDIO_USER
@@ -53,11 +54,11 @@ export RSTUDIO_PASSWORD
 export RSTUDIO_AUTH
 
 # get unused socket per https://unix.stackexchange.com/a/132524
-# tiny race condition between the python & singularity commands
+# tiny race condition between the Python and launching the rserver
 PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
 readonly PORT
 
-# Instructions for user.
+# Instructions for user
 cat 1>&2 <<END
 1. SSH tunnel from your workstation using the following command from a terminal on your local workstation:
 
