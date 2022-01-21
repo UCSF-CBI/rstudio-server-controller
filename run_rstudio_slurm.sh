@@ -7,7 +7,7 @@
 #SBATCH --nodelist=c4-n11
 
 # The 
-LOCALPORT=8787
+LOCALPORT=${LOCALPORT:-8787}
 
 # Need a workdir for sqlite database, otherwise we'd have to be root. Also for our rsession.sh
 workdir=$HOME/.config/rstudio-server-launcher
@@ -66,22 +66,22 @@ END
 chmod +x "${workdir}/rsession.sh"
 
 # set up variables - actual user id & generated password. To be validated by auth script
-RSTUDIO_USER=$(id --user --name)
-RSTUDIO_PASSWORD=$(openssl rand -base64 15)
+RSTUDIO_USER=${RSTUDIO_USER:-$(id --user --name)}
+RSTUDIO_PASSWORD=${RSTUDIO_PASSWORD:-$(openssl rand -base64 15)}
 
 export RSTUDIO_USER
 export RSTUDIO_PASSWORD
 
 # get unused socket per https://unix.stackexchange.com/a/132524
 # tiny race condition between the Python and launching the rserver
-FREE_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
-readonly FREE_PORT
+RSTUDIO_PORT=${RSTUDIO_PORT:-$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')}
+readonly RSTUDIO_PORT
 
 # Instructions for user
 cat 1>&2 <<END
 1. SSH tunnel from your workstation using the following command from a terminal on your local workstation:
 
-   ssh -N -L ${LOCALPORT}:${HOSTNAME}:${FREE_PORT} $RSTUDIO_USER@c4-log2
+   ssh -N -L ${LOCALPORT}:${HOSTNAME}:${RSTUDIO_PORT} $RSTUDIO_USER@c4-log2
 
    and point your web browser to http://127.0.0.1:${LOCALPORT}
 
@@ -101,7 +101,7 @@ END
 rserver --server-daemonize 0 \
 	--server-data-dir "$workdir/var/run/rstudio-server" \
         --database-config-file "$workdir/database.conf" \
-        --www-port "$FREE_PORT" \
+        --www-port "$RSTUDIO_PORT" \
         --auth-none 0 \
         --auth-stay-signed-in-days 1 \
         --auth-timeout-minutes 0 \
