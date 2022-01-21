@@ -24,10 +24,10 @@ module load "r/${R_VERSION}"
 module load rstudio-server
 
 ## Assert executables are available
-which R          &> /dev/null || { 2>&1 echo "ERROR: No such executable: R";          exit 1; }
-which rserver    &> /dev/null || { 2>&1 echo "ERROR: No such executable: reserver";   exit 1; }
-which rsession   &> /dev/null || { 2>&1 echo "ERROR: No such executable: resession";  exit 1; }
-which pam-helper &> /dev/null || { 2>&1 echo "ERROR: No such executable: pam-helper"; exit 1; }
+command -v R          &> /dev/null || { 2>&1 echo "ERROR: No such executable: R";          exit 1; }
+command -v rserver    &> /dev/null || { 2>&1 echo "ERROR: No such executable: reserver";   exit 1; }
+command -v rsession   &> /dev/null || { 2>&1 echo "ERROR: No such executable: resession";  exit 1; }
+command -v pam-helper &> /dev/null || { 2>&1 echo "ERROR: No such executable: pam-helper"; exit 1; }
 
 ## FIXME: This shouldn't really be hardcoded. See also comment below. /HB 2022-01-21
 R_LIBS_USER=${R_LIBS_USER:-"$HOME/R/%p-library/%v-CBI-gcc8"}
