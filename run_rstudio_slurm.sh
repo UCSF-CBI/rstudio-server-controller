@@ -51,7 +51,9 @@ export OMP_NUM_THREADS
 RSESSION_LOG_FILE="$workdir/rsession.log"
 export RSESSION_LOG_FILE
 
-exec &>>"\$RSESSION_LOG_FILE"
+echo "Launching rsession on \${HOSTNAME}" > "\${RSESSION_LOG_FILE}"
+
+exec &>> "\${RSESSION_LOG_FILE}"
 
 echo "Launching rsession on ..."
 set -x
@@ -72,7 +74,17 @@ export RSTUDIO_USER
 export RSTUDIO_PASSWORD
 
 ## Validate correctness of pam-helper executable (should return true)
-echo "${RSTUDIO_PASSWORD}" | pam-helper "${RSTUDIO_USER}" || { 2>&1 echo "ERROR: Validation of 'pam-helper' failed: $(command -v pam-helper)"; exit 1; }
+echo "${RSTUDIO_PASSWORD}" | PAM_HELPER_LOGFILE="" pam-helper "${RSTUDIO_USER}" || { 2>&1 echo "ERROR: Validation of 'pam-helper' failed: $(command -v pam-helper)"; exit 1; }
+
+[[ -n ${PAM_HELPER_LOGFILE} ]] && { 
+  echo "************************************************************"
+  echo "WARNING: Environment variable 'PAM_HELPER_LOGFILE' is set."
+  echo "All usernames and passwords entered at the RStudio Server"
+  echo "login prompt will be recorded to the file:"
+  echo "${PAM_HELPER_LOGFILE}"
+  echo "************************************************************"
+  echo
+}
 
 # get unused socket per https://unix.stackexchange.com/a/132524
 # tiny race condition between the Python and launching the rserver
@@ -104,6 +116,7 @@ rserver --server-daemonize 0 \
 	--server-data-dir "$workdir/var/run/rstudio-server" \
         --database-config-file "$workdir/database.conf" \
         --www-port "$RSTUDIO_PORT" \
+        --auth-pam-helper-path "pam-helper" \
         --auth-none 0 \
         --auth-stay-signed-in-days 1 \
         --auth-timeout-minutes 0 \
