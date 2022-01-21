@@ -6,13 +6,20 @@
 #SBATCH --output=rstudio-server.%j
 #SBATCH --export=NONE
 
-# The 
 LOCALPORT=${LOCALPORT:-8787}
 
 # Need a workdir for sqlite database, otherwise we'd have to be root. Also for our rsession.sh
 workdir=$HOME/.config/rstudio-server-launcher
 mkdir -p "${workdir}"/{run,tmp,var/lib/rstudio-server,/var/run/rstudio-server}
 chmod 700 "${workdir}"/{run,tmp,var/lib/rstudio-server,/var/run/rstudio-server}
+
+## Prevent user from running multiple instances of the RStudio Server
+lockfile=${workdir}/pid.lock
+if [[ -f "${lockfile}" ]]; then
+    2>&1 echo "ERROR: Another RStudio Server session of yours is already active on the cluster. Please terminate that first. As a last resort, remove lock file '${lockfile}' and retry."
+    exit 1
+fi
+echo "${PID}" > "${lockfile}"
 
 # Load CBI software stack
 module load CBI
