@@ -10,12 +10,13 @@
 
 # Need a workdir for sqlite database, otherwise we'd have to be root. Also for our rsession.sh
 workdir=$HOME/rstudio-server
-mkdir -p -m 700 ${workdir}/run ${workdir}/tmp ${workdir}/var/lib/rstudio-server 
+mkdir -p "${workdir}/run" "${workdir}/tmp" "${workdir}/var/lib/rstudio-server"
+chmod 700 "${workdir}/run" "${workdir}/tmp" "${workdir}/var/lib/rstudio-server"
 
 # Load R version from CBI
 module load CBI r/4.1.2
 
-cat > ${workdir}/database.conf <<END
+cat > "${workdir}/database.conf" <<END
 provider=sqlite
 directory=$HOME/rstudio-server/var/lib/rstudio-server
 END
@@ -27,7 +28,7 @@ END
 # Set R_LIBS_USER to a path specific to rocker/rstudio to avoid conflicts with
 # personal libraries from any R installation in the host environment
 
-cat > ${workdir}/rsession.sh <<END
+cat > "${workdir}/rsession.sh" <<END
 #!/bin/sh
 export OMP_NUM_THREADS=${SLURM_JOB_CPUS_PER_NODE}
 export RSESSION_LOG_FILE="$workdir/rsession.log"
@@ -39,15 +40,18 @@ set -x
 exec rsession --r-libs-user "$HOME/R/%p-library/%v-CBI-gcc8" "\${@}"
 END
 
-chmod +x ${workdir}/rsession.sh
+chmod +x "${workdir}/rsession.sh"
 
 # get unused socket per https://unix.stackexchange.com/a/132524
 # tiny race condition between the python & singularity commands
-readonly PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
+PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
+readonly PORT
 
 # set up variables - actual user id & generated password. To be validated by auth script
-export RSTUDIO_USER=$(id -un)
-export RSTUDIO_PASSWORD=$(openssl rand -base64 15)
+RSTUDIO_USER=$(id -un)
+RSTUDIO_PASSWORD=$(openssl rand -base64 15)
+export RSTUDIO_USER
+export RSTUDIO_PASSWORD
 
 # set up authentication helper
 #export RSTUDIO_AUTH="$workdir/auth"
@@ -76,15 +80,15 @@ END
 
 PATH=/usr/lib/rstudio-server/bin:$PATH
 rserver --server-daemonize 0 \
-        --database-config-file $workdir/database.conf \
-        --www-port ${PORT} \
+        --database-config-file "$workdir/database.conf" \
+        --www-port "${PORT}" \
         --auth-none 0 \
-        --auth-pam-helper-path $RSTUDIO_AUTH \
+        --auth-pam-helper-path "$RSTUDIO_AUTH" \
         --auth-stay-signed-in-days 30 \
         --auth-timeout-minutes 0 \
         --auth-minimum-user-id 500 \
-        --rsession-path $workdir/rsession.sh \
-        --secure-cookie-key-file $workdir/tmp/my-secure-cookie-key \
-        --server-user $USER
+        --rsession-path "$workdir/rsession.sh" \
+        --secure-cookie-key-file "$workdir/tmp/my-secure-cookie-key" \
+        --server-user "$USER"
 printf 'rserver exited' 1>&2
 
