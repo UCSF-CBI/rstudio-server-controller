@@ -6,13 +6,32 @@
 #SBATCH --export=NONE
 #SBATCH --nodelist=c4-n11
 
-# Need a workdir for sqlite database, otherwise we'd have to be root. Also for our rsession.sh
-workdir=$HOME/rstudio-server
-mkdir -p "${workdir}"/{run,tmp,var/lib/rstudio-server}
-chmod 700 "${workdir}"/{run,tmp,var/lib/rstudio-server}
+# The 
+LOCALPORT=8787
 
-# Load R version from CBI
-module load CBI r/4.1.2
+# Need a workdir for sqlite database, otherwise we'd have to be root. Also for our rsession.sh
+workdir=$HOME/.config/rstudio-server-launcher
+mkdir -p "${workdir}"/{run,tmp,var/lib/rstudio-server,/var/run/rstudio-server}
+chmod 700 "${workdir}"/{run,tmp,var/lib/rstudio-server,/var/run/rstudio-server}
+
+# Load CBI software stack
+module load CBI
+
+## Use the default R version, unless overridden by R_VERSION
+module load "r/${R_VERSION}"
+
+## Use the default RStudio Server version
+module load rstudio-server
+
+## Assert executables are available
+which R          &> /dev/null || { 2>&1 echo "ERROR: No such executable: R";          exit 1; }
+which rserver    &> /dev/null || { 2>&1 echo "ERROR: No such executable: reserver";   exit 1; }
+which rsession   &> /dev/null || { 2>&1 echo "ERROR: No such executable: resession";  exit 1; }
+which pam-helper &> /dev/null || { 2>&1 echo "ERROR: No such executable: pam-helper"; exit 1; }
+
+## FIXME: This shouldn't really be hardcoded. See also comment below. /HB 2022-01-21
+R_LIBS_USER=${R_LIBS_USER:-"$HOME/R/%p-library/%v-CBI-gcc8"}
+R_LIBS_USER="$HOME/R/%p-library/%v-CBI-gcc8"
 
 cat > "${workdir}/database.conf" <<END
 provider=sqlite
@@ -34,9 +53,14 @@ export RSESSION_LOG_FILE
 
 exec &>>"\$RSESSION_LOG_FILE"
 
-echo "Launching rsession on..."
+echo "Launching rsession on ..."
 set -x
-exec rsession --r-libs-user "$HOME/R/%p-library/%v-CBI-gcc8" "\${@}"
+
+## FIXME: This shouldn't really be hardcoded. See also comment above. /HB 2022-01-21
+## Seems like it should work without specifying --r-libs-user; default?!?
+## exec rsession "\${@}"
+## exec rsession --r-libs-user "${R_LIBS_USER}" "\${@}"
+exec rsession --r-libs-user "$$HOME/R/%p-library/%v-CBI-gcc8" "\${@}"
 END
 
 chmod +x "${workdir}/rsession.sh"
@@ -45,28 +69,21 @@ chmod +x "${workdir}/rsession.sh"
 RSTUDIO_USER=$(id --user --name)
 RSTUDIO_PASSWORD=$(openssl rand -base64 15)
 
-# set up authentication helper
-#RSTUDIO_AUTH="$workdir/auth"
-RSTUDIO_AUTH="pam-helper"  # Use custom pam-helper file (borrowed from rocker) in /usr/lib/rstudio-server/bin/pam-helper
-
 export RSTUDIO_USER
 export RSTUDIO_PASSWORD
-export RSTUDIO_AUTH
-
-LOCALPORT=8787
 
 # get unused socket per https://unix.stackexchange.com/a/132524
 # tiny race condition between the Python and launching the rserver
-PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
-readonly PORT
+FREE_PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
+readonly FREE_PORT
 
 # Instructions for user
 cat 1>&2 <<END
 1. SSH tunnel from your workstation using the following command from a terminal on your local workstation:
 
-   ssh -N -L ${LOCALPORT}:${HOSTNAME}:${PORT} $RSTUDIO_USER@c4-log2
+   ssh -N -L ${LOCALPORT}:${HOSTNAME}:${FREE_PORT} $RSTUDIO_USER@c4-log2
 
-   and point your web browser to http://localhost:${LOCALPORT}
+   and point your web browser to http://127.0.0.1:${LOCALPORT}
 
 2. log in to RStudio Server using the following credentials:
 
@@ -81,16 +98,15 @@ When done using RStudio Server, terminate the job by:
       scancel -f ${SLURM_JOB_ID}
 END
 
-PATH=/usr/lib/rstudio-server/bin:$PATH
 rserver --server-daemonize 0 \
+	--server-data-dir "$workdir/var/run/rstudio-server" \
         --database-config-file "$workdir/database.conf" \
-        --www-port "${PORT}" \
+        --www-port "$FREE_PORT" \
         --auth-none 0 \
-        --auth-pam-helper-path "$RSTUDIO_AUTH" \
-        --auth-stay-signed-in-days 30 \
+        --auth-stay-signed-in-days 1 \
         --auth-timeout-minutes 0 \
         --auth-minimum-user-id 500 \
         --rsession-path "$workdir/rsession.sh" \
         --secure-cookie-key-file "$workdir/tmp/my-secure-cookie-key" \
         --server-user "$USER"
-printf 'rserver exited' 1>&2
+echo "rserver exited" 1>&2
