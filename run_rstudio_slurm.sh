@@ -1,12 +1,10 @@
 #!/bin/bash
-
 #SBATCH --time=08:00:00
 #SBATCH --ntasks=4              # Number of CPUs
 #SBATCH --mem=16gb              # Memory (GB)
 #SBATCH --output=rstudio.job.%j
 #SBATCH --export=NONE
 #SBATCH --nodelist=c4-n11
-
 
 # Need a workdir for sqlite database, otherwise we'd have to be root. Also for our rsession.sh
 workdir=$HOME/rstudio-server
@@ -42,20 +40,22 @@ END
 
 chmod +x "${workdir}/rsession.sh"
 
+# set up variables - actual user id & generated password. To be validated by auth script
+RSTUDIO_USER=$(id -un)
+RSTUDIO_PASSWORD=$(openssl rand -base64 15)
+
+# set up authentication helper
+#export RSTUDIO_AUTH="$workdir/auth"
+RSTUDIO_AUTH="pam-helper"  # Use custom pam-helper file (borrowed from rocker) in /usr/lib/rstudio-server/bin/pam-helper
+
+export RSTUDIO_USER
+export RSTUDIO_PASSWORD
+export RSTUDIO_AUTH
+
 # get unused socket per https://unix.stackexchange.com/a/132524
 # tiny race condition between the python & singularity commands
 PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
 readonly PORT
-
-# set up variables - actual user id & generated password. To be validated by auth script
-RSTUDIO_USER=$(id -un)
-RSTUDIO_PASSWORD=$(openssl rand -base64 15)
-export RSTUDIO_USER
-export RSTUDIO_PASSWORD
-
-# set up authentication helper
-#export RSTUDIO_AUTH="$workdir/auth"
-export RSTUDIO_AUTH="pam-helper"  # Use custom pam-helper file (borrowed from rocker) in /usr/lib/rstudio-server/bin/pam-helper
 
 # Instructions for user.
 cat 1>&2 <<END
