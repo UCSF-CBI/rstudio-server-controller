@@ -59,8 +59,7 @@ set -x
 ## FIXME: This shouldn't really be hardcoded. See also comment above. /HB 2022-01-21
 ## Seems like it should work without specifying --r-libs-user; default?!?
 ## exec rsession "\${@}"
-## exec rsession --r-libs-user "${R_LIBS_USER}" "\${@}"
-exec rsession --r-libs-user "$$HOME/R/%p-library/%v-CBI-gcc8" "\${@}"
+exec rsession --r-libs-user "${R_LIBS_USER}" "\${@}"
 END
 
 chmod +x "${workdir}/rsession.sh"
