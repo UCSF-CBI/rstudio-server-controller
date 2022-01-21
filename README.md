@@ -1,3 +1,3 @@
-# slurm-rstudio-server
-Scripts for running interactive rstudio on compute nodes via the slurm schedule.
+# rstudio-server-launcher
 
+Scripts for launching the RStudio Server on compute nodes via the Slurm scheduler.
