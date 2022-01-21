@@ -61,7 +61,7 @@ set -o nounset
 
 IFS='' read -r password
 
-[ "${USER}" = "${1}" ] && [ "${RSTUDIO_PASSWORD}" = "${password}" ]
+[ "${USER}" = "${RSTUDIO_USER}" ] && [ "${RSTUDIO_PASSWORD}" = "${password}" ]
 END
 
 chmod +x ${workdir}/pam-helper
