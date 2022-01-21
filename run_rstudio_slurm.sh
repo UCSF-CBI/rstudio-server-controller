@@ -46,9 +46,21 @@ chmod +x "${workdir}/rsession.sh"
 RSTUDIO_USER=$(id --user --name)
 RSTUDIO_PASSWORD=$(openssl rand -base64 15)
 
-# set up authentication helper
-#RSTUDIO_AUTH="$workdir/auth"
-RSTUDIO_AUTH="pam-helper"  # Use custom pam-helper file (borrowed from rocker) in /usr/lib/rstudio-server/bin/pam-helper
+# set up authentication helper. Use custom pam-helper file (borrowed from rocker)
+cat > "${workdir}/pam-helper" <<END
+#!/bin/bash
+
+set -o nounset
+
+## Enforces the custom password specified in the PASSWORD environment variable
+## The accepted RStudio username is the same as the USER environment variable (i.e., local user name).
+
+IFS='' read -r password
+
+[ "${USER}" = "${1}" ] && [ "${RSTUDIO_PASSWORD}" = "${password}" ]
+END
+
+RSTUDIO_AUTH="pam-helper"  
 
 export RSTUDIO_USER
 export RSTUDIO_PASSWORD
