@@ -6,8 +6,9 @@
 #SBATCH --export=NONE
 #SBATCH --nodelist=c4-n11
 
-# Need a workdir for sqlite database, otherwise we'd have to be root. Also for our rsession.sh
-workdir=$HOME/rstudio-server
+# Need a workdir for sqlite database, otherwise we'd have to be root. Also for our rsession.sh. Using STMPDIR (local /scratch).
+# The working directory will be created and then deleted for each run via prolog/epilog slurm scripts.
+workdir=$TMPDIR/rstudio-server
 mkdir -p "${workdir}"/{run,tmp,var/lib/rstudio-server}
 chmod 700 "${workdir}"/{run,tmp,var/lib/rstudio-server}
 
@@ -64,7 +65,7 @@ readonly PORT
 cat 1>&2 <<END
 1. SSH tunnel from your workstation using the following command from a terminal on your local workstation:
 
-   ssh -N -L ${LOCALPORT}:${HOSTNAME}:${PORT} $RSTUDIO_USER@c4-log2
+   ssh -N -L ${LOCALPORT}:${HOSTNAME}:${PORT} $RSTUDIO_USER@${SLURM_SUBMIT_HOST}:-$HOME	
 
    and point your web browser to http://localhost:${LOCALPORT}
 
