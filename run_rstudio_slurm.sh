@@ -77,7 +77,7 @@ readonly PORT
 cat 1>&2 <<END
 1. SSH tunnel from your workstation using the following command from a terminal on your local workstation:
 
-   ssh -N -L ${LOCALPORT}:${HOSTNAME}:${PORT} $RSTUDIO_USER@${SLURM_SUBMIT_HOST}:-$HOME
+   ssh -N -L ${LOCALPORT}:${HOSTNAME}:${PORT} $RSTUDIO_USER@${SLURM_SUBMIT_HOST}:-c4-log1
 
    and point your web browser to http://localhost:${LOCALPORT}
 
