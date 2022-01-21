@@ -41,7 +41,7 @@ END
 chmod +x "${workdir}/rsession.sh"
 
 # set up variables - actual user id & generated password. To be validated by auth script
-RSTUDIO_USER=$(id -un)
+RSTUDIO_USER=$(id --user --name)
 RSTUDIO_PASSWORD=$(openssl rand -base64 15)
 
 # set up authentication helper
@@ -91,4 +91,3 @@ rserver --server-daemonize 0 \
         --secure-cookie-key-file "$workdir/tmp/my-secure-cookie-key" \
         --server-user "$USER"
 printf 'rserver exited' 1>&2
-
