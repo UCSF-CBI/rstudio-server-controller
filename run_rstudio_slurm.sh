@@ -72,6 +72,9 @@ RSTUDIO_PASSWORD=${RSTUDIO_PASSWORD:-$(openssl rand -base64 15)}
 export RSTUDIO_USER
 export RSTUDIO_PASSWORD
 
+## Validate correctness of pam-helper executable (should return true)
+echo "${RSTUDIO_PASSWORD}" | pam-helper "${RSTUDIO_USER}" || { 2>&1 echo "ERROR: Validation of 'pam-helper' failed: $(command -v pam-helper)"; exit 1; }
+
 # get unused socket per https://unix.stackexchange.com/a/132524
 # tiny race condition between the Python and launching the rserver
 RSTUDIO_PORT=${RSTUDIO_PORT:-$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')}
