@@ -53,6 +53,8 @@ export RSTUDIO_USER
 export RSTUDIO_PASSWORD
 export RSTUDIO_AUTH
 
+LOCALPORT=8787
+
 # get unused socket per https://unix.stackexchange.com/a/132524
 # tiny race condition between the Python and launching the rserver
 PORT=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
@@ -62,9 +64,9 @@ readonly PORT
 cat 1>&2 <<END
 1. SSH tunnel from your workstation using the following command from a terminal on your local workstation:
 
-   ssh -N -L 8787:${HOSTNAME}:${PORT} $RSTUDIO_USER@c4-log2
+   ssh -N -L ${LOCALPORT}:${HOSTNAME}:${PORT} $RSTUDIO_USER@c4-log2
 
-   and point your web browser to http://localhost:8787
+   and point your web browser to http://localhost:${LOCALPORT}
 
 2. log in to RStudio Server using the following credentials:
 
