@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --time=08:00:00
-#SBATCH --ntasks=4              # Number of CPUs
-#SBATCH --mem=16gb              # Memory (GB)
-#SBATCH --output=rstudio.job.%j
+#SBATCH --time=08:00:00             # Maximum run-time
+#SBATCH --nodes=1                   # Run on a single machine
+#SBATCH --ntasks=4                  # Number of CPU cores
+#SBATCH --mem=16G                   # Memory (GiB)
+#SBATCH --output=rstudio-server.%j
 #SBATCH --export=NONE
-#SBATCH --nodelist=c4-n11
 
 # The 
 LOCALPORT=${LOCALPORT:-8787}
