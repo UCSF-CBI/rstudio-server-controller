@@ -8,8 +8,8 @@
 
 # Need a workdir for sqlite database, otherwise we'd have to be root. Also for our rsession.sh
 workdir=$HOME/rstudio-server
-mkdir -p "${workdir}/run" "${workdir}/tmp" "${workdir}/var/lib/rstudio-server"
-chmod 700 "${workdir}/run" "${workdir}/tmp" "${workdir}/var/lib/rstudio-server"
+mkdir -p "${workdir}"/{run,tmp,var/lib/rstudio-server}
+chmod 700 "${workdir}"/{run,tmp,var/lib/rstudio-server}
 
 # Load R version from CBI
 module load CBI r/4.1.2
