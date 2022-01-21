@@ -60,7 +60,7 @@ IFS='' read -r password
 [ "${USER}" = "${1}" ] && [ "${RSTUDIO_PASSWORD}" = "${password}" ]
 END
 
-RSTUDIO_AUTH="pam-helper"  
+RSTUDIO_AUTH="${workdir}/pam-helper" 
 
 export RSTUDIO_USER
 export RSTUDIO_PASSWORD
