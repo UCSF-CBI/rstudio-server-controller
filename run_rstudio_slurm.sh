@@ -57,9 +57,12 @@ set -o nounset
 ## Enforces the custom password specified in the RSTUDIO_PASSWORD environment variable
 ## The accepted RStudio username is the same as the USER environment variable (i.e., local user name).
 
+# set a dummy password
+password="dummy"
+
 IFS='' read -r password
 
-[ "${USER}" = "${1}" ] && [ "${RSTUDIO_PASSWORD}" = "${password}:-stoopid" ]
+[ "${USER}" = "${1}" ] && [ "${RSTUDIO_PASSWORD}" = "${password}" ]
 END
 
 chmod +x ${workdir}/pam-helper
