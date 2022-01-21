@@ -28,7 +28,7 @@ END
 
 cat > "${workdir}/rsession.sh" <<END
 #!/bin/sh
-export OMP_NUM_THREADS=${SLURM_JOB_CPUS_PER_NODE}
+export OMP_NUM_THREADS=${SLURM_JOB_CPUS_PER_NODE:-$(nproc 2> /dev/null || echo "1")}
 export RSESSION_LOG_FILE="$workdir/rsession.log"
 
 exec &>>"\$RSESSION_LOG_FILE"
