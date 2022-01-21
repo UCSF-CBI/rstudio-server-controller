@@ -16,7 +16,7 @@ module load CBI r/4.1.2
 
 cat > "${workdir}/database.conf" <<END
 provider=sqlite
-directory=$HOME/rstudio-server/var/lib/rstudio-server
+directory=${workdir}/var/lib/rstudio-server
 END
 
 # Set OMP_NUM_THREADS to prevent OpenBLAS (and any other OpenMP-enhanced
