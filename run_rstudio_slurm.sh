@@ -45,6 +45,8 @@ chmod +x "${workdir}/rsession.sh"
 # set up variables - actual user id & generated password. To be validated by auth script
 RSTUDIO_USER=$(id --user --name)
 RSTUDIO_PASSWORD=$(openssl rand -base64 15)
+export RSTUDIO_USER
+export RSTUDIO_PASSWORD
 
 # set up authentication helper. Use custom pam-helper file (borrowed from rocker)
 cat > "${workdir}/pam-helper" <<END
@@ -52,7 +54,7 @@ cat > "${workdir}/pam-helper" <<END
 
 set -o nounset
 
-## Enforces the custom password specified in the PASSWORD environment variable
+## Enforces the custom password specified in the RSTUDIO_PASSWORD environment variable
 ## The accepted RStudio username is the same as the USER environment variable (i.e., local user name).
 
 IFS='' read -r password
@@ -61,9 +63,6 @@ IFS='' read -r password
 END
 
 RSTUDIO_AUTH="${workdir}/pam-helper" 
-
-export RSTUDIO_USER
-export RSTUDIO_PASSWORD
 export RSTUDIO_AUTH
 
 LOCALPORT=8787
