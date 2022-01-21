@@ -1,4 +1,4 @@
 shellcheck:
-	shellcheck *.sh
+	shellcheck -x -- *.sh
 
 
