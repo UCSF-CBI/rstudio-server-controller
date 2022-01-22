@@ -20,6 +20,7 @@ if [[ -f "${lockfile}" ]]; then
     exit 1
 fi
 echo "${PID}" > "${lockfile}"
+trap 'rm "${lockfile}"' EXIT
 
 # Load CBI software stack
 module load CBI
