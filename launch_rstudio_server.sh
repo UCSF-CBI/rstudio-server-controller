@@ -6,6 +6,24 @@
 #SBATCH --output=rstudio-server.%j
 #SBATCH --export=NONE
 
+## Remove file lock, when the RStudio Server instance is shutdown
+function on_exit_rm {
+    rm "${lockfile}"
+}
+
+## Terminate the R session, when the RStudio Server instance is shutdown
+function on_exit_rsession {
+    local pid
+    pid=$(cat "${workdir}/var/run/rstudio-server/rstudio-rsession/${USER}-d.pid")
+    echo "pid=$pid"
+    kill -TERM "${pid}"
+}
+
+function on_exit {
+    on_exit_rsession
+    on_exit_rm
+}
+
 LOCALPORT=${LOCALPORT:-8787}
 
 # Need a workdir for sqlite database, otherwise we'd have to be root. Also for our rsession.sh
@@ -19,8 +37,6 @@ if [[ -f "${lockfile}" ]]; then
     2>&1 echo "ERROR: Another RStudio Server session of yours is already active on the cluster. Please terminate that first. As a last resort, remove lock file '${lockfile}' and retry."
     exit 1
 fi
-echo "${PID}" > "${lockfile}"
-trap 'rm "${lockfile}"' EXIT
 
 # Load CBI software stack
 module load CBI
@@ -101,9 +117,8 @@ export RSTUDIO_PASSWORD
   echo
 }
 
-## Terminate the R session, when the RStudio Server instance is shutdown
-# shellcheck disable=SC2154
-trap 'pid=$(cat "${workdir}/var/run/rstudio-server/rstudio-rsession/${USER}-d.pid"); echo "pid=$pid"; kill -TERM "${pid}"; echo "done"' EXIT
+echo "${PID}" > "${lockfile}"
+trap "on_exit" EXIT
 
 # get unused socket per https://unix.stackexchange.com/a/132524
 # tiny race condition between the Python and launching the rserver
