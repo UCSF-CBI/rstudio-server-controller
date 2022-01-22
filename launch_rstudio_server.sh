@@ -56,14 +56,21 @@ cat > "${workdir}/rsession.sh" <<END
 OMP_NUM_THREADS=${SLURM_JOB_CPUS_PER_NODE:-$(nproc 2> /dev/null || echo "1")}
 export OMP_NUM_THREADS
 
+## The PPID can be used to identify child process 'rsession', e.g. ps --ppid <pid>
+echo "\${PPID}" > "$workdir/rsession.ppid"
+
 RSESSION_LOG_FILE="$workdir/rsession.log"
 export RSESSION_LOG_FILE
 
-echo "Launching rsession on \${HOSTNAME}" > "\${RSESSION_LOG_FILE}"
+{
+    echo "Launching rsession:"
+    echo "Time: \$(date)"
+    echo "HOSTNAME: \${HOSTNAME}"
+    echo "PPID: \${PPID}"
+    echo "Command: exec rsession --r-libs-user "${R_LIBS_USER}" \"\${@}\""
+} > "\${RSESSION_LOG_FILE}"
 
 exec &>> "\${RSESSION_LOG_FILE}"
-
-echo "Launching rsession on ..."
 set -x
 
 ## FIXME: This shouldn't really be hardcoded. See also comment above. /HB 2022-01-21
@@ -93,6 +100,10 @@ export RSTUDIO_PASSWORD
   echo "************************************************************"
   echo
 }
+
+## Terminate the R session, when the RStudio Server instance is shutdown
+# shellcheck disable=SC2154
+trap 'pid=$(cat "${workdir}/var/run/rstudio-server/rstudio-rsession/${USER}-d.pid"); echo "pid=$pid"; kill -TERM "${pid}"; echo "done"' EXIT
 
 # get unused socket per https://unix.stackexchange.com/a/132524
 # tiny race condition between the Python and launching the rserver
