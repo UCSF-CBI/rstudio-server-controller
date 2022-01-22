@@ -138,11 +138,7 @@ The RStudio Server is being launched on ${HOSTNAME}. Next,
 
 3. Enter your cluster credentials at the RStudio Server authentication prompt
 
-When done:
-
-1. Exit the RStudio session, e.g. quit()
-
-2. Interrupt this script, e.g. press Ctrl-C
+When done, interrupt this script, e.g. press Ctrl-C.
 
 END
 
