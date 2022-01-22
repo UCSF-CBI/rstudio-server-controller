@@ -25,6 +25,7 @@ function on_exit {
 }
 
 LOCALPORT=${LOCALPORT:-8787}
+LOGIN_HOST=${LOGIN_HOST:-c4-log2}
 
 # Need a workdir for sqlite database, otherwise we'd have to be root. Also for our rsession.sh
 workdir=$HOME/.config/rstudio-server-launcher
@@ -127,23 +128,22 @@ readonly RSTUDIO_PORT
 
 # Instructions for user
 cat 1>&2 <<END
-1. SSH tunnel from your workstation using the following command from a terminal on your local workstation:
+The RStudio Server is being launched on ${HOSTNAME}. Next,
 
-   ssh -N -L ${LOCALPORT}:${HOSTNAME}:${RSTUDIO_PORT} $RSTUDIO_USER@c4-log2
+1. SSH to the cluster from your local computer using:
 
-   and point your web browser to http://127.0.0.1:${LOCALPORT}
+  ssh -N -L ${LOCALPORT}:${HOSTNAME}:${RSTUDIO_PORT} ${RSTUDIO_USER}@${LOGIN_HOST}
 
-2. log in to RStudio Server using the following credentials:
+2. Open your web browser at <http://127.0.0.1:${LOCALPORT}>
 
-   user: $RSTUDIO_USER
-   password: $RSTUDIO_PASSWORD
+3. Enter your cluster credentials at the RStudio Server authentication prompt
 
-When done using RStudio Server, terminate the job by:
+When done:
 
-1. Exit the RStudio Session ("power" button in the top right corner of the RStudio window)
-2. Issue the following command on the login node:
+1. Exit the RStudio session, e.g. quit()
 
-      scancel -f ${SLURM_JOB_ID}
+2. Interrupt this script, e.g. press Ctrl-C
+
 END
 
 rserver --server-daemonize 0 \
