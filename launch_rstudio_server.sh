@@ -25,7 +25,7 @@ function on_exit {
 }
 
 LOCALPORT=${LOCALPORT:-8787}
-LOGIN_HOST=${LOGIN_HOST:-c4-log2}
+LOGIN_HOST=${LOGIN_HOST:-c4-log2.ucsf.edu}
 
 # Need a workdir for sqlite database, otherwise we'd have to be root. Also for our rsession.sh
 workdir=$HOME/.config/rstudio-server-launcher
