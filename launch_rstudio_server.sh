@@ -32,10 +32,10 @@ module load "r/${R_VERSION}"
 module load rstudio-server
 
 ## Assert executables are available
-command -v R          &> /dev/null || { 2>&1 echo "ERROR: No such executable: R";          exit 1; }
-command -v rserver    &> /dev/null || { 2>&1 echo "ERROR: No such executable: reserver";   exit 1; }
-command -v rsession   &> /dev/null || { 2>&1 echo "ERROR: No such executable: resession";  exit 1; }
-command -v pam-helper &> /dev/null || { 2>&1 echo "ERROR: No such executable: pam-helper"; exit 1; }
+command -v R           &> /dev/null || { 2>&1 echo "ERROR: No such executable: R";           exit 1; }
+command -v rserver     &> /dev/null || { 2>&1 echo "ERROR: No such executable: reserver";    exit 1; }
+command -v rsession    &> /dev/null || { 2>&1 echo "ERROR: No such executable: resession";   exit 1; }
+command -v auth-via-su &> /dev/null || { 2>&1 echo "ERROR: No such executable: auth-via-su"; exit 1; }
 
 ## FIXME: This shouldn't really be hardcoded. See also comment below. /HB 2022-01-21
 R_LIBS_USER=${R_LIBS_USER:-"$HOME/R/%p-library/%v-CBI-gcc8"}
@@ -81,8 +81,8 @@ RSTUDIO_PASSWORD=${RSTUDIO_PASSWORD:-$(openssl rand -base64 15)}
 export RSTUDIO_USER
 export RSTUDIO_PASSWORD
 
-## Validate correctness of pam-helper executable (should return true)
-echo "${RSTUDIO_PASSWORD}" | PAM_HELPER_LOGFILE="" pam-helper "${RSTUDIO_USER}" || { 2>&1 echo "ERROR: Validation of 'pam-helper' failed: $(command -v pam-helper)"; exit 1; }
+## Validate correctness of auth-via-su executable (should return true)
+#echo "${RSTUDIO_PASSWORD}" | PAM_HELPER_LOGFILE="" auth-via-su "${RSTUDIO_USER}" || { 2>&1 echo "ERROR: Validation of 'auth-via-su' failed: $(command -v auth-via-su)"; exit 1; }
 
 [[ -n ${PAM_HELPER_LOGFILE} ]] && { 
   echo "************************************************************"
@@ -124,7 +124,7 @@ rserver --server-daemonize 0 \
 	--server-data-dir "$workdir/var/run/rstudio-server" \
         --database-config-file "$workdir/database.conf" \
         --www-port "$RSTUDIO_PORT" \
-        --auth-pam-helper-path "pam-helper" \
+        --auth-pam-helper-path "auth-via-su" \
         --auth-none 0 \
         --auth-stay-signed-in-days 1 \
         --auth-timeout-minutes 0 \
