@@ -103,8 +103,8 @@ END
 
 chmod +x "${workdir}/rsession.sh"
 
-## Validate correctness of auth-via-su executable (should return true)
-#echo "${RSTUDIO_PASSWORD}" | AUTH_LOGFILE="" auth-via-su "${USER}" || { 2>&1 echo "ERROR: Validation of 'auth-via-su' failed: $(command -v auth-via-su)"; exit 1; }
+## Validate correctness of auth-via-su executable (should return false)
+echo "" | AUTH_LOGFILE="" auth-via-su "${USER}" > /dev/null && { 2>&1 echo "ERROR: Validation of 'auth-via-su' failed: $(command -v auth-via-su)"; exit 1; }
 
 [[ -n ${AUTH_LOGFILE} ]] && { 
   echo "************************************************************"
