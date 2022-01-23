@@ -28,5 +28,5 @@ jobs:
 
     - name: ShellCheck
       run: |
-        shellcheck -x -- *.sh
+        shellcheck -x -- bin/*
 

@@ -1,4 +1,4 @@
 shellcheck:
-	shellcheck -x -- *.sh
+	shellcheck -x -- bin/*
 
 
