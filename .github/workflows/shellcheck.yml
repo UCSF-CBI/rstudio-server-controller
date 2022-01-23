@@ -28,6 +28,5 @@ jobs:
 
     - name: ShellCheck
       run: |
-	shellcheck -x bin/freeport
-	(cd bin; shellcheck -x rstudio-server)
+        make shellcheck
 
