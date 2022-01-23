@@ -89,6 +89,12 @@ export RSESSION_LOG_FILE
     echo "Time: \$(date)"
     echo "HOSTNAME: \${HOSTNAME}"
     echo "PPID: \${PPID}"
+    echo "PWD: \${PWD}"
+    echo "PATH: \${PATH}"
+    env | grep -E "^(SLURM_)"
+    env | grep -E "^(NSLOTS|NHOSTS|SGE_|JOB_|PE_)"
+    Rscript --version
+    env | grep -E "^R_"
     echo "Command: exec rsession --r-libs-user "${R_LIBS_USER}" \"\${@}\""
 } > "\${RSESSION_LOG_FILE}"
 
