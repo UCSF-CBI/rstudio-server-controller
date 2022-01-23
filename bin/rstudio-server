@@ -78,6 +78,14 @@ function validate_auth {
 }
 
 
+function validate_port {
+    [[ -z $1 ]] && error "Port must not be empty"
+    if [[ $1 -lt 0 ]] || [[ $1 -gt 65535 ]]; then
+        error "Port out of range [0,65535]: $1"
+    fi
+}
+
+
 ## Assert executable exist
 function assert_executable {
   command -v "$1" &> /dev/null || error "No such executable: $1"
@@ -244,6 +252,7 @@ verbose=false
 args=()
 full=false
 port=${RSTUDIO_PORT}
+[[ -n ${port} ]] && validate_port "$port"
 
 # Parse command-line options
 while [[ $# -gt 0 ]]; do
@@ -279,6 +288,7 @@ while [[ $# -gt 0 ]]; do
         fi
         if [[ "$key" == "port" ]]; then
             port=$value
+            validate_port "$port"
         else
             merror "Unknown option: $1"
         fi
