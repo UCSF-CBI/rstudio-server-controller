@@ -110,6 +110,7 @@ function acquired_lock_file {
         error "Another RStudio Server session of yours is already active on the cluster. Please terminate that first. As a last resort, remove lock file '${lockfile}' and retry."
     fi
     echo "${PID}" > "${lockfile}"
+    echo "${lockfile}"
 }
 
 function remove_lock_file {
@@ -123,18 +124,72 @@ function remove_lock_file {
 function make_database_conf {
     local workdir
     workdir=$(config_dir)
+    assert_dir_exists "${workdir}"
     {
         echo "provider=sqlite"
         echo "directory=${workdir}/var/lib/rstudio-server"
     } > "${workdir}/database.conf"
+    echo "${workdir}/database.conf"
+}
+
+function make_rserver_conf {
+    local workdir
+    workdir=$(config_dir)
+    assert_dir_exists "${workdir}"
+    {
+        ## For legacy accounts with UID in [500,999] on C4
+        echo "auth-minimum-user-id=500"
+
+        ## Enable [sic!] multi-user authentication, i.e. don't disable it
+        echo "auth-none=0"
+        
+        echo "auth-pam-helper-path=auth-via-su"
+        
+        ## Number of days to keep a user signed in when using the "Stay Signed
+        #  In" option. Only used when auth-timeout-minutes is 0 (disabled).
+        # echo "auth-stay-signed-in-days=1"
+        
+        ## Require re-sign in if idle for 30 minutes
+        echo "auth-timeout-minutes=30"
+
+        ## Path to RStudio Server configuration file
+        echo "database-config-file=${workdir}/database.conf"
+
+        ## Path to the 'rsession' executable
+        echo "rsession-path=${workdir}/rsession.sh"
+        
+        echo "secure-cookie-key-file=${workdir}/tmp/my-secure-cookie-key"
+
+        ## Run 'rserver' as a regular non-privileged process
+        echo "server-daemonize=0"
+
+        ## Folder where RStudio Server writes run-time state
+        echo "server-data-dir=${workdir}/var/run/rstudio-server"
+
+        ## File where the rserver daemon PID is written
+        echo "server-pid-file=${workdir}/var/run/rstudio-server.pid"
+
+        ## Run 'rserver' as this user
+        echo "server-user=${USER:?}"
+
+        ## Default working directory of the 'rserver' process
+        echo "server-working-dir=${workdir}"
+
+        ## The web port for the RStudio Server
+        echo "www-port=${port:?}"
+    } > "${workdir}/rserver.conf"
+    echo "${workdir}/rserver.conf"
 }
 
 
-function make_ression_sh {
+function make_rsession_sh {
     local workdir
     local R_LIBS_USER
+
+    R_LIBS_USER=${1:?}
+
     workdir=$(config_dir)
-    R_LIBS_USER=$1
+    assert_dir_exists "${workdir}"
     
     cat > "${workdir}/rsession.sh" <<END
 #!/bin/sh
@@ -175,6 +230,7 @@ exec rsession --r-libs-user "${R_LIBS_USER}" "\${@}"
 END
   
   chmod +x "${workdir}/rsession.sh"
+  echo "${workdir}/rsession.sh"
 }
 
 
@@ -218,22 +274,12 @@ function launch_rserver {
     local workdir
     
     workdir=$(config_dir)
-    port=$1
+    assert_dir_exists "${workdir}"
+    port=${1:?}
     
-    rserver \
-        --server-daemonize 0 \
-        --server-data-dir "$workdir/var/run/rstudio-server" \
-        --database-config-file "$workdir/database.conf" \
-        --www-port "$port" \
-        --auth-pam-helper-path "auth-via-su" \
-        --auth-none 0 \
-        --auth-stay-signed-in-days 1 \
-        --auth-timeout-minutes 0 \
-        --auth-minimum-user-id 500 \
-        --rsession-path "$workdir/rsession.sh" \
-        --secure-cookie-key-file "$workdir/tmp/my-secure-cookie-key" \
-        --server-user "$USER"
+    rserver --config-file="${workdir}/rserver.conf"
 }
+
 
 # -------------------------------------------------------------------------
 # MAIN
@@ -356,10 +402,11 @@ elif [[ "${action}" == "start" ]]; then
     make_config_dir  
     acquired_lock_file
     make_database_conf
+    make_rserver_conf
     
     ## FIXME: This shouldn't really be hardcoded. See also comment below. /HB 2022-01-21
     R_LIBS_USER=${R_LIBS_USER:-"$HOME/R/%p-library/%v-CBI-gcc8"}
-    make_ression_sh "${R_LIBS_USER}"
+    make_rsession_sh "${R_LIBS_USER}"
   
     port=${port:-$(free_port)}
     instructions "${port}"
