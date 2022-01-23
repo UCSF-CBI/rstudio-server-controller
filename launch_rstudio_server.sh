@@ -103,12 +103,8 @@ END
 
 chmod +x "${workdir}/rsession.sh"
 
-# The RStudio Server user (=USER)
-RSTUDIO_USER=${RSTUDIO_USER:-$(id --user --name)}
-export RSTUDIO_USER
-
 ## Validate correctness of auth-via-su executable (should return true)
-#echo "${RSTUDIO_PASSWORD}" | AUTH_LOGFILE="" auth-via-su "${RSTUDIO_USER}" || { 2>&1 echo "ERROR: Validation of 'auth-via-su' failed: $(command -v auth-via-su)"; exit 1; }
+#echo "${RSTUDIO_PASSWORD}" | AUTH_LOGFILE="" auth-via-su "${USER}" || { 2>&1 echo "ERROR: Validation of 'auth-via-su' failed: $(command -v auth-via-su)"; exit 1; }
 
 [[ -n ${AUTH_LOGFILE} ]] && { 
   echo "************************************************************"
@@ -134,7 +130,7 @@ The RStudio Server is being launched on ${HOSTNAME}. Next,
 
 1. SSH to the cluster from your local computer using:
 
-  ssh -N -L ${LOCALPORT}:${HOSTNAME}:${RSTUDIO_PORT} ${RSTUDIO_USER}@${LOGIN_HOST}
+  ssh -N -L ${LOCALPORT}:${HOSTNAME}:${RSTUDIO_PORT} ${USER}@${LOGIN_HOST}
 
 2. Open your web browser at <http://127.0.0.1:${LOCALPORT}>
 
@@ -155,5 +151,5 @@ rserver --server-daemonize 0 \
         --auth-minimum-user-id 500 \
         --rsession-path "$workdir/rsession.sh" \
         --secure-cookie-key-file "$workdir/tmp/my-secure-cookie-key" \
-        --server-user "$RSTUDIO_USER"
+        --server-user "$USER"
 echo "rserver exited" 1>&2
