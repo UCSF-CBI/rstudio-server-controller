@@ -5,17 +5,18 @@
 ###  rstudio-server <command> [options]
 ### 
 ### Commands:
-###  start
-###  reset        Wipes temporary config files
+###  start        Start the RStudio Server
+###  config       Output config path
+###  reset        Wipe config files
 ###
 ### Options:
 ###  --help       Display the full help page with examples
 ###  --version    Output version of this software
 ###  --debug      Output detailed debug information
 ###  --verbose    Output informative message
-###  --port=<int> The port RStudio Server will use. (Default: random)
+###  --force      Force an action
 ###
-### where ...
+###  --port=<int> The port RStudio Server will use. (Default: random)
 ### ---
 ###
 ### Example:
@@ -24,6 +25,8 @@
 ###
 ###  rstudio-server start
 ###  rstudio-server start --port=8787
+###
+###  rstudio-server config
 ###
 ### Version: 0.1.0-9000
 ### Copyright: Henrik Bengtsson (2021)
@@ -157,9 +160,9 @@ export RSESSION_LOG_FILE
     echo "PATH: \${PATH}"
     env | grep -E "^(SLURM_)"
     env | grep -E "^(NSLOTS|NHOSTS|SGE_|JOB_|PE_)"
-    Rscript --version
     env | grep -E "^R_"
-    echo "Command: exec rsession --r-libs-user "${R_LIBS_USER}" \"\${@}\""
+    R --version 2>&1
+    echo "Command: exec rsession --r-libs-user "${R_LIBS_USER}" \${@}"
 } > "\${RSESSION_LOG_FILE}"
 
 exec &>> "\${RSESSION_LOG_FILE}"
@@ -253,6 +256,8 @@ while [[ $# -gt 0 ]]; do
         action="$1"
     elif [[ "$1" == "reset" ]]; then
         action="$1"
+    elif [[ "$1" == "config" ]]; then
+        action="$1"
 
     ## Options (--flags):
     elif [[ "$1" == "--help" ]]; then
@@ -321,7 +326,9 @@ mdebug "force: ${force}"
 mdebug "args: [n=${#args[@]}] ${args[*]}"
 
 
-if [[ "${action}" == "reset" ]]; then
+if [[ "${action}" == "config" ]]; then
+    config_dir
+elif [[ "${action}" == "reset" ]]; then
     $force || acquired_lock_file
     workdir=$(config_dir)
     [[ -d "${workdir}" ]] && rm -rf "${workdir}"
