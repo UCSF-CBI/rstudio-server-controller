@@ -1,0 +1,361 @@
+#!/bin/bash
+### rstudio_server
+### 
+### Usage:
+###  rstudio-server <command> [options]
+### 
+### Commands:
+###  start
+###  reset        Wipes temporary config files
+###
+### Options:
+###  --help       Display the full help page with examples
+###  --version    Output version of this software
+###  --debug      Output detailed debug information
+###  --verbose    Output informative message
+###  --port=<int> The port RStudio Server will use. (Default: random)
+###
+### where ...
+### ---
+###
+### Example:
+###  rstudio-server --help
+###  rstudio-server --version
+###
+###  rstudio-server start
+###  rstudio-server start --port=8787
+###
+### Version: 0.1.0-9000
+### Copyright: Henrik Bengtsson (2021)
+### License: MIT
+
+## Import bash utility functions
+incl="${BASH_SOURCE%/*}/incl"
+
+# shellcheck source=incl/asserts.sh
+source "${incl}/asserts.sh"
+# shellcheck source=incl/cli.sh
+source "${incl}/cli.sh"
+# shellcheck source=incl/conditions.sh
+source "${incl}/conditions.sh"
+# shellcheck source=incl/files.sh
+source "${incl}/files.sh"
+# shellcheck source=incl/output.sh
+source "${incl}/output.sh"
+
+
+# -------------------------------------------------------------------------
+# On-exit functions
+# -------------------------------------------------------------------------
+function on_exit {
+    terminate_rsession
+    remove_lock_file
+}
+
+# -------------------------------------------------------------------------
+# Utility functions
+# -------------------------------------------------------------------------
+function free_port {
+    # get unused socket per https://unix.stackexchange.com/a/132524
+    # tiny race condition between the Python and launching the rserver
+    python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
+}    
+   
+function warn_auth_logfile {
+  warn "*************************************************************"
+  warn "* Environment variable 'AUTO_LOGFILE' is set.  All usernames"
+  warn "* and passwords entered at the RStudio Server login prompt"
+  warn "* will be recorded to the file:"
+  warn "* ${AUTH_LOGFILE}"
+  warn "*************************************************************"
+  echo
+}
+
+function validate_auth {
+    ## Validate correctness of auth-via-su executable (should return false)
+    echo "" | AUTH_LOGFILE="" auth-via-su "${USER}" > /dev/null && error "Validation of 'auth-via-su' failed: $(command -v auth-via-su)"
+    [[ -n ${AUTH_LOGFILE} ]] && warn_auth_logfile
+}
+
+
+## Assert executable exist
+function assert_executable {
+  command -v "$1" &> /dev/null || error "No such executable: $1"
+}
+
+
+## Need a workdir for sqlite database, otherwise we'd have to be root.
+## Also for our rsession.sh
+function config_dir {
+  echo "$HOME/.config/rstudio-server-launcher"
+}
+
+function make_config_dir {
+    local workdir
+    workdir=$(config_dir)
+    mkdir -p "${workdir}"/{run,tmp,var/lib/rstudio-server,/var/run/rstudio-server}
+    chmod 700 "${workdir}"/{run,tmp,var/lib/rstudio-server,/var/run/rstudio-server}
+}
+
+## Prevent user from running multiple instances of the RStudio Server
+function acquired_lock_file {
+    local workdir
+    local lockfile
+    workdir=$(config_dir)
+    lockfile=${workdir}/pid.lock
+    if [[ -f "${lockfile}" ]]; then
+        error "Another RStudio Server session of yours is already active on the cluster. Please terminate that first. As a last resort, remove lock file '${lockfile}' and retry."
+    fi
+    echo "${PID}" > "${lockfile}"
+}
+
+function remove_lock_file {
+    local workdir
+    local lockfile
+    workdir=$(config_dir)
+    lockfile=${workdir}/pid.lock
+    [[ -f "${lockfile}" ]] && rm "${lockfile}"
+}    
+
+function make_database_conf {
+    local workdir
+    workdir=$(config_dir)
+    cat > "${workdir}/database.conf" <<END
+provider=sqlite
+directory=${workdir}/var/lib/rstudio-server
+END
+}  
+
+
+function make_ression_sh {
+    local workdir
+    local R_LIBS_USER
+    workdir=$(config_dir)
+    R_LIBS_USER=$1
+    
+    cat > "${workdir}/rsession.sh" <<END
+#!/bin/sh
+
+# Set OMP_NUM_THREADS to prevent OpenBLAS (and any other OpenMP-enhanced
+# libraries used by R) from spawning more threads than the number of processors
+# allocated to the job.
+OMP_NUM_THREADS=${SLURM_JOB_CPUS_PER_NODE:-$(nproc 2> /dev/null || echo "1")}
+export OMP_NUM_THREADS
+
+## The PPID can be used to identify child process 'rsession', e.g. ps --ppid <pid>
+echo "\${PPID}" > "$workdir/rsession.ppid"
+
+RSESSION_LOG_FILE="$workdir/rsession.log"
+export RSESSION_LOG_FILE
+
+{
+    echo "Launching rsession:"
+    echo "Time: \$(date)"
+    echo "HOSTNAME: \${HOSTNAME}"
+    echo "PPID: \${PPID}"
+    echo "PWD: \${PWD}"
+    echo "PATH: \${PATH}"
+    env | grep -E "^(SLURM_)"
+    env | grep -E "^(NSLOTS|NHOSTS|SGE_|JOB_|PE_)"
+    Rscript --version
+    env | grep -E "^R_"
+    echo "Command: exec rsession --r-libs-user "${R_LIBS_USER}" \"\${@}\""
+} > "\${RSESSION_LOG_FILE}"
+
+exec &>> "\${RSESSION_LOG_FILE}"
+set -x
+
+## FIXME: This shouldn't really be hardcoded. See also comment above. /HB 2022-01-21
+## Seems like it should work without specifying --r-libs-user; default?!?
+## exec rsession "\${@}"
+exec rsession --r-libs-user "${R_LIBS_USER}" "\${@}"
+END
+  
+  chmod +x "${workdir}/rsession.sh"
+}
+
+
+# Instructions for the user
+function instructions {
+    local port
+    port=$1
+    
+    LOCALPORT=${LOCALPORT:-8787}
+    LOGIN_HOST=${LOGIN_HOST:-c4-log2.ucsf.edu}
+  
+    cat 1>&2 <<END
+The RStudio Server is being launched on ${HOSTNAME}. Next,
+
+1. SSH to the cluster from your local computer using:
+
+  ssh -N -L ${LOCALPORT}:${HOSTNAME}:${port} ${USER}@${LOGIN_HOST}
+
+2. Open your web browser at <http://127.0.0.1:${LOCALPORT}>
+
+3. Enter your cluster credentials at the RStudio Server authentication prompt
+
+When done, interrupt this script, e.g. press Ctrl-C.
+  
+END
+}
+
+
+function terminate_rsession {
+    local workdir
+    local pid
+    
+    workdir=$(config_dir)
+    pid=$(cat "${workdir}/var/run/rstudio-server/rstudio-rsession/${USER}-d.pid")
+    echo "pid=$pid"
+    kill -TERM "${pid}"
+}
+
+
+function launch_rserver {
+    local port
+    local workdir
+    
+    workdir=$(config_dir)
+    port=$1
+    
+    rserver \
+        --server-daemonize 0 \
+        --server-data-dir "$workdir/var/run/rstudio-server" \
+        --database-config-file "$workdir/database.conf" \
+        --www-port "$port" \
+        --auth-pam-helper-path "auth-via-su" \
+        --auth-none 0 \
+        --auth-stay-signed-in-days 1 \
+        --auth-timeout-minutes 0 \
+        --auth-minimum-user-id 500 \
+        --rsession-path "$workdir/rsession.sh" \
+        --secure-cookie-key-file "$workdir/tmp/my-secure-cookie-key" \
+        --server-user "$USER"
+}
+
+# -------------------------------------------------------------------------
+# MAIN
+# -------------------------------------------------------------------------
+## Actions
+action=
+dryrun=false
+force=false
+verbose=false
+args=()
+full=false
+port=${RSTUDIO_PORT}
+
+# Parse command-line options
+while [[ $# -gt 0 ]]; do
+    mdebug "Next CLI argument: $1"
+    ## Commands:
+    if [[ "$1" == "start" ]]; then
+        action="$1"
+    elif [[ "$1" == "reset" ]]; then
+        action="$1"
+
+    ## Options (--flags):
+    elif [[ "$1" == "--help" ]]; then
+        action=help
+    elif [[ "$1" == "--version" ]]; then
+        action=version
+    elif [[ "$1" == "--debug" ]]; then
+        debug=true
+    elif [[ "$1" == "--dry-run" ]]; then
+        dryrun=true
+    elif [[ "$1" == "--verbose" ]]; then
+        verbose=true
+    elif [[ "$1" == "--force" ]]; then
+        force=true
+        
+    ## Options (--key=value):
+    elif [[ "$1" =~ ^--.*=.*$ ]]; then
+        key=${1//--}
+        key=${key//=*}
+        value=${1//--[[:alpha:]]*=}
+        mdebug "Key-value option '$1' parsed to key='$key', value='$value'"
+        if [[ -z $value ]]; then
+            merror "Option '--$key' must not be empty"
+        fi
+        if [[ "$key" == "port" ]]; then
+            port=$value
+        else
+            merror "Unknown option: $1"
+        fi
+    ## Additional options to be appended (rarely needed)
+    else
+        args+=("$1")
+    fi
+    shift
+done
+
+
+## --help should always be available prior to any validation errors
+if [[ -z $action ]]; then
+    help
+    _exit 0
+elif [[ $action == "help" ]]; then
+    help full
+    _exit 0
+elif [[ $action == "version" ]]; then
+    version
+    $full && catfs_version
+    _exit 0
+fi
+
+
+# -------------------------------------------------------------------------
+# Validate options
+# -------------------------------------------------------------------------
+
+
+# -------------------------------------------------------------------------
+# Initiate
+# -------------------------------------------------------------------------
+mdebug "action: ${action}"
+mdebug "debug: ${debug}"
+mdebug "verbose: ${verbose}"
+mdebug "dryrun: ${dryrun}"
+mdebug "force: ${force}"
+mdebug "args: [n=${#args[@]}] ${args[*]}"
+
+
+if [[ "${action}" == "reset" ]]; then
+    $force || acquired_lock_file
+    workdir=$(config_dir)
+    [[ -d "${workdir}" ]] && rm -rf "${workdir}"
+elif [[ "${action}" == "start" ]]; then
+    # Load CBI software stack
+    module load CBI
+    
+    ## Use the default R version, unless overridden by R_VERSION
+    module load "r/${R_VERSION}"
+    
+    ## Use the default RStudio Server version
+    module load rstudio-server
+    
+    ## Assert executables are available
+    assert_executable R
+    assert_executable rserver
+    assert_executable rsession
+    assert_executable auth-via-su
+  
+    validate_auth
+  
+    trap "on_exit" EXIT
+    
+    make_config_dir  
+    acquired_lock_file
+    make_database_conf
+    
+    ## FIXME: This shouldn't really be hardcoded. See also comment below. /HB 2022-01-21
+    R_LIBS_USER=${R_LIBS_USER:-"$HOME/R/%p-library/%v-CBI-gcc8"}
+    R_LIBS_USER="$HOME/R/%p-library/%v-CBI-gcc8"
+    make_ression_sh "${R_LIBS_USER}"
+  
+    port=${port:-$(free_port)}
+    instructions "${port}"
+    launch_rserver "${port}"
+    
+    echo "rserver exited" 1>&2
+fi
