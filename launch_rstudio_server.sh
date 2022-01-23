@@ -24,6 +24,11 @@ function on_exit {
     on_exit_rm
 }
 
+function free_port {
+    python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
+}    
+   
+
 LOCALPORT=${LOCALPORT:-8787}
 LOGIN_HOST=${LOGIN_HOST:-c4-log2.ucsf.edu}
 
@@ -123,7 +128,7 @@ trap "on_exit" EXIT
 
 # get unused socket per https://unix.stackexchange.com/a/132524
 # tiny race condition between the Python and launching the rserver
-RSTUDIO_PORT=${RSTUDIO_PORT:-$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')}
+RSTUDIO_PORT=${RSTUDIO_PORT:-$(free_port)}
 readonly RSTUDIO_PORT
 
 # Instructions for user
