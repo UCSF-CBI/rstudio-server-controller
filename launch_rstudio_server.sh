@@ -103,22 +103,19 @@ END
 
 chmod +x "${workdir}/rsession.sh"
 
-# set up variables - actual user id & generated password. To be validated by auth script
+# The RStudio Server user (=USER)
 RSTUDIO_USER=${RSTUDIO_USER:-$(id --user --name)}
-RSTUDIO_PASSWORD=${RSTUDIO_PASSWORD:-$(openssl rand -base64 15)}
-
 export RSTUDIO_USER
-export RSTUDIO_PASSWORD
 
 ## Validate correctness of auth-via-su executable (should return true)
-#echo "${RSTUDIO_PASSWORD}" | PAM_HELPER_LOGFILE="" auth-via-su "${RSTUDIO_USER}" || { 2>&1 echo "ERROR: Validation of 'auth-via-su' failed: $(command -v auth-via-su)"; exit 1; }
+#echo "${RSTUDIO_PASSWORD}" | AUTH_LOGFILE="" auth-via-su "${RSTUDIO_USER}" || { 2>&1 echo "ERROR: Validation of 'auth-via-su' failed: $(command -v auth-via-su)"; exit 1; }
 
-[[ -n ${PAM_HELPER_LOGFILE} ]] && { 
+[[ -n ${AUTH_LOGFILE} ]] && { 
   echo "************************************************************"
   echo "WARNING: Environment variable 'PAM_HELPER_LOGFILE' is set."
   echo "All usernames and passwords entered at the RStudio Server"
   echo "login prompt will be recorded to the file:"
-  echo "${PAM_HELPER_LOGFILE}"
+  echo "${AUTH_LOGFILE}"
   echo "************************************************************"
   echo
 }
@@ -158,5 +155,5 @@ rserver --server-daemonize 0 \
         --auth-minimum-user-id 500 \
         --rsession-path "$workdir/rsession.sh" \
         --secure-cookie-key-file "$workdir/tmp/my-secure-cookie-key" \
-        --server-user "$USER"
+        --server-user "$RSTUDIO_USER"
 echo "rserver exited" 1>&2
