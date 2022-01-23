@@ -128,11 +128,11 @@ function remove_lock_file {
 function make_database_conf {
     local workdir
     workdir=$(config_dir)
-    cat > "${workdir}/database.conf" <<END
-provider=sqlite
-directory=${workdir}/var/lib/rstudio-server
-END
-}  
+    {
+        echo "provider=sqlite"
+        echo "directory=${workdir}/var/lib/rstudio-server"
+    } > "${workdir}/database.conf"
+}
 
 
 function make_ression_sh {
@@ -190,21 +190,20 @@ function instructions {
     
     LOCALPORT=${LOCALPORT:-8787}
     LOGIN_HOST=${LOGIN_HOST:-c4-log2.ucsf.edu}
-  
-    cat 1>&2 <<END
-The RStudio Server is being launched on ${HOSTNAME}. Next,
 
-1. SSH to the cluster from your local computer using:
-
-  ssh -N -L ${LOCALPORT}:${HOSTNAME}:${port} ${USER}@${LOGIN_HOST}
-
-2. Open your web browser at <http://127.0.0.1:${LOCALPORT}>
-
-3. Enter your cluster credentials at the RStudio Server authentication prompt
-
-When done, interrupt this script, e.g. press Ctrl-C.
-  
-END
+    {
+       echo "The RStudio Server is being launched on ${HOSTNAME}. Next,"
+       echo ""
+       echo "1. SSH to the cluster from your local computer using:"
+       echo
+       echo "  ssh -N -L ${LOCALPORT}:${HOSTNAME}:${port} ${USER}@${LOGIN_HOST}"
+       echo
+       echo "2. Open your web browser at <http://127.0.0.1:${LOCALPORT}>"
+       echo
+       echo "3. Enter your cluster credentials at the RStudio Server authentication prompt"
+       echo
+       echo "When done, interrupt this script, e.g. press Ctrl-C."
+    } 1>&2
 }
 
 
