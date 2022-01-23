@@ -1,8 +1,8 @@
 #!/bin/bash
-### rstudio_server
+### rsc: An RStudio Server Controller
 ### 
 ### Usage:
-###  rstudio-server <command> [options]
+###  rsc <command> [options]
 ### 
 ### Commands:
 ###  start        Start the RStudio Server
@@ -20,15 +20,15 @@
 ### ---
 ###
 ### Example:
-###  rstudio-server --help
-###  rstudio-server --version
+###  rsc --help
+###  rsc --version
 ###
-###  rstudio-server start
-###  rstudio-server start --port=8787
+###  rsc start
+###  rsc start --port=8787
 ###
-###  rstudio-server config
+###  rsc config
 ###
-### Version: 0.1.0-9000
+### Version: 0.1.0-9001
 ### Copyright: Henrik Bengtsson (2021)
 ### License: MIT
 
@@ -90,7 +90,7 @@ function assert_executable {
 ## Need a workdir for sqlite database, otherwise we'd have to be root.
 ## Also for our rsession.sh
 function config_dir {
-  echo "$HOME/.config/rstudio-server-launcher"
+  echo "$HOME/.config/rsc"
 }
 
 function make_config_dir {
