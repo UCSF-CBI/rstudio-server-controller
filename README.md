@@ -2,4 +2,5 @@
 
 # rstudio-server-launcher
 
-Scripts for launching the RStudio Server on compute nodes via the Slurm scheduler.
+Script for launching the RStudio Server on a development nodes or on a compute node via a job scheduler.
+
