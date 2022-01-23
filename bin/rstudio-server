@@ -45,14 +45,6 @@ source "${incl}/output.sh"
 
 
 # -------------------------------------------------------------------------
-# On-exit functions
-# -------------------------------------------------------------------------
-function on_exit {
-    terminate_rsession
-    remove_lock_file
-}
-
-# -------------------------------------------------------------------------
 # Utility functions
 # -------------------------------------------------------------------------
 function free_port {
@@ -351,7 +343,8 @@ elif [[ "${action}" == "start" ]]; then
   
     validate_auth
   
-    trap "on_exit" EXIT
+    ## On-exit functions
+    trap "terminate_rsession; remove_lock_file" EXIT
     
     make_config_dir  
     acquired_lock_file
@@ -359,7 +352,6 @@ elif [[ "${action}" == "start" ]]; then
     
     ## FIXME: This shouldn't really be hardcoded. See also comment below. /HB 2022-01-21
     R_LIBS_USER=${R_LIBS_USER:-"$HOME/R/%p-library/%v-CBI-gcc8"}
-    R_LIBS_USER="$HOME/R/%p-library/%v-CBI-gcc8"
     make_ression_sh "${R_LIBS_USER}"
   
     port=${port:-$(free_port)}
