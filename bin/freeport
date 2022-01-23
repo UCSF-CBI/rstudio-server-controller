@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Usage:
+#  freeport <preferred>
+#
+# Description:
+# Finds a free TCP port on the current machine
+#
+# Author: Henrik Bengtsson (2021) adopted from unknown author.
+
+## Was a preferred port specified?
+if [[ -n ${1} ]]; then
+    ## Is it available?
+    nc -z 127.0.0.1 "${1}" || { echo "${1}"; exit 0; }
+fi
+
+## Find a random, free port
+python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
