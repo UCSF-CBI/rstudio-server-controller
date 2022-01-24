@@ -27,8 +27,10 @@
 ###  rsc start --port=8787
 ###
 ###  rsc config
+###  rsc config --full
+###  rsc log
 ###
-### Version: 0.1.0-9001
+### Version: 0.1.0-9002
 ### Copyright: Henrik Bengtsson (2021)
 ### License: MIT
 
@@ -50,6 +52,11 @@ source "${incl}/output.sh"
 # -------------------------------------------------------------------------
 # Utility functions
 # -------------------------------------------------------------------------
+function ruler {
+    ## 70-symbols wide
+    echo "----------------------------------------------------------------------"
+}
+
 function free_port {
     # get unused socket per https://unix.stackexchange.com/a/132524
     # tiny race condition between the Python and launching the rserver
@@ -304,6 +311,8 @@ while [[ $# -gt 0 ]]; do
         action="$1"
     elif [[ "$1" == "config" ]]; then
         action="$1"
+    elif [[ "$1" == "log" ]]; then
+        action="$1"
 
     ## Options (--flags):
     elif [[ "$1" == "--help" ]]; then
@@ -318,6 +327,8 @@ while [[ $# -gt 0 ]]; do
         verbose=true
     elif [[ "$1" == "--force" ]]; then
         force=true
+    elif [[ "$1" == "--full" ]]; then
+        full=true
         
     ## Options (--key=value):
     elif [[ "$1" =~ ^--.*=.*$ ]]; then
@@ -373,7 +384,36 @@ mdebug "args: [n=${#args[@]}] ${args[*]}"
 
 
 if [[ "${action}" == "config" ]]; then
-    config_dir
+    workdir=$(config_dir)
+    echo "config-dir=${workdir}"
+    echo "lockfile=${workdir}/pid.lock"
+    rsession_log_file=${workdir}/rsession.log
+    echo "ression-log-file=${rsession_log_file}"
+    config_file=${workdir}/rserver.conf
+    echo "config-file=${config_file}"
+    if $full; then
+        echo
+        files=("${config_file}")
+        for file in "${files[@]}"; do
+            if [[ -f "${file}" ]]; then
+                ruler
+                echo "${file}"
+                ruler
+                cat "${file}"
+            fi
+        done
+    fi
+elif [[ "${action}" == "log" ]]; then
+    workdir=$(config_dir)
+    file=${workdir}/rsession.log
+    if [[ -f "${file}" ]]; then
+        ruler
+        echo "${file}"
+        ruler
+        cat "${file}"
+    else
+        echo "No rsession log file: ${file}"
+    fi
 elif [[ "${action}" == "reset" ]]; then
     $force || acquired_lock_file
     workdir=$(config_dir)

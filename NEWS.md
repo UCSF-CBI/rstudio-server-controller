@@ -1,5 +1,14 @@
 # rstudio-server-launcher
 
+## Version 0.1.0-9002
+
+New features:
+
+* Add 'rsc config --full'
+
+* Add 'rsc log'
+
+
 ## Version 0.1.0
 
 New features:
