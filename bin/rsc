@@ -166,11 +166,10 @@ function make_rserver_conf {
         
         echo "auth-pam-helper-path=auth-via-su"
         
-        ## Number of days to keep a user signed in when using the "Stay Signed
-        #  In" option. Only used when auth-timeout-minutes is 0 (disabled).
-        # echo "auth-stay-signed-in-days=1"
-        
         ## Require re-sign in if idle for 30 minutes
+        ## Specifically, if user makes no input to the RStudio Server, they
+        ## will be automatically logged out after this time and be redirected
+        ## to the 'Sign in to RStudio' page
         echo "auth-timeout-minutes=30"
 
         ## Path to RStudio Server configuration file
