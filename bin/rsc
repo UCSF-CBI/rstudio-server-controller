@@ -27,6 +27,11 @@
 ###
 ###  rsc start
 ###  rsc start --port=8787
+###  rsc start --port=random
+###
+###  rsc status
+###
+###  rsc stop
 ###
 ###  rsc config
 ###  rsc config --full
@@ -138,13 +143,20 @@ function make_database_conf {
         echo "provider=sqlite"
         echo "directory=${workdir}/var/lib/rstudio-server"
     } > "${workdir}/database.conf"
-    echo "${workdir}/database.conf"
 }
 
 function make_rserver_conf {
     local workdir
+    local port
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
+    port=${1:?}
+
+    if [[ "${port}" == "random" ]]; then
+        port=$(free_port)
+    fi
+    validate_port "${port}"
+    
     {
         ## For legacy accounts with UID in [500,999] on C4
         echo "auth-minimum-user-id=500"
@@ -184,7 +196,6 @@ function make_rserver_conf {
         ## The web port for the RStudio Server
         echo "www-port=${port:?}"
     } > "${workdir}/rserver.conf"
-    echo "${workdir}/rserver.conf"
 }
 
 
@@ -196,16 +207,11 @@ function make_rsession_conf {
         ## The default R_LIBS_USER folder that the R session will use
         echo "r-libs-user=${R_LIBS_USER:?}"
     } > "${workdir}/rsession.conf"
-    echo "${workdir}/rsession.conf"
 }
 
 
 function make_rsession_sh {
     local workdir
-    local R_LIBS_USER
-
-    R_LIBS_USER=${1:?}
-
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
     
@@ -245,7 +251,6 @@ exec rsession "\${@}"
 END
   
   chmod +x "${workdir}/rsession.sh"
-  echo "${workdir}/rsession.sh"
 }
 
 
@@ -327,14 +332,12 @@ function terminate_rsession {
 }
 
 function launch_rserver {
-    local port
-    local workdir
-    
+    local workdir   
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
-    port=${1:?}
-    
-    rserver --config-file="${workdir}/rserver.conf"
+    pid_file=$(rserver_pid_file)
+    rserver --config-file="${workdir}/rserver.conf" &
+    echo $! > "${pid_file}"
 }
 
 
@@ -389,13 +392,15 @@ while [[ $# -gt 0 ]]; do
         key=${1//--}
         key=${key//=*}
         value=${1//--[[:alpha:]]*=}
-        mdebug "Key-value option '$1' parsed to key='$key', value='$value'"
-        if [[ -z $value ]]; then
-            merror "Option '--$key' must not be empty"
+        mdebug "Key-value option '$1' parsed to key='${key}', value='${value}'"
+        if [[ -z ${value} ]]; then
+            merror "Option '--${key}' must not be empty"
         fi
-        if [[ "$key" == "port" ]]; then
-            port=$value
-            validate_port "$port"
+        if [[ "${key}" == "port" ]]; then
+            port=${value}
+            if [[ "${value}" != "random" ]]; then
+                validate_port "${port}"
+            fi
         else
             merror "Unknown option: $1"
         fi
@@ -434,6 +439,7 @@ mdebug "debug: ${debug}"
 mdebug "verbose: ${verbose}"
 mdebug "dryrun: ${dryrun}"
 mdebug "force: ${force}"
+mdebug "port: ${port}"
 mdebug "args: [n=${#args[@]}] ${args[*]}"
 
 
@@ -524,22 +530,19 @@ elif [[ "${action}" == "start" ]]; then
   
     validate_auth
   
-    ## On-exit functions
-    trap "terminate_rsession; terminate_rserver; remove_lock_file" EXIT
+#    ## On-exit functions
+#    trap "terminate_rsession; terminate_rserver; remove_lock_file" EXIT
     
     make_config_dir  
     acquired_lock_file
+    
     make_database_conf
-    make_rserver_conf
+    make_rserver_conf "${port}"
+    make_rsession_sh
     make_rsession_conf
 
-    ## FIXME: This shouldn't really be hardcoded. See also comment below. /HB 2022-01-21
-    R_LIBS_USER=${R_LIBS_USER:-"$HOME/R/%p-library/%v-CBI-gcc8"}
-    make_rsession_sh "${R_LIBS_USER}"
-  
-    port=${port:-$(free_port)}
+    launch_rserver
+    echo "RStudio Server started (pid $(rserver_pid))" 1>&2
+
     instructions "${port}"
-    launch_rserver "${port}"
-    
-    echo "rserver exited" 1>&2
 fi
