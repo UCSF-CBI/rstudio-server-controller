@@ -276,14 +276,32 @@ function instructions {
 }
 
 
-function terminate_rsession {
+function check_pid {
+    ## Output PID if there is such a process, otherwise output nothing
+    if [[ -n "${1:?}" ]] && [[ -d "/proc/${1}" ]]; then
+        echo "${1}"
+    else
+        echo ""
+    fi
+}
+
+function rsession_pid_file {
     local workdir
-    local pid
-    
     workdir=$(config_dir)
-    pid=$(cat "${workdir}/var/run/rstudio-server/rstudio-rsession/${USER}-d.pid")
+    echo "${workdir}/var/run/rstudio-server/rstudio-rsession/${USER}-d.pid"
+}
+
+function rsession_pid {
+    local pid
+    pid=$(cat "$(rsession_pid_file)")
+    check_pid "${pid}"
+}
+
+function terminate_rsession {
+    local pid
+    pid=$(rsession_pid)
     echo "pid=$pid"
-    kill -TERM "${pid}"
+    [[ -n "${pid}" ]] && kill -TERM "${pid}"
 }
 
 
@@ -317,6 +335,8 @@ while [[ $# -gt 0 ]]; do
     mdebug "Next CLI argument: $1"
     ## Commands:
     if [[ "$1" == "start" ]]; then
+        action="$1"
+    elif [[ "$1" == "status" ]]; then
         action="$1"
     elif [[ "$1" == "reset" ]]; then
         action="$1"
@@ -409,6 +429,7 @@ if [[ "${action}" == "config" ]]; then
     echo "config-file=${file}"
     files+=("${file}")
 
+    echo "rsession-pid-file=$(rsession_pid_file)"
     echo "rsession-log-file=${workdir}/rsession.log"
 
     if $full; then
@@ -432,6 +453,13 @@ elif [[ "${action}" == "log" ]]; then
         cat "${file}"
     else
         echo "No rsession log file: ${file}"
+    fi
+elif [[ "${action}" == "status" ]]; then
+    pid=$(rsession_pid)
+    if [[ -n "${pid}" ]]; then
+        echo "rsession: running (pid $(rsession_pid))"
+    else
+        echo "rsession: not running"
     fi
 elif [[ "${action}" == "reset" ]]; then
     $force || acquired_lock_file
