@@ -6,8 +6,9 @@
 ### 
 ### Commands:
 ###  start        Start the RStudio Server
-###  config       Output config path
-###  reset        Wipe config files
+###  config       Output configuration details
+###  log          Output rsession log
+###  reset        Wipe all configuration
 ###
 ### Options:
 ###  --help       Display the full help page with examples
@@ -15,6 +16,7 @@
 ###  --debug      Output detailed debug information
 ###  --verbose    Output informative message
 ###  --force      Force an action
+###  --full       Output more information
 ###
 ###  --port=<int> The port RStudio Server will use. (Default: random)
 ### ---
@@ -189,6 +191,18 @@ function make_rserver_conf {
 }
 
 
+function make_rsession_conf {
+    local workdir
+    workdir=$(config_dir)
+    assert_dir_exists "${workdir}"
+    {
+        ## The default R_LIBS_USER folder that the R session will use
+        echo "r-libs-user=${R_LIBS_USER:?}"
+    } > "${workdir}/rsession.conf"
+    echo "${workdir}/rsession.conf"
+}
+
+
 function make_rsession_sh {
     local workdir
     local R_LIBS_USER
@@ -230,10 +244,7 @@ export RSESSION_LOG_FILE
 exec &>> "\${RSESSION_LOG_FILE}"
 set -x
 
-## FIXME: This shouldn't really be hardcoded. See also comment above. /HB 2022-01-21
-## Seems like it should work without specifying --r-libs-user; default?!?
-##exec rsession "\${@}"
-exec rsession --r-libs-user "${R_LIBS_USER}" "\${@}"
+exec rsession "\${@}"
 END
   
   chmod +x "${workdir}/rsession.sh"
@@ -298,7 +309,7 @@ force=false
 verbose=false
 args=()
 full=false
-port=${RSTUDIO_PORT}
+port=${RSTUDIO_PORT:-8787}
 [[ -n ${port} ]] && validate_port "$port"
 
 # Parse command-line options
@@ -384,16 +395,24 @@ mdebug "args: [n=${#args[@]}] ${args[*]}"
 
 
 if [[ "${action}" == "config" ]]; then
+    files=()
     workdir=$(config_dir)
     echo "config-dir=${workdir}"
+
     echo "lockfile=${workdir}/pid.lock"
-    rsession_log_file=${workdir}/rsession.log
-    echo "ression-log-file=${rsession_log_file}"
-    config_file=${workdir}/rserver.conf
-    echo "config-file=${config_file}"
+
+    file=${workdir}/rserver.conf
+    echo "config-file=${file}"
+    files+=("${file}")
+
+    file=${workdir}/rsession.conf
+    echo "config-file=${file}"
+    files+=("${file}")
+
+    echo "rsession-log-file=${workdir}/rsession.log"
+
     if $full; then
         echo
-        files=("${config_file}")
         for file in "${files[@]}"; do
             if [[ -f "${file}" ]]; then
                 ruler
@@ -443,7 +462,8 @@ elif [[ "${action}" == "start" ]]; then
     acquired_lock_file
     make_database_conf
     make_rserver_conf
-    
+    make_rsession_conf
+
     ## FIXME: This shouldn't really be hardcoded. See also comment below. /HB 2022-01-21
     R_LIBS_USER=${R_LIBS_USER:-"$HOME/R/%p-library/%v-CBI-gcc8"}
     make_rsession_sh "${R_LIBS_USER}"
