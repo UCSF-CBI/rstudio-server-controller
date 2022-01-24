@@ -118,7 +118,7 @@ function acquired_lock_file {
     if [[ -f "${lockfile}" ]]; then
         error "Another RStudio Server session of yours is already active on the cluster. Please terminate that first. As a last resort, remove lock file '${lockfile}' and retry."
     fi
-    echo "${PID}" > "${lockfile}"
+    echo "${PPID}" > "${lockfile}"
     echo "${lockfile}"
 }
 
@@ -314,13 +314,17 @@ function rsession_pid {
     read_pid "$(rsession_pid_file)"
 }
 
+function terminate_rserver {
+    local pid
+    pid=$(rserver_pid)
+    [[ -n "${pid}" ]] && kill -TERM "${pid}" && echo "pid=${pid}"
+}
+
 function terminate_rsession {
     local pid
     pid=$(rsession_pid)
-    echo "pid=$pid"
-    [[ -n "${pid}" ]] && kill -TERM "${pid}"
+    [[ -n "${pid}" ]] && kill -TERM "${pid}" && echo "pid=${pid}"
 }
-
 
 function launch_rserver {
     local port
@@ -354,6 +358,8 @@ while [[ $# -gt 0 ]]; do
     if [[ "$1" == "start" ]]; then
         action="$1"
     elif [[ "$1" == "status" ]]; then
+        action="$1"
+    elif [[ "$1" == "stop" ]]; then
         action="$1"
     elif [[ "$1" == "reset" ]]; then
         action="$1"
@@ -485,6 +491,17 @@ elif [[ "${action}" == "status" ]]; then
     else
         echo "rsession: not running"
     fi
+elif [[ "${action}" == "stop" ]]; then
+    ## Terminate rsession
+    pid=$(rsession_pid)
+    [[ -n "${pid}" ]] && kill -TERM "${pid}"
+
+    ## Terminate rserver
+    pid=$(rserver_pid)
+    [[ -n "${pid}" ]] && kill -TERM "${pid}"
+
+    ## Remove lock file
+    remove_lock_file    
 elif [[ "${action}" == "reset" ]]; then
     $force || acquired_lock_file
     workdir=$(config_dir)
@@ -508,7 +525,7 @@ elif [[ "${action}" == "start" ]]; then
     validate_auth
   
     ## On-exit functions
-    trap "terminate_rsession; remove_lock_file" EXIT
+    trap "terminate_rsession; terminate_rserver; remove_lock_file" EXIT
     
     make_config_dir  
     acquired_lock_file
