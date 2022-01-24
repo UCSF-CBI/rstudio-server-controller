@@ -175,9 +175,6 @@ function make_rserver_conf {
         ## Folder where RStudio Server writes run-time state
         echo "server-data-dir=${workdir}/var/run/rstudio-server"
 
-        ## File where the rserver daemon PID is written
-        echo "server-pid-file=${workdir}/var/run/rstudio-server.pid"
-
         ## Run 'rserver' as this user
         echo "server-user=${USER:?}"
 
@@ -222,7 +219,7 @@ OMP_NUM_THREADS=${SLURM_JOB_CPUS_PER_NODE:-$(nproc 2> /dev/null || echo "1")}
 export OMP_NUM_THREADS
 
 ## The PPID can be used to identify child process 'rsession', e.g. ps --ppid <pid>
-echo "\${PPID}" > "$workdir/rsession.ppid"
+echo "\${PPID}" > "$workdir/rserver.pid"
 
 RSESSION_LOG_FILE="$workdir/rsession.log"
 export RSESSION_LOG_FILE
@@ -278,11 +275,33 @@ function instructions {
 
 function check_pid {
     ## Output PID if there is such a process, otherwise output nothing
-    if [[ -n "${1:?}" ]] && [[ -d "/proc/${1}" ]]; then
+    if [[ -n "${1}" ]] && [[ -d "/proc/${1}" ]]; then
         echo "${1}"
     else
         echo ""
     fi
+}
+
+function read_pid {
+    local pid
+    pid=
+    if [[ -f "$1" ]]; then
+        pid=$(cat "$1")
+    fi
+    check_pid "${pid}"
+}    
+
+
+function rserver_pid_file {
+    local workdir
+    workdir=$(config_dir)
+    ## Note, this file is created by the 'rsession.sh' script, so
+    ## it does not exist until user logs in
+    echo "${workdir}/rserver.pid"
+}
+
+function rserver_pid {
+    read_pid "$(rserver_pid_file)"
 }
 
 function rsession_pid_file {
@@ -292,9 +311,7 @@ function rsession_pid_file {
 }
 
 function rsession_pid {
-    local pid
-    pid=$(cat "$(rsession_pid_file)")
-    check_pid "${pid}"
+    read_pid "$(rsession_pid_file)"
 }
 
 function terminate_rsession {
@@ -429,6 +446,7 @@ if [[ "${action}" == "config" ]]; then
     echo "config-file=${file}"
     files+=("${file}")
 
+    echo "rserver-pid-file=$(rserver_pid_file)"
     echo "rsession-pid-file=$(rsession_pid_file)"
     echo "rsession-log-file=${workdir}/rsession.log"
 
@@ -455,9 +473,15 @@ elif [[ "${action}" == "log" ]]; then
         echo "No rsession log file: ${file}"
     fi
 elif [[ "${action}" == "status" ]]; then
+    pid=$(rserver_pid)
+    if [[ -n "${pid}" ]]; then
+        echo "rserver: running (pid ${pid})"
+    else
+        echo "rserver: not running or rsession has been launched yet"
+    fi
     pid=$(rsession_pid)
     if [[ -n "${pid}" ]]; then
-        echo "rsession: running (pid $(rsession_pid))"
+        echo "rsession: running (pid ${pid})"
     else
         echo "rsession: not running"
     fi
