@@ -6,9 +6,11 @@
 ### 
 ### Commands:
 ###  start        Start the RStudio Server
+###  stop         Stop the RStudio Server
+###  status       Check whether the RStudio Server is running or not
 ###  config       Output configuration details
-###  log          Output rsession log
 ###  reset        Wipe all configuration
+###  log          Output rsession log
 ###
 ### Options:
 ###  --help       Display the full help page with examples
