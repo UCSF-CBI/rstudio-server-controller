@@ -1,8 +1,10 @@
 # rstudio-server-launcher
 
-## Version 0.1.0-9002
+## Version 0.1.0-9003
 
 New features:
+
+* Add 'rsc start --background', to launch the RStudio Server in the background.
 
 * Add 'rsc config --full'
 

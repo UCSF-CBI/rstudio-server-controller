@@ -19,8 +19,9 @@
 ###  --verbose    Output informative message
 ###  --force      Force an action
 ###  --full       Output more information
+###  --background Launch the RStudio Server in the background
 ###
-###  --port=<int> The port RStudio Server will use. (Default: random)
+###  --port=<int> The port RStudio Server will use. (Default: 8787)
 ### ---
 ###
 ### Example:
@@ -39,7 +40,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.1.0-9002
+### Version: 0.1.0-9003
 ### Copyright: Henrik Bengtsson (2021)
 ### License: MIT
 
@@ -333,7 +334,7 @@ function terminate_rsession {
 }
 
 function launch_rserver {
-    local workdir   
+    local workdir
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
     pid_file=$(rserver_pid_file)
@@ -352,6 +353,7 @@ force=false
 verbose=false
 args=()
 full=false
+background=false
 port=${RSTUDIO_PORT:-8787}
 [[ -n ${port} ]] && validate_port "$port"
 
@@ -387,6 +389,8 @@ while [[ $# -gt 0 ]]; do
         force=true
     elif [[ "$1" == "--full" ]]; then
         full=true
+    elif [[ "$1" == "--background" ]]; then
+        background=true
         
     ## Options (--key=value):
     elif [[ "$1" =~ ^--.*=.*$ ]]; then
@@ -546,4 +550,10 @@ elif [[ "${action}" == "start" ]]; then
     echo "RStudio Server started (pid $(rserver_pid))" 1>&2
 
     instructions "${port}"
+
+    mdebug "background=$background"
+    if ! $background; then
+        mdebug "Waiting for 'rserver' (pid $(rserver_pid)) to finish"
+        wait
+    fi
 fi
