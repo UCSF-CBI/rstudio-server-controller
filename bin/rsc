@@ -584,7 +584,14 @@ elif [[ "${action}" == "start" ]]; then
         mdebug "Submit Slurm job"
         job_id=$(sbatch --parsable "${workdir}/rserver.sh")
         mdebug "Job ID=${job_id}"
-        echo "RStudio Server job submitted (job ID ${job_id})" 1>&2
+        echo "Waiting for RStudio Server job (${job_id}) to start" 1>&2
+        state=QUEUED
+        until [[ "${state}" == "RUNNING" ]]; do
+            state=$(squeue --job="${job_id}" --noheader --format="%T")
+            mdebug "state=${state}"
+            sleep 3.0
+        done
+        echo "RStudio Server job (${job_id}) is ${state}" 1>&2
     else
         launch_rserver
         echo "RStudio Server started (pid $(rserver_pid))" 1>&2
