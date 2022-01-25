@@ -4,11 +4,11 @@
 
 New features:
 
-* Add 'rsc start --background', to launch the RStudio Server in the background.
+* Add `rsc start --background`, to launch the RStudio Server in the background.
 
-* Add 'rsc config --full'
+* Add `rsc config --full`.
 
-* Add 'rsc log'
+* Add `rsc log`.
 
 
 ## Version 0.1.0
