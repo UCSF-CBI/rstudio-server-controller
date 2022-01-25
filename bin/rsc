@@ -31,6 +31,7 @@
 ###  rsc start
 ###  rsc start --port=8787
 ###  rsc start --port=random
+###  rsc start --background -port=random
 ###
 ###  rsc status
 ###
