@@ -225,6 +225,8 @@ function make_rserver_sh {
 module load CBI
 module load r
 module load rstudio-server
+hostname > "${workdir}/rserver.hostname"
+grep -E "www-port=" ~/.config/rsc/rserver.conf | sed 's/www-port=//' > "${workdir}/rserver.port"
 rserver --config-file="${workdir}/rserver.conf"
 END
   
@@ -585,13 +587,17 @@ elif [[ "${action}" == "start" ]]; then
         job_id=$(sbatch --parsable "${workdir}/rserver.sh")
         mdebug "Job ID=${job_id}"
         echo "Waiting for RStudio Server job (${job_id}) to start" 1>&2
-        state=QUEUED
+        state=PENDING
         until [[ "${state}" == "RUNNING" ]]; do
             state=$(squeue --job="${job_id}" --noheader --format="%T")
             mdebug "state=${state}"
             sleep 3.0
         done
         echo "RStudio Server job (${job_id}) is ${state}" 1>&2
+        hostname=$(cat "${workdir}/rserver.hostname")
+        port=$(cat "${workdir}/rserver.port")
+        echo "RStudio Server is available at http://${hostname}:${port}" 1>&2
+	
     else
         launch_rserver
         echo "RStudio Server started (pid $(rserver_pid))" 1>&2
