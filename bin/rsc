@@ -39,7 +39,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.1.0-9004
+### Version: 0.1.0-9005
 ### Copyright: Henrik Bengtsson (2021)
 ### License: MIT
 
@@ -533,15 +533,6 @@ elif [[ "${action}" == "reset" ]]; then
     workdir=$(config_dir)
     [[ -d "${workdir}" ]] && rm -rf "${workdir}"
 elif [[ "${action}" == "start" ]]; then
-    # Load CBI software stack
-    module load CBI
-    
-    ## Use the default R version, unless overridden by R_VERSION
-    module load "r/${R_VERSION}"
-    
-    ## Use the default RStudio Server version
-    module load rstudio-server
-    
     ## Assert executables are available
     assert_executable R
     assert_executable rserver
