@@ -5,13 +5,17 @@
 Script for launching the RStudio Server on a development nodes or on a compute node via a job scheduler.
 
 
-## Launch the RStudio Server from the current shell
+## Instruction
+
+To launch your personal RStudio Server instance, call:
 
 ```sh
 $ rsc start
 ```
 
-This will launch RStudio Server, which can be accessed via the web browser at <http://127.0.0.1:8787>.  The `rsc` command will run until terminated, e.g. Ctrl-C.  A user can only launch one instance.  Attempts to start more, will produce an informative error message.  This limit applies across all machines on the same file system.
+The RStudio Server can then be accessed via the web browser at <http://127.0.0.1:8787>.
+
+The `rsc` command will run until terminated, e.g. Ctrl-C.  A user can only launch one instance.  Attempts to start more, will produce an informative error message.  This limit applies across all machines on the same file system.
 
 To start the RStudio Server on another port than the default 8787, specify option `--port`, e.g.
 
@@ -25,12 +29,6 @@ To use a random, available port, use:
 $ rsc start --port=random
 ```
 
-To launch the RStudio Server in the background, use option `--background`, e.g.
-
-```sh
-$ rsc start --background
-$ 
-```
 
 To check if the RStudio Server is running, use:
 

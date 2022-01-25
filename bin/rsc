@@ -6,7 +6,7 @@
 ### 
 ### Commands:
 ###  start        Start the RStudio Server
-###  stop         Stop the RStudio Server
+###  stop         Stop the RStudio Server and any R session
 ###  status       Check whether the RStudio Server is running or not
 ###  config       Output configuration details
 ###  reset        Wipe all configuration
@@ -39,7 +39,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.1.0-9005
+### Version: 0.1.0-9006
 ### Copyright: Henrik Bengtsson (2021)
 ### License: MIT
 
@@ -310,13 +310,13 @@ function rsession_pid {
 function terminate_rserver {
     local pid
     pid=$(rserver_pid)
-    [[ -n "${pid}" ]] && kill -TERM "${pid}" && echo "pid=${pid}"
+    [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rserver (PID ${pid}) terminated"
 }
 
 function terminate_rsession {
     local pid
     pid=$(rsession_pid)
-    [[ -n "${pid}" ]] && kill -TERM "${pid}" && echo "pid=${pid}"
+    [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rsession (PID ${pid}) terminated"
 }
 
 function rserver_hostname {
@@ -515,7 +515,7 @@ elif [[ "${action}" == "status" ]]; then
     if [[ -n "${pid}" ]]; then
         echo "rserver: running (pid ${pid})"
     else
-        echo "rserver: not running or rsession has been launched yet"
+        echo "rserver: not running"
     fi
     pid=$(rsession_pid)
     if [[ -n "${pid}" ]]; then
@@ -547,9 +547,6 @@ elif [[ "${action}" == "start" ]]; then
   
     validate_auth
   
-#    ## On-exit functions
-#    trap "terminate_rsession; terminate_rserver; remove_lock_file" EXIT
-    
     make_config_dir  
     acquired_lock_file
     
@@ -558,6 +555,10 @@ elif [[ "${action}" == "start" ]]; then
     make_rsession_sh
     make_rsession_conf
 
+    ## Make sure to stop the RStudio Server and any R sessions on exit
+    mdebug "Registering 'trap ... EXIT"
+    trap "terminate_rsession; terminate_rserver; remove_lock_file" EXIT
+    
     launch_rserver
     mdebug "RStudio Server started (pid $(rserver_pid))" 1>&2
     

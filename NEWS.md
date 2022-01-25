@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.1.0-9005
+## Version 0.1.0-9006
 
 Significant changes:
 
@@ -16,6 +16,9 @@ New features:
 
 * Add `rsc log`.
 
+* Now 'rsc start' will make sure to terminate the RStudio Server instance
+  and any running R sessions when exiting.
+  
 
 ## Version 0.1.0
 
