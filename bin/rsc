@@ -123,7 +123,7 @@ function acquired_lock_file {
     workdir=$(config_dir)
     lockfile=${workdir}/pid.lock
     if [[ -f "${lockfile}" ]]; then
-        error "Another RStudio Server session of yours is already active on the cluster. Please terminate that first. As a last resort, remove lock file '${lockfile}' and retry."
+        error "Another RStudio Server session of yours is already active on the system.  Please terminate that first, e.g. 'rsc stop'.  As a last resort, call 'pkill rserver; pkill rsession', remove lock file '${lockfile}', and retry."
     fi
     echo "${PPID}" > "${lockfile}"
     echo "${lockfile}"
@@ -263,30 +263,6 @@ exec rsession "\${@}"
 END
   
   chmod +x "${workdir}/rsession.sh"
-}
-
-
-# Instructions for the user
-function instructions {
-    local port
-    port=$1
-    
-    LOCALPORT=${LOCALPORT:-8787}
-    LOGIN_HOST=${LOGIN_HOST:-c4-log2.ucsf.edu}
-
-    {
-       echo "The RStudio Server is being launched on ${HOSTNAME}. Next,"
-       echo ""
-       echo "1. SSH to the cluster from your local computer using:"
-       echo
-       echo "  ssh -N -L ${LOCALPORT}:${HOSTNAME}:${port} ${USER}@${LOGIN_HOST}"
-       echo
-       echo "2. Open your web browser at <http://127.0.0.1:${LOCALPORT}>"
-       echo
-       echo "3. Enter your cluster credentials at the RStudio Server authentication prompt"
-       echo
-       echo "When done, interrupt this script, e.g. press Ctrl-C."
-    } 1>&2
 }
 
 
@@ -617,8 +593,11 @@ elif [[ "${action}" == "start" ]]; then
     make_rsession_conf
 
     launch_rserver
-    echo "RStudio Server started (pid $(rserver_pid))" 1>&2
-    instructions "${port}"
+    mdebug "RStudio Server started (pid $(rserver_pid))" 1>&2
+    
+    LOCALPORT=${LOCALPORT:-8787}
+    LOGIN_HOST=${LOGIN_HOST:-c4-log2.ucsf.edu}
+    echo "RStudio Server is available on <$(rserver_url)>.  If you're are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by running 'ssh -J ${USER}@${LOGIN_HOST} -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal."
     mdebug "Waiting for 'rserver' (pid $(rserver_pid)) to finish"
     wait
 fi
