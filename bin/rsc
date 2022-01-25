@@ -354,10 +354,32 @@ function terminate_rsession {
     [[ -n "${pid}" ]] && kill -TERM "${pid}" && echo "pid=${pid}"
 }
 
+function rserver_hostname {
+    local workdir
+    workdir=$(config_dir)
+    assert_dir_exists "${workdir}"
+    cat "${workdir}/rserver.hostname"
+}
+
+function rserver_port {
+    local workdir
+    workdir=$(config_dir)
+    assert_dir_exists "${workdir}"
+    cat "${workdir}/rserver.port"
+}
+
+function rserver_url {
+    echo "http://$(rserver_hostname):$(rserver_port)"
+}
+
 function launch_rserver {
     local workdir
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
+
+    hostname > "${workdir}/rserver.hostname"
+    grep -E "www-port=" ~/.config/rsc/rserver.conf | sed 's/www-port=//' > "${workdir}/rserver.port"
+
     pid_file=$(rserver_pid_file)
     rserver --config-file="${workdir}/rserver.conf" &
     echo $! > "${pid_file}"
@@ -602,13 +624,12 @@ elif [[ "${action}" == "start" ]]; then
             sleep 3.0
         done
         echo "RStudio Server job (${job_id}) is ${state}" 1>&2
-        hostname=$(cat "${workdir}/rserver.hostname")
-        port=$(cat "${workdir}/rserver.port")
-        echo "RStudio Server is available at http://${hostname}:${port}" 1>&2
+        echo "RStudio Server is available at $(rserver_url)" 1>&2
 	
     else
         launch_rserver
         echo "RStudio Server started (pid $(rserver_pid))" 1>&2
+        echo "RStudio Server is available at $(rserver_url)" 1>&2
         instructions "${port}"
         mdebug "background=$background"
         if ! $background; then
