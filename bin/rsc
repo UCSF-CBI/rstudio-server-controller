@@ -372,6 +372,13 @@ function rserver_url {
     echo "http://$(rserver_hostname):$(rserver_port)"
 }
 
+function rserver_jobid {
+    local workdir
+    workdir=$(config_dir)
+    assert_dir_exists "${workdir}"
+    cat "${workdir}/rserver.jobid"
+}
+
 function launch_rserver {
     local workdir
     workdir=$(config_dir)
@@ -524,6 +531,10 @@ if [[ "${action}" == "config" ]]; then
     file=${workdir}/rserver.port
     echo "rserver-sh-file=${file}"
     files+=("${file}")
+
+    file=${workdir}/rserver.jobid
+    echo "rserver-sh-file=${file}"
+    files+=("${file}")
     
     echo "rserver-pid-file=$(rserver_pid_file)"
     echo "rsession-pid-file=$(rsession_pid_file)"
@@ -565,13 +576,36 @@ elif [[ "${action}" == "status" ]]; then
         echo "rsession: not running"
     fi
 elif [[ "${action}" == "stop" ]]; then
-    ## Terminate rsession
-    pid=$(rsession_pid)
-    [[ -n "${pid}" ]] && kill -TERM "${pid}"
+    workdir=$(config_dir)
+    ## Running as a job?
+    if [[ -f "${workdir}/rserver.jobid" ]]; then
+        job_id=$(rserver_jobid)
+        [[ -n "${job_id}" ]] || error "${workdir}/rserver.jobid has not job ID"
+        state=$(squeue --job="${job_id}" --noheader --format="%T" 2> /dev/null)
+        mdebug "state=${state}"
+        if [[ -n "${state}" ]]; then
+            mdebug "Stopping RStudio Server job (job ID ${job_id}) ..."
+            scancel "${job_id}"
+            while true; do
+                state=$(squeue --job="${job_id}" --noheader --format="%T" 2> /dev/null)
+                mdebug "state=${state}"
+                if [[ -z "${state}" ]]; then
+                    break
+                fi
+                sleep 3.0
+            done
+            echo "RStudio Server stopped"
+        fi
+        rm "${workdir}/rserver.jobid"
+    else
+        ## Terminate rsession
+        pid=$(rsession_pid)
+        [[ -n "${pid}" ]] && kill -TERM "${pid}"
 
-    ## Terminate rserver
-    pid=$(rserver_pid)
-    [[ -n "${pid}" ]] && kill -TERM "${pid}"
+        ## Terminate rserver
+        pid=$(rserver_pid)
+        [[ -n "${pid}" ]] && kill -TERM "${pid}"
+    fi
 
     ## Remove lock file
     remove_lock_file    
@@ -616,6 +650,7 @@ elif [[ "${action}" == "start" ]]; then
         mdebug "Submit Slurm job"
         job_id=$(sbatch --parsable "${workdir}/rserver.sh")
         mdebug "Job ID=${job_id}"
+        echo "${job_id}" > "${workdir}/rserver.jobid"
         echo "Waiting for RStudio Server job (${job_id}) to start" 1>&2
         state=PENDING
         until [[ "${state}" == "RUNNING" ]]; do
