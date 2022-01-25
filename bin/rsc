@@ -494,6 +494,14 @@ if [[ "${action}" == "config" ]]; then
     file=${workdir}/rserver.sh
     echo "rserver-sh-file=${file}"
     files+=("${file}")
+
+    file=${workdir}/rserver.hostname
+    echo "rserver-sh-file=${file}"
+    files+=("${file}")
+
+    file=${workdir}/rserver.port
+    echo "rserver-sh-file=${file}"
+    files+=("${file}")
     
     echo "rserver-pid-file=$(rserver_pid_file)"
     echo "rsession-pid-file=$(rsession_pid_file)"
