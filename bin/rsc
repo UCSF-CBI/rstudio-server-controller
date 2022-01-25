@@ -20,8 +20,9 @@
 ###  --force      Force an action
 ###  --full       Output more information
 ###  --background Launch the RStudio Server in the background
+###  --as-job     Launch the RStudio Server via the job scheduler
 ###
-###  --port=<int> The port RStudio Server will use. (Default: 8787)
+###  --port=<int> The port RStudio Server will use (Default: 8787)
 ### ---
 ###
 ### Example:
@@ -212,6 +213,23 @@ function make_rsession_conf {
     } > "${workdir}/rsession.conf"
 }
 
+function make_rserver_sh {
+    local workdir
+    workdir=$(config_dir)
+    assert_dir_exists "${workdir}"
+    
+    cat > "${workdir}/rserver.sh" <<END
+#!/bin/sh
+#SBATCH --job-name=RStudioServer
+#SBATCH --time=08:00:00
+module load CBI
+module load r
+module load rstudio-server
+rserver --config-file="${workdir}/rserver.conf"
+END
+  
+  chmod +x "${workdir}/rserver.sh"
+}
 
 function make_rsession_sh {
     local workdir
@@ -355,6 +373,7 @@ verbose=false
 args=()
 full=false
 background=false
+as_job=false
 port=${RSTUDIO_PORT:-8787}
 [[ -n ${port} ]] && validate_port "$port"
 
@@ -392,6 +411,8 @@ while [[ $# -gt 0 ]]; do
         full=true
     elif [[ "$1" == "--background" ]]; then
         background=true
+    elif [[ "$1" == "--as-job" ]]; then
+        as_job=true
         
     ## Options (--key=value):
     elif [[ "$1" =~ ^--.*=.*$ ]]; then
@@ -464,6 +485,14 @@ if [[ "${action}" == "config" ]]; then
     echo "config-file=${file}"
     files+=("${file}")
 
+    file=${workdir}/rsession.sh
+    echo "rsession-sh-file=${file}"
+    files+=("${file}")
+
+    file=${workdir}/rserver.sh
+    echo "rserver-sh-file=${file}"
+    files+=("${file}")
+    
     echo "rserver-pid-file=$(rserver_pid_file)"
     echo "rsession-pid-file=$(rsession_pid_file)"
     echo "rsession-log-file=${workdir}/rsession.log"
@@ -547,14 +576,23 @@ elif [[ "${action}" == "start" ]]; then
     make_rsession_sh
     make_rsession_conf
 
-    launch_rserver
-    echo "RStudio Server started (pid $(rserver_pid))" 1>&2
-
-    instructions "${port}"
-
-    mdebug "background=$background"
-    if ! $background; then
-        mdebug "Waiting for 'rserver' (pid $(rserver_pid)) to finish"
-        wait
+    mdebug "as_job=$as_job"
+    if $as_job; then
+        make_rserver_sh
+        workdir=$(config_dir)
+        assert_dir_exists "${workdir}"
+        mdebug "Submit Slurm job"
+        job_id=$(sbatch --parsable "${workdir}/rserver.sh")
+        mdebug "Job ID=${job_id}"
+        echo "RStudio Server job submitted (job ID ${job_id})" 1>&2
+    else
+        launch_rserver
+        echo "RStudio Server started (pid $(rserver_pid))" 1>&2
+        instructions "${port}"
+        mdebug "background=$background"
+        if ! $background; then
+            mdebug "Waiting for 'rserver' (pid $(rserver_pid)) to finish"
+            wait
+        fi
     fi
 fi
