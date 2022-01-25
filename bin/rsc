@@ -19,8 +19,6 @@
 ###  --verbose    Output informative message
 ###  --force      Force an action
 ###  --full       Output more information
-###  --background Launch the RStudio Server in the background
-###  --as-job     Launch the RStudio Server via the job scheduler
 ###
 ###  --port=<int> The port RStudio Server will use (Default: 8787)
 ### ---
@@ -32,7 +30,6 @@
 ###  rsc start
 ###  rsc start --port=8787
 ###  rsc start --port=random
-###  rsc start --background -port=random
 ###
 ###  rsc status
 ###
@@ -42,7 +39,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.1.0-9003
+### Version: 0.1.0-9004
 ### Copyright: Henrik Bengtsson (2021)
 ### License: MIT
 
@@ -213,23 +210,6 @@ function make_rsession_conf {
     } > "${workdir}/rsession.conf"
 }
 
-function make_rserver_sh {
-    local workdir
-    workdir=$(config_dir)
-    assert_dir_exists "${workdir}"
-    
-    cat > "${workdir}/rserver.sh" <<END
-#!/bin/sh
-#SBATCH --job-name=RStudioServer
-#SBATCH --time=08:00:00
-module load CBI
-module load r
-module load rstudio-server
-rserver --config-file="${workdir}/rserver.conf"
-END
-  
-  chmod +x "${workdir}/rserver.sh"
-}
 
 function make_rsession_sh {
     local workdir
@@ -242,7 +222,7 @@ function make_rsession_sh {
 # Set OMP_NUM_THREADS to prevent OpenBLAS (and any other OpenMP-enhanced
 # libraries used by R) from spawning more threads than the number of processors
 # allocated to the job.
-OMP_NUM_THREADS=${SLURM_JOB_CPUS_PER_NODE:-$(nproc 2> /dev/null || echo "1")}
+OMP_NUM_THREADS=${OMP_NUM_THREADS:-${SLURM_JOB_CPUS_PER_NODE:-$(nproc 2> /dev/null || echo "1")}}
 export OMP_NUM_THREADS
 
 ## The PPID can be used to identify child process 'rsession', e.g. ps --ppid <pid>
@@ -258,11 +238,22 @@ export RSESSION_LOG_FILE
     echo "PPID: \${PPID}"
     echo "PWD: \${PWD}"
     echo "PATH: \${PATH}"
+    echo
+
+    echo "R details:"
+    R --version 2>&1
+    echo
+
+    echo "R_*** environment variables:"
+    env | grep -E "^R_"
+    echo
+
+    echo "Job-scheduler environment variables:"
     env | grep -E "^(SLURM_)"
     env | grep -E "^(NSLOTS|NHOSTS|SGE_|JOB_|PE_)"
-    env | grep -E "^R_"
-    R --version 2>&1
-    echo "Command: exec rsession --r-libs-user "${R_LIBS_USER}" \${@}"
+    echo
+
+    echo "Command: exec rsession \${@}"
 } > "\${RSESSION_LOG_FILE}"
 
 exec &>> "\${RSESSION_LOG_FILE}"
@@ -372,8 +363,6 @@ force=false
 verbose=false
 args=()
 full=false
-background=false
-as_job=false
 port=${RSTUDIO_PORT:-8787}
 [[ -n ${port} ]] && validate_port "$port"
 
@@ -409,10 +398,6 @@ while [[ $# -gt 0 ]]; do
         force=true
     elif [[ "$1" == "--full" ]]; then
         full=true
-    elif [[ "$1" == "--background" ]]; then
-        background=true
-    elif [[ "$1" == "--as-job" ]]; then
-        as_job=true
         
     ## Options (--key=value):
     elif [[ "$1" =~ ^--.*=.*$ ]]; then
@@ -576,30 +561,9 @@ elif [[ "${action}" == "start" ]]; then
     make_rsession_sh
     make_rsession_conf
 
-    mdebug "as_job=$as_job"
-    if $as_job; then
-        make_rserver_sh
-        workdir=$(config_dir)
-        assert_dir_exists "${workdir}"
-        mdebug "Submit Slurm job"
-        job_id=$(sbatch --parsable "${workdir}/rserver.sh")
-        mdebug "Job ID=${job_id}"
-        echo "Waiting for RStudio Server job (${job_id}) to start" 1>&2
-        state=QUEUED
-        until [[ "${state}" == "RUNNING" ]]; do
-            state=$(squeue --job="${job_id}" --noheader --format="%T")
-            mdebug "state=${state}"
-            sleep 3.0
-        done
-        echo "RStudio Server job (${job_id}) is ${state}" 1>&2
-    else
-        launch_rserver
-        echo "RStudio Server started (pid $(rserver_pid))" 1>&2
-        instructions "${port}"
-        mdebug "background=$background"
-        if ! $background; then
-            mdebug "Waiting for 'rserver' (pid $(rserver_pid)) to finish"
-            wait
-        fi
-    fi
+    launch_rserver
+    echo "RStudio Server started (pid $(rserver_pid))" 1>&2
+    instructions "${port}"
+    mdebug "Waiting for 'rserver' (pid $(rserver_pid)) to finish"
+    wait
 fi
