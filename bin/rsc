@@ -365,6 +365,7 @@ function launch_rserver {
     pid_file=$(rserver_pid_file)
     rserver --config-file="${workdir}/rserver.conf" &
     echo $! > "${pid_file}"
+    mdebug "RStudio Server started (pid $(rserver_pid))" 1>&2
 }
 
 
@@ -591,15 +592,14 @@ elif [[ "${action}" == "start" ]]; then
     trap "terminate_rsession; terminate_rserver; remove_lock_file" EXIT
     
     launch_rserver
-    mdebug "RStudio Server started (pid $(rserver_pid))" 1>&2
     
     LOCALPORT=${LOCALPORT:-8787}
     LOGIN_HOST=${LOGIN_HOST:-c4-log2.ucsf.edu}
-    msg="RStudio Server is available on <$(rserver_url)>."
+    msg="Your personal RStudio Server is available on <$(rserver_url)>."
     if ! $(on_local_machine); then
-        msg="${msg}. If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by running 'ssh -J ${USER}@${LOGIN_HOST} -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal."
+        msg="${msg} If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by running 'ssh -J ${USER}@${LOGIN_HOST} -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal."
     fi
-    msg="${msg}. To stop the server, press Ctrl-C here, or run 'rsc stop' on $(rserver_hostname) in another shell."
+    msg="${msg} To stop the server, press Ctrl-C here, or run 'rsc stop' on $(rserver_hostname) in another shell."
     echo "${msg}"
     mdebug "Waiting for 'rserver' (pid $(rserver_pid)) to finish"
     wait
