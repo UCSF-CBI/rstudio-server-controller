@@ -39,7 +39,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.1.2-9001
+### Version: 0.1.2-9002
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -377,6 +377,46 @@ function on_local_machine {
 }
 
 
+
+function find_login_host_via_who {
+    local bfr
+    bfr=$(who | grep -E "^${USER}")
+    mdebug "1. ${bfr}"
+    ## Drop entries with LINE suggesting direct login
+    bfr=$(echo "${bfr}" | grep -v -E "[[:space:]]:[[:digit:]]+[[:space:]]")
+    mdebug "2. ${bfr}"
+    ## Look only at the last entry
+    bfr=$(echo "${bfr}" | tail -n -1)
+    mdebug "3. ${bfr}"
+    ## Extract the hostname
+    bfr=$(echo "${bfr}" | sed -E 's/(.*[[:space:]]+[(]|[)][[:space:]]*)//g')
+    mdebug "4. ${bfr}"
+    echo "${bfr}"
+}
+
+function find_login_host {
+    local host
+    local full
+    host=${LOGIN_HOST}
+    
+    if [[ -z "${host}" ]]; then
+        host=$(find_login_host_via_who)
+    fi
+    
+    if [[ -z "${host}" ]]; then
+        host="c4-log2.ucsf.edu"
+    fi
+
+    ## Attempt to look up the DNS entry
+    if [[ -n "${host}" ]]; then
+        if full=$(host "${host}"); then
+            host=$(echo "${full}" | cut -d ' ' -f 1)
+	fi
+    fi
+    echo "${host}"
+}
+
+
 # -------------------------------------------------------------------------
 # MAIN
 # -------------------------------------------------------------------------
@@ -594,10 +634,10 @@ elif [[ "${action}" == "start" ]]; then
     launch_rserver
     
     LOCALPORT=${LOCALPORT:-8787}
-    LOGIN_HOST=${LOGIN_HOST:-c4-log2.ucsf.edu}
+
     msg="Your personal RStudio Server is available on <$(rserver_url)>."
-    if ! $(on_local_machine); then
-        msg="${msg} If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by running 'ssh -J ${USER}@${LOGIN_HOST} -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal."
+    if ! on_local_machine; then
+        msg="${msg} If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by running 'ssh -J ${USER}@$(find_login_host) -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal."
     fi
     msg="${msg} To stop the server, press Ctrl-C here, or run 'rsc stop' on $(rserver_hostname) in another shell."
     echo "${msg}"

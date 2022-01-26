@@ -1,6 +1,15 @@
 # rstudio-server-launcher
 
-## Version 0.1.2-9001
+## Version 0.1.2-9002
+
+New features:
+
+* Now 'rsc start' only gives instructions how to access the RStudio
+  Server instance from a remote machine, when connected from one.
+
+* Now the 'rsc start' instructions on how to connect from a remote
+  machine infers the login hostname from the current connection
+  by querying `who` and `host`.
 
 Bug fixes:
 
