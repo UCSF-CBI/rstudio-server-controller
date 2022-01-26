@@ -39,8 +39,8 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.1.0-9006
-### Copyright: Henrik Bengtsson (2021)
+### Version: 0.1.1
+### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
 ## Import bash utility functions

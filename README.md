@@ -1,8 +1,8 @@
-[![shellcheck](https://github.com/UCSF-CBI/rstudio-server-launcher/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/UCSF-CBI/rstudio-server-launcher/actions/workflows/shellcheck.yml)
+[![shellcheck](https://github.com/UCSF-CBI/rstudio-server-controller/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/UCSF-CBI/rstudio-server-controller/actions/workflows/shellcheck.yml)
 
-# rstudio-server-launcher
+# RStudio Server Controller (RSC)
 
-Script for launching the RStudio Server on a development nodes or on a compute node via a job scheduler.
+This is a tool for launching a personal instance of the RStudio Server on a Linux machine, which then can be access via the web browser, either directly or via SSH tunneling.
 
 
 ## Instruction
