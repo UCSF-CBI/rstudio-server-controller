@@ -39,7 +39,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.1.1-9001
+### Version: 0.1.1-9002
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -190,6 +190,9 @@ function make_rserver_conf {
         ## Path to the 'rsession' executable
         echo "rsession-path=${workdir}/rsession.sh"
         
+        ## Path to 'rsession.conf'
+        echo "rsession-config-file=${workdir}/rsession.conf"
+        
         echo "secure-cookie-key-file=${workdir}/tmp/my-secure-cookie-key"
 
         ## Run 'rserver' as a regular non-privileged process
@@ -228,7 +231,9 @@ function make_rsession_conf {
 function r_libs_user {
     local paths
     mdebug "R_LIBS_USER=${R_LIBS_USER}"
-    paths=$(Rscript --vanilla -e "cat(Sys.getenv('R_LIBS_USER'))")
+    paths=${R_LIBS_USER}
+    ## NOTE: No need to expand
+#    paths=$(Rscript --vanilla -e "cat(Sys.getenv('R_LIBS_USER'))")
     mdebug "expanded(R_LIBS_USER)=${paths}"
     echo "${paths}"
 }
@@ -281,7 +286,7 @@ export RSESSION_LOG_FILE
 exec &>> "\${RSESSION_LOG_FILE}"
 set -x
 
-exec rsession --r-libs-user="$(r_libs_user)" "\${@}"
+exec rsession "\${@}"
 END
   
   chmod +x "${workdir}/rsession.sh"
@@ -563,7 +568,7 @@ elif [[ "${action}" == "reset" ]]; then
 elif [[ "${action}" == "start" ]]; then
     ## Assert executables are available
     assert_executable R
-    assert_executable Rscript
+#    assert_executable Rscript
     assert_executable rserver
     assert_executable rsession
   
