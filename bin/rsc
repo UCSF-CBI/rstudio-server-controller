@@ -39,12 +39,13 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.1.1-9000
+### Version: 0.1.1-9001
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
 ## Import bash utility functions
 incl="${BASH_SOURCE%/*}/incl"
+utils="${BASH_SOURCE%/*}/utils"
 
 # shellcheck source=incl/asserts.sh
 source "${incl}/asserts.sh"
@@ -74,7 +75,7 @@ function free_port {
    
 function warn_auth_logfile {
   warn "*************************************************************"
-  warn "* Environment variable 'AUTO_LOGFILE' is set.  All usernames"
+  warn "* Environment variable 'AUTH_LOGFILE' is set.  All usernames"
   warn "* and passwords entered at the RStudio Server login prompt"
   warn "* will be recorded to the file:"
   warn "* ${AUTH_LOGFILE}"
@@ -82,9 +83,19 @@ function warn_auth_logfile {
   echo
 }
 
+function auth_tool {
+    local path
+    path=${utils}/auth-via-su
+    assert_executable "${path}"
+    path=$(realpath "${path}")
+    echo "${path}"
+}
+
 function validate_auth {
+    local auth
+    auth=$(auth_tool)
     ## Validate correctness of auth-via-su executable (should return false)
-    echo "" | AUTH_LOGFILE="" auth-via-su "${USER}" > /dev/null && error "Validation of 'auth-via-su' failed: $(command -v auth-via-su)"
+    echo "" | AUTH_LOGFILE="" "${auth}" "${USER}" > /dev/null && error "Validation of '$(basename "${auth}")' failed: ${auth}"
     [[ -n ${AUTH_LOGFILE} ]] && warn_auth_logfile
 }
 
@@ -165,7 +176,7 @@ function make_rserver_conf {
         ## Enable [sic!] multi-user authentication, i.e. don't disable it
         echo "auth-none=0"
         
-        echo "auth-pam-helper-path=auth-via-su"
+        echo "auth-pam-helper-path=$(auth_tool)"
         
         ## Require re-sign in if idle for 30 minutes
         ## Specifically, if user makes no input to the RStudio Server, they
@@ -542,7 +553,6 @@ elif [[ "${action}" == "start" ]]; then
     assert_executable R
     assert_executable rserver
     assert_executable rsession
-    assert_executable auth-via-su
   
     validate_auth
   

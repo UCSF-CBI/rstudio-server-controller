@@ -1,8 +1,10 @@
 # rstudio-server-launcher
 
-## Version 0.1.1-9000
+## Version 0.1.1-9001
 
-* ...
+New features:
+
+* Now the 'auth-via-su' script is distributed part of this software.
 
 
 ## Version 0.1.1
