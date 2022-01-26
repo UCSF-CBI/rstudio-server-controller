@@ -126,7 +126,6 @@ function acquired_lock_file {
         error "Another RStudio Server session of yours is already active on the system.  Please terminate that first, e.g. 'rsc stop'.  As a last resort, call 'pkill rserver; pkill rsession', remove lock file '${lockfile}', and retry."
     fi
     echo "${PPID}" > "${lockfile}"
-    echo "${lockfile}"
 }
 
 function remove_lock_file {
