@@ -39,7 +39,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.1.2-9002
+### Version: 0.1.2-9003
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -213,6 +213,75 @@ function make_rserver_conf {
 }
 
 
+function assert_integer {
+    echo "${1:?}" | grep -q "^[[:digit:]]+" && error "Not an integer: ${1}"
+}
+
+function dhms_to_minutes {
+    local bfr
+    local value
+    local total
+    local multipliers
+    local parts
+    bfr=${1:?}
+    
+    parts=()
+    until [[ -z "${bfr}" ]]; do
+        mdebug "Parsing: ${bfr}"
+        echo "${bfr}" | grep -q -F "[[:digit:]]+$" && error "Syntax error: ${bfr}"
+        value=$(echo "${bfr}" | sed -E 's/^(.*[[:digit:]]+[:-]|)([[:digit:]]+)$/\2/')
+	assert_integer "${value}"
+        bfr=$(echo "${bfr}" | sed -E 's/[:-]?([[:digit:]]+)$//')
+	parts+=("${value}")
+    done
+    mdebug "parts=${parts[*]}"
+
+    ## seconds, minutes, hours, days
+    multipliers=(1 60 3600 86400)
+    total=0
+    for (( kk=0; kk < ${#parts[@]}; kk++ )); do
+	value=$(( multipliers[kk] * parts[kk] ))
+	mdebug "$(printf "%d. %d*%d = %d\n" "${kk}" "${multipliers[${kk}]}" "${parts[${kk}]}" "${value}")"
+	total=$(( total + value ))
+    done
+    mdebug "total=${total} seconds"
+
+    ## Round down to nearest minute
+    total=$((total / 60))
+    mdebug "total=${total} minutes"
+    
+    echo "${total}"
+}
+
+function rsession_timeout {
+    local timeout
+    local bfr
+    timeout=${RSTUDIO_RSESSION_TIMEOUT}
+
+    ## Running as a Slurm job?
+    if [[ -n "${SLURM_JOB_ID}" ]]; then
+	## Query Slurm for it's requested run-time
+	if bfr=$(squeue --jobs="${SLURM_JOB_ID}" --noheader --format="%l" 2> /dev/null); then
+	    bfr=$(echo "${bfr}" | head -n 1)
+            mdebug "Slurm run-time limit: '${bfr}'"
+	    if [[ -n "${bfr}" ]]; then
+	        echo "bfr='${bfr}'"
+                timeout=$(dhms_to_minutes "${bfr}")
+            fi
+	fi
+    fi
+    
+    if [[ -z "${timeout}" ]]; then
+        ## The default is 120 minutes (2 hours)
+        timeout=120
+    fi
+    
+    mdebug "rsession timeout: ${timeout} minutes"
+    assert_integer "${timeout}"
+    echo "${timeout}"
+}
+
+
 function make_rsession_conf {
     local workdir
     workdir=$(config_dir)
@@ -220,7 +289,7 @@ function make_rsession_conf {
     {
         ## Number of minutes before a session times out, at which point
         ## the session will either suspend
-        echo "session-timeout-minutes=120"
+        echo "session-timeout-minutes=$(rsession_timeout)"
         
         ## The default R_LIBS_USER folder that the R session will use
         echo "r-libs-user=${R_LIBS_USER:?}"
@@ -381,16 +450,18 @@ function on_local_machine {
 function find_login_host_via_who {
     local bfr
     bfr=$(who | grep -E "^${USER}")
-    mdebug "1. ${bfr}"
-    ## Drop entries with LINE suggesting direct login
-    bfr=$(echo "${bfr}" | grep -v -E "[[:space:]]:[[:digit:]]+[[:space:]]")
-    mdebug "2. ${bfr}"
-    ## Look only at the last entry
-    bfr=$(echo "${bfr}" | tail -n -1)
-    mdebug "3. ${bfr}"
-    ## Extract the hostname
-    bfr=$(echo "${bfr}" | sed -E 's/(.*[[:space:]]+[(]|[)][[:space:]]*)//g')
-    mdebug "4. ${bfr}"
+    if [[ -n "${bfr}" ]]; then
+        mdebug "1. ${bfr}"
+        ## Drop entries with LINE suggesting direct login
+        bfr=$(echo "${bfr}" | grep -v -E "[[:space:]]:[[:digit:]]+[[:space:]]")
+        mdebug "2. ${bfr}"
+        ## Look only at the last entry
+        bfr=$(echo "${bfr}" | tail -n -1)
+        mdebug "3. ${bfr}"
+        ## Extract the hostname
+        bfr=$(echo "${bfr}" | sed -E 's/(.*[[:space:]]+[(]|[)][[:space:]]*)//g')
+        mdebug "4. ${bfr}"
+    fi	
     echo "${bfr}"
 }
 

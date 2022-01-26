@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.1.2-9002
+## Version 0.1.2-9003
 
 New features:
 
@@ -10,6 +10,11 @@ New features:
 * Now the 'rsc start' instructions on how to connect from a remote
   machine infers the login hostname from the current connection
   by querying `who` and `host`.
+
+* When running the RStudio Server via an interactive job, then the
+  R session timeout limit is inferred from maximum run-time as given
+  by the job scheduler. If this cannot be inferred, the timeout
+  limit defaults to 120 minutes.
 
 Bug fixes:
 
