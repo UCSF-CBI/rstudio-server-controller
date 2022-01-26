@@ -39,7 +39,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.1.2-9000
+### Version: 0.1.2-9001
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -541,6 +541,13 @@ elif [[ "${action}" == "status" ]]; then
         echo "rsession: not running"
     fi
 elif [[ "${action}" == "stop" ]]; then
+    workdir=$(config_dir)
+    lockfile=${workdir}/pid.lock
+    ## If running, make sure we're stopping from the correct machine
+    if [[ -f "${lockfile}" ]] && [[ "${HOSTNAME}" != "$(rserver_hostname)" ]]; then
+        error "Stopping the RStudio Server can only be made from the machine ($(rserver_hostname)) where it was started from"
+    fi
+
     ## Terminate rsession
     pid=$(rsession_pid)
     [[ -n "${pid}" ]] && kill -TERM "${pid}"

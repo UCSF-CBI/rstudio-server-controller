@@ -1,8 +1,14 @@
 # rstudio-server-launcher
 
-## Version 0.1.2-9000
+## Version 0.1.2-9001
 
-* ...
+Bug fixes:
+
+* `rsc stop` called from another machine on the same system would
+  silently remove the internal lock file used to prevent more than
+  one RStudio Server instance from running.  Now an informative
+  error message is produced informing on what machine the server
+  is running and need to be stopped from.
 
 
 ## Version 0.1.2
