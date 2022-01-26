@@ -368,6 +368,14 @@ function launch_rserver {
 }
 
 
+function on_local_machine {
+    ## If who shows a entry with LINE that has :0 or similar, then that
+    ## suggests the user is on the current machine, and not logged in
+    ## from elsewhere
+    who | grep -E "^${USER}" | grep -q -E "[[:space:]]:[[:digit:]]+[[:space:]]"
+}
+
+
 # -------------------------------------------------------------------------
 # MAIN
 # -------------------------------------------------------------------------
@@ -587,7 +595,12 @@ elif [[ "${action}" == "start" ]]; then
     
     LOCALPORT=${LOCALPORT:-8787}
     LOGIN_HOST=${LOGIN_HOST:-c4-log2.ucsf.edu}
-    echo "RStudio Server is available on <$(rserver_url)>. If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by running 'ssh -J ${USER}@${LOGIN_HOST} -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal. To stop the server, press Ctrl-C here, or run 'rsc stop' on $(rserver_hostname) in another shell."
+    msg="RStudio Server is available on <$(rserver_url)>."
+    if ! $(on_local_machine); then
+        msg="${msg}. If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by running 'ssh -J ${USER}@${LOGIN_HOST} -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal."
+    fi
+    msg="${msg}. To stop the server, press Ctrl-C here, or run 'rsc stop' on $(rserver_hostname) in another shell."
+    echo "${msg}"
     mdebug "Waiting for 'rserver' (pid $(rserver_pid)) to finish"
     wait
 fi
