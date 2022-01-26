@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.1.0-9006
+## Version 0.1.1
 
 Significant changes:
 
