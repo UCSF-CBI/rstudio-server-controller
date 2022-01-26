@@ -215,17 +215,29 @@ function make_rsession_conf {
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
     {
+        ## Number f minutes before a session times out, at which point
+        ## the session will either suspend
+        echo "session-timeout-minutes=120"
+        
         ## The default R_LIBS_USER folder that the R session will use
-        echo "r-libs-user=${R_LIBS_USER:?}"
+        echo "r-libs-user=$(r_libs_user)"
     } > "${workdir}/rsession.conf"
 }
 
+
+function r_libs_user {
+    local paths
+    mdebug "R_LIBS_USER=${R_LIBS_USER}"
+    paths=$(Rscript --vanilla -e "cat(Sys.getenv('R_LIBS_USER'))")
+    mdebug "expanded(R_LIBS_USER)=${paths}"
+    echo "${paths}"
+}
 
 function make_rsession_sh {
     local workdir
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
-    
+
     cat > "${workdir}/rsession.sh" <<END
 #!/bin/sh
 
@@ -269,7 +281,7 @@ export RSESSION_LOG_FILE
 exec &>> "\${RSESSION_LOG_FILE}"
 set -x
 
-exec rsession "\${@}"
+exec rsession --r-libs-user="$(r_libs_user)" "\${@}"
 END
   
   chmod +x "${workdir}/rsession.sh"
@@ -551,6 +563,7 @@ elif [[ "${action}" == "reset" ]]; then
 elif [[ "${action}" == "start" ]]; then
     ## Assert executables are available
     assert_executable R
+    assert_executable Rscript
     assert_executable rserver
     assert_executable rsession
   
