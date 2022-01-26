@@ -1,5 +1,25 @@
 # rstudio-server-launcher
 
+## Version 0.1.1
+
+Significant changes:
+
+* `rsc` no longer loads Linux environment modules.  Instead, the user is
+  responsible for making sure R and RStudio Server executables are on the
+  `PATH`.  This gives the user maximum flexibility in what R version to
+  run.  The `rsc` tool will produce informative error messages if these
+  executables are not found.
+
+New features:
+
+* Add `rsc config --full`.
+
+* Add `rsc log`.
+
+* Now 'rsc start' will make sure to terminate the RStudio Server instance
+  and any running R sessions when exiting.
+  
+
 ## Version 0.1.0
 
 New features:
