@@ -1,5 +1,16 @@
 # rstudio-server-launcher
 
+## Version 0.1.2
+
+New features:
+
+* Now the 'auth-via-su' script is distributed part of this software.
+
+Bug fixes:
+
+* Environment variable R_LIBS_USER was ignore.
+
+
 ## Version 0.1.1
 
 Significant changes:

@@ -39,12 +39,13 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.1.1
+### Version: 0.1.2
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
 ## Import bash utility functions
 incl="${BASH_SOURCE%/*}/incl"
+utils="${BASH_SOURCE%/*}/utils"
 
 # shellcheck source=incl/asserts.sh
 source "${incl}/asserts.sh"
@@ -74,7 +75,7 @@ function free_port {
    
 function warn_auth_logfile {
   warn "*************************************************************"
-  warn "* Environment variable 'AUTO_LOGFILE' is set.  All usernames"
+  warn "* Environment variable 'AUTH_LOGFILE' is set.  All usernames"
   warn "* and passwords entered at the RStudio Server login prompt"
   warn "* will be recorded to the file:"
   warn "* ${AUTH_LOGFILE}"
@@ -82,9 +83,19 @@ function warn_auth_logfile {
   echo
 }
 
+function auth_tool {
+    local path
+    path=${utils}/auth-via-su
+    assert_executable "${path}"
+    path=$(realpath "${path}")
+    echo "${path}"
+}
+
 function validate_auth {
+    local auth
+    auth=$(auth_tool)
     ## Validate correctness of auth-via-su executable (should return false)
-    echo "" | AUTH_LOGFILE="" auth-via-su "${USER}" > /dev/null && error "Validation of 'auth-via-su' failed: $(command -v auth-via-su)"
+    echo "" | AUTH_LOGFILE="" "${auth}" "${USER}" > /dev/null && error "Validation of '$(basename "${auth}")' failed: ${auth}"
     [[ -n ${AUTH_LOGFILE} ]] && warn_auth_logfile
 }
 
@@ -126,7 +137,6 @@ function acquired_lock_file {
         error "Another RStudio Server session of yours is already active on the system.  Please terminate that first, e.g. 'rsc stop'.  As a last resort, call 'pkill rserver; pkill rsession', remove lock file '${lockfile}', and retry."
     fi
     echo "${PPID}" > "${lockfile}"
-    echo "${lockfile}"
 }
 
 function remove_lock_file {
@@ -166,7 +176,7 @@ function make_rserver_conf {
         ## Enable [sic!] multi-user authentication, i.e. don't disable it
         echo "auth-none=0"
         
-        echo "auth-pam-helper-path=auth-via-su"
+        echo "auth-pam-helper-path=$(auth_tool)"
         
         ## Require re-sign in if idle for 30 minutes
         ## Specifically, if user makes no input to the RStudio Server, they
@@ -179,6 +189,9 @@ function make_rserver_conf {
 
         ## Path to the 'rsession' executable
         echo "rsession-path=${workdir}/rsession.sh"
+        
+        ## Path to 'rsession.conf'
+        echo "rsession-config-file=${workdir}/rsession.conf"
         
         echo "secure-cookie-key-file=${workdir}/tmp/my-secure-cookie-key"
 
@@ -205,6 +218,10 @@ function make_rsession_conf {
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
     {
+        ## Number f minutes before a session times out, at which point
+        ## the session will either suspend
+        echo "session-timeout-minutes=120"
+        
         ## The default R_LIBS_USER folder that the R session will use
         echo "r-libs-user=${R_LIBS_USER:?}"
     } > "${workdir}/rsession.conf"
@@ -215,7 +232,7 @@ function make_rsession_sh {
     local workdir
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
-    
+
     cat > "${workdir}/rsession.sh" <<END
 #!/bin/sh
 
@@ -543,7 +560,6 @@ elif [[ "${action}" == "start" ]]; then
     assert_executable R
     assert_executable rserver
     assert_executable rsession
-    assert_executable auth-via-su
   
     validate_auth
   
@@ -564,7 +580,7 @@ elif [[ "${action}" == "start" ]]; then
     
     LOCALPORT=${LOCALPORT:-8787}
     LOGIN_HOST=${LOGIN_HOST:-c4-log2.ucsf.edu}
-    echo "RStudio Server is available on <$(rserver_url)>.  If you're are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by running 'ssh -J ${USER}@${LOGIN_HOST} -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal."
+    echo "RStudio Server is available on <$(rserver_url)>.  If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by running 'ssh -J ${USER}@${LOGIN_HOST} -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal.  To stop the server, press Ctrl-C here, or run 'rsc stop' on $(rserver_hostname) in another shell."
     mdebug "Waiting for 'rserver' (pid $(rserver_pid)) to finish"
     wait
 fi
