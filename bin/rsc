@@ -404,7 +404,7 @@ function find_login_host {
     fi
     
     if [[ -z "${host}" ]]; then
-        host="c4-log2.ucsf.edu"
+        host="<login-machine>"
     fi
 
     ## Attempt to look up the DNS entry
