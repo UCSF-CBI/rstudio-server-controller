@@ -39,7 +39,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.1.2
+### Version: 0.2.0
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -213,14 +213,84 @@ function make_rserver_conf {
 }
 
 
+function assert_integer {
+    echo "${1:?}" | grep -q "^[[:digit:]]+" && error "Not an integer: ${1}"
+}
+
+function dhms_to_minutes {
+    local bfr
+    local value
+    local total
+    local multipliers
+    local parts
+    bfr=${1:?}
+    
+    parts=()
+    until [[ -z "${bfr}" ]]; do
+        mdebug "Parsing: ${bfr}"
+        echo "${bfr}" | grep -q -F "[[:digit:]]+$" && error "Syntax error: ${bfr}"
+        value=$(echo "${bfr}" | sed -E 's/^(.*[[:digit:]]+[:-]|)([[:digit:]]+)$/\2/')
+	assert_integer "${value}"
+        bfr=$(echo "${bfr}" | sed -E 's/[:-]?([[:digit:]]+)$//')
+	parts+=("${value}")
+    done
+    mdebug "parts=${parts[*]}"
+
+    ## seconds, minutes, hours, days
+    multipliers=(1 60 3600 86400)
+    total=0
+    for (( kk=0; kk < ${#parts[@]}; kk++ )); do
+	value=$(( multipliers[kk] * parts[kk] ))
+	mdebug "$(printf "%d. %d*%d = %d\n" "${kk}" "${multipliers[${kk}]}" "${parts[${kk}]}" "${value}")"
+	total=$(( total + value ))
+    done
+    mdebug "total=${total} seconds"
+
+    ## Round down to nearest minute
+    total=$((total / 60))
+    mdebug "total=${total} minutes"
+    
+    echo "${total}"
+}
+
+function rsession_timeout {
+    local timeout
+    local bfr
+    timeout=${RSTUDIO_RSESSION_TIMEOUT}
+
+    ## Running as a Slurm job?
+    if [[ -n "${SLURM_JOB_ID}" ]]; then
+	## Query Slurm for it's requested run-time
+	if bfr=$(squeue --jobs="${SLURM_JOB_ID}" --noheader --format="%l" 2> /dev/null); then
+	    bfr=$(echo "${bfr}" | head -n 1)
+            mdebug "Slurm run-time limit: '${bfr}'"
+	    if [[ -n "${bfr}" ]]; then
+                timeout=$(dhms_to_minutes "${bfr}")
+            fi
+	fi
+    fi
+    
+    if [[ -z "${timeout}" ]]; then
+        ## The default is 120 minutes (2 hours)
+        timeout=120
+    fi
+    
+    mdebug "rsession timeout: ${timeout} minutes"
+    assert_integer "${timeout}"
+    export RSTUDIO_RSESSION_TIMEOUT="${timeout}"
+    echo "${timeout}"
+}
+
+
 function make_rsession_conf {
     local workdir
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
+    rsession_timeout > /dev/null
     {
-        ## Number f minutes before a session times out, at which point
+        ## Number of minutes before a session times out, at which point
         ## the session will either suspend
-        echo "session-timeout-minutes=120"
+        echo "session-timeout-minutes=$(rsession_timeout)"
         
         ## The default R_LIBS_USER folder that the R session will use
         echo "r-libs-user=${R_LIBS_USER:?}"
@@ -365,6 +435,57 @@ function launch_rserver {
     pid_file=$(rserver_pid_file)
     rserver --config-file="${workdir}/rserver.conf" &
     echo $! > "${pid_file}"
+    mdebug "RStudio Server started (pid $(rserver_pid))" 1>&2
+}
+
+
+function on_local_machine {
+    ## If who shows a entry with LINE that has :0 or similar, then that
+    ## suggests the user is on the current machine, and not logged in
+    ## from elsewhere
+    who | grep -E "^${USER}" | grep -q -E "[[:space:]]:[[:digit:]]+[[:space:]]"
+}
+
+
+
+function find_login_host_via_who {
+    local bfr
+    bfr=$(who | grep -E "^${USER}")
+    if [[ -n "${bfr}" ]]; then
+        mdebug "1. ${bfr}"
+        ## Drop entries with LINE suggesting direct login
+        bfr=$(echo "${bfr}" | grep -v -E "[[:space:]]:[[:digit:]]+[[:space:]]")
+        mdebug "2. ${bfr}"
+        ## Look only at the last entry
+        bfr=$(echo "${bfr}" | tail -n -1)
+        mdebug "3. ${bfr}"
+        ## Extract the hostname
+        bfr=$(echo "${bfr}" | sed -E 's/(.*[[:space:]]+[(]|[)][[:space:]]*)//g')
+        mdebug "4. ${bfr}"
+    fi	
+    echo "${bfr}"
+}
+
+function find_login_host {
+    local host
+    local full
+    host=${LOGIN_HOSTNAME}
+    
+    if [[ -z "${host}" ]]; then
+        host=$(find_login_host_via_who)
+    fi
+    
+    if [[ -z "${host}" ]]; then
+        host="<login-machine>"
+    fi
+
+    ## Attempt to look up the DNS entry
+    if [[ -n "${host}" ]]; then
+        if full=$(host "${host}"); then
+            host=$(echo "${full}" | cut -d ' ' -f 1)
+	fi
+    fi
+    echo "${host}"
 }
 
 
@@ -541,6 +662,13 @@ elif [[ "${action}" == "status" ]]; then
         echo "rsession: not running"
     fi
 elif [[ "${action}" == "stop" ]]; then
+    workdir=$(config_dir)
+    lockfile=${workdir}/pid.lock
+    ## If running, make sure we're stopping from the correct machine
+    if [[ -f "${lockfile}" ]] && [[ "${HOSTNAME}" != "$(rserver_hostname)" ]]; then
+        error "Stopping the RStudio Server can only be made from the machine ($(rserver_hostname)) where it was started from"
+    fi
+
     ## Terminate rsession
     pid=$(rsession_pid)
     [[ -n "${pid}" ]] && kill -TERM "${pid}"
@@ -576,11 +704,16 @@ elif [[ "${action}" == "start" ]]; then
     trap "terminate_rsession; terminate_rserver; remove_lock_file" EXIT
     
     launch_rserver
-    mdebug "RStudio Server started (pid $(rserver_pid))" 1>&2
     
-    LOCALPORT=${LOCALPORT:-8787}
-    LOGIN_HOST=${LOGIN_HOST:-c4-log2.ucsf.edu}
-    echo "RStudio Server is available on <$(rserver_url)>.  If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by running 'ssh -J ${USER}@${LOGIN_HOST} -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal.  To stop the server, press Ctrl-C here, or run 'rsc stop' on $(rserver_hostname) in another shell."
+    if on_local_machine; then
+        msg="Your personal RStudio Server is available on <http://127.0.0.1:$(rserver_port)> from this machine ($(rserver_hostname))."
+    else
+        LOCALPORT=${LOCALPORT:-8787}
+        msg="Your personal RStudio Server is available on <http://$(rserver_hostname):$(rserver_port)>. If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:${LOCALPORT}> by running 'ssh -J ${USER}@$(find_login_host) -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal."
+    fi
+    msg="${msg} Any R session started times out after being idle for $(rsession_timeout) minutes."
+    msg="${msg} To stop the server, press Ctrl-C here, or run 'rsc stop' on $(rserver_hostname) in another shell."
+    echo "${msg}"
     mdebug "Waiting for 'rserver' (pid $(rserver_pid)) to finish"
     wait
 fi
