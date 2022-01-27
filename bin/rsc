@@ -265,7 +265,6 @@ function rsession_timeout {
 	    bfr=$(echo "${bfr}" | head -n 1)
             mdebug "Slurm run-time limit: '${bfr}'"
 	    if [[ -n "${bfr}" ]]; then
-	        echo "bfr='${bfr}'"
                 timeout=$(dhms_to_minutes "${bfr}")
             fi
 	fi
