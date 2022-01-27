@@ -39,7 +39,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.0-9001
+### Version: 0.2.0-9002
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -134,7 +134,7 @@ function acquired_lock_file {
     workdir=$(config_dir)
     lockfile=${workdir}/pid.lock
     if [[ -f "${lockfile}" ]]; then
-        error "Another RStudio Server session of yours is already active on the system.  Please terminate that first, e.g. 'rsc stop'.  As a last resort, call 'pkill rserver; pkill rsession', remove lock file '${lockfile}', and retry."
+        error "Another RStudio Server session of yours is already running on $(rserver_hostname) on this system. Please terminate that first, e.g. call 'rsc stop' from that machine. As a last resort, call 'pkill rserver; pkill rsession', remove lock file '${lockfile}', and retry."
     fi
     echo "${PPID}" > "${lockfile}"
 }
