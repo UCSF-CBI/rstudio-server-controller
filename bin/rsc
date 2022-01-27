@@ -39,7 +39,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.0-9000
+### Version: 0.2.0-9001
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -95,7 +95,7 @@ function validate_auth {
     local auth
     auth=$(auth_tool)
     ## Validate correctness of auth-via-su executable (should return false)
-    echo "" | AUTH_LOGFILE="" "${auth}" "${USER}" > /dev/null && error "Validation of '$(basename "${auth}")' failed: ${auth}"
+    echo "" | AUTH_LOGFILE="" "${auth}" "${USER}" &> /dev/null && error "Validation of '$(basename "${auth}")' failed: ${auth}"
     [[ -n ${AUTH_LOGFILE} ]] && warn_auth_logfile
 }
 

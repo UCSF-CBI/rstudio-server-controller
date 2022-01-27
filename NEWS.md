@@ -1,8 +1,11 @@
 # rstudio-server-launcher
 
-## Version 0.2.0-9000
+## Version 0.2.0-9001
 
-* ...
+Bug fixes:
+
+* Internal validation of 'auth-via-su' could output messages to
+  standard error. Those are now muffled.
 
 
 ## Version 0.2.0
