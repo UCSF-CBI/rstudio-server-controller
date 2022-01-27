@@ -469,7 +469,7 @@ function find_login_host_via_who {
 function find_login_host {
     local host
     local full
-    host=${LOGIN_HOST}
+    host=${LOGIN_HOSTNAME}
     
     if [[ -z "${host}" ]]; then
         host=$(find_login_host_via_who)
