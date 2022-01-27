@@ -1,8 +1,12 @@
 # rstudio-server-launcher
 
-## Version 0.2.0-9000
+## Version 0.2.0-9001
 
-* ...
+New features:
+
+* If 'rsc start' fails because there's already an existing RStudio
+  Server running, the error message now includes on what machine
+  that instance is running.
 
 
 ## Version 0.2.0
