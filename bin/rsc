@@ -278,6 +278,7 @@ function rsession_timeout {
     
     mdebug "rsession timeout: ${timeout} minutes"
     assert_integer "${timeout}"
+    export RSTUDIO_RSESSION_TIMEOUT="${timeout}"
     echo "${timeout}"
 }
 
@@ -286,6 +287,7 @@ function make_rsession_conf {
     local workdir
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
+    rsession_timeout > /dev/null
     {
         ## Number of minutes before a session times out, at which point
         ## the session will either suspend
@@ -704,12 +706,13 @@ elif [[ "${action}" == "start" ]]; then
     
     launch_rserver
     
-    LOCALPORT=${LOCALPORT:-8787}
-
-    msg="Your personal RStudio Server is available on <$(rserver_url)>."
-    if ! on_local_machine; then
-        msg="${msg} If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by running 'ssh -J ${USER}@$(find_login_host) -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal."
+    if on_local_machine; then
+        msg="Your personal RStudio Server is available on <http://127.0.0.1:$(rserver_port)> from this machine ($(rserver_hostname))."
+    else
+        LOCALPORT=${LOCALPORT:-8787}
+        msg="Your personal RStudio Server is available on <http://$(rserver_hostname):$(rserver_port)>. If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:${LOCALPORT}> by running 'ssh -J ${USER}@$(find_login_host) -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal."
     fi
+    msg="${msg} Any R session started times out after being idle for $(rsession_timeout) minutes."
     msg="${msg} To stop the server, press Ctrl-C here, or run 'rsc stop' on $(rserver_hostname) in another shell."
     echo "${msg}"
     mdebug "Waiting for 'rserver' (pid $(rserver_pid)) to finish"
