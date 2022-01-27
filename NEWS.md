@@ -1,5 +1,19 @@
 # rstudio-server-launcher
 
+## Version 0.2.1
+
+New features:
+
+* If 'rsc start' fails because there's already an existing RStudio
+  Server running, the error message now includes on what machine
+  that instance is running.
+
+Bug fixes:
+
+* Internal validation of 'auth-via-su' could output messages to
+  standard error. Those are now muffled.
+
+
 ## Version 0.2.0
 
 New features:
