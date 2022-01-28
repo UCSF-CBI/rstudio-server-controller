@@ -39,7 +39,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.1-9001
+### Version: 0.2.1-9002
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -320,8 +320,9 @@ export RSESSION_LOG_FILE
 
 {
     echo "Launching rsession:"
-    echo "Time: \$(date)"
+    echo "Time: \$(date --rfc-3339=seconds)"
     echo "HOSTNAME: \${HOSTNAME}"
+    echo "hostname: \$(hostname)"
     echo "PPID: \${PPID}"
     echo "PWD: \${PWD}"
     echo "PATH: \${PATH}"
@@ -687,7 +688,7 @@ elif [[ "${action}" == "stop" ]]; then
     workdir=$(config_dir)
     lockfile=${workdir}/pid.lock
     ## If running, make sure we're stopping from the correct machine
-    if [[ -f "${lockfile}" ]] && [[ "${HOSTNAME}" != "$(rserver_hostname)" ]]; then
+    if [[ -f "${lockfile}" ]] && [[ "$(hostname)" != "$(rserver_hostname)" ]]; then
         error "Stopping the RStudio Server can only be made from the machine ($(rserver_hostname)) where it was started from"
     fi
 

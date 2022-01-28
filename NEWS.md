@@ -1,11 +1,14 @@
 # rstudio-server-launcher
 
-## Version 0.2.1-9001
+## Version 0.2.1-9002
 
 Bug fixes:
 
 * `rsc start` failed to shut down nicely when receiving SIGTERM,
   resulting in R sessions and lock files being left behind.
+
+* `src stop` would fail on machines where environment `HOSTNAME`
+  is not correct. Now relying on `hostname` instead.
 
 
 ## Version 0.2.1
