@@ -504,6 +504,13 @@ function on_sigterm {
     mdebug "on_sigterm() ... done"
 }
 
+function on_sigcont {
+    mdebug "on_sigcont() ..."
+    shutdown
+    exit 0
+    mdebug "on_sigcont() ... done"
+}
+
 # -------------------------------------------------------------------------
 # MAIN
 # -------------------------------------------------------------------------
@@ -722,7 +729,10 @@ elif [[ "${action}" == "start" ]]; then
 
     mdebug "Registering 'trap on_sigterm SIGTERM', which triggers the EXIT trap"
     trap on_sigterm SIGTERM
-    
+
+    mdebug "Registering 'trap on_sigterm SIGCONT', which triggers the EXIT trap"
+    trap on_sigcont SIGCONT
+
 #    for kk in {1..64}; do
 #        trap 'echo "Caught signal ${kk}"' "${kk}"
 #    done
