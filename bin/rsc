@@ -144,7 +144,7 @@ function remove_lock_file {
     local lockfile
     workdir=$(config_dir)
     lockfile=${workdir}/pid.lock
-    [[ -f "${lockfile}" ]] && rm "${lockfile}"
+    [[ -f "${lockfile}" ]] && rm "${lockfile}" && mdebug "Lock file removed: ${lockfile}"
 }    
 
 function make_database_conf {
@@ -489,6 +489,15 @@ function find_login_host {
 }
 
 
+function on_exit {
+    mdebug "on_exit() ..."
+    terminate_rsession
+    terminate_rserver
+    remove_lock_file
+    mdebug "on_exit() ... done"
+}
+
+
 # -------------------------------------------------------------------------
 # MAIN
 # -------------------------------------------------------------------------
@@ -700,8 +709,8 @@ elif [[ "${action}" == "start" ]]; then
     make_rsession_conf
 
     ## Make sure to stop the RStudio Server and any R sessions on exit
-    mdebug "Registering 'trap ... EXIT"
-    trap "terminate_rsession; terminate_rserver; remove_lock_file" EXIT
+    mdebug "Registering 'trap on_exit EXIT'"
+    trap on_exit EXIT
     
     launch_rserver
     
