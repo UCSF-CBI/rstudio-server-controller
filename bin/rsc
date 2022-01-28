@@ -435,7 +435,7 @@ function launch_rserver {
     pid_file=$(rserver_pid_file)
     rserver --config-file="${workdir}/rserver.conf" &
     echo $! > "${pid_file}"
-    mdebug "RStudio Server started (pid $(rserver_pid))" 1>&2
+    mdebug "RStudio Server started (pid $(rserver_pid))"
 }
 
 
@@ -489,16 +489,17 @@ function find_login_host {
 }
 
 
-function on_exit {
-    mdebug "on_exit() ..."
+function shutdown {
+    mdebug "shutdown() ..."
     terminate_rsession
     terminate_rserver
     remove_lock_file
-    mdebug "on_exit() ... done"
+    mdebug "shutdown() ... done"
 }
 
 function on_sigterm {
     mdebug "on_sigterm() ..."
+    shutdown
     exit 0
     mdebug "on_sigterm() ... done"
 }
@@ -716,11 +717,15 @@ elif [[ "${action}" == "start" ]]; then
     mdebug "PID for rsc (this process): $$"
 
     ## Make sure to stop the RStudio Server and any R sessions on exit
-    mdebug "Registering 'trap on_exit EXIT', which perform cleanups"
-    trap on_exit EXIT
+    mdebug "Registering 'trap shutdown EXIT', which perform cleanups"
+    trap shutdown EXIT
 
-    mdebug "Registering 'trap on_sigterm SIGTERM', which will trigger the EXIT trap"
+    mdebug "Registering 'trap on_sigterm SIGTERM', which triggers the EXIT trap"
     trap on_sigterm SIGTERM
+    
+#    for kk in {1..64}; do
+#        trap 'echo "Caught signal ${kk}"' "${kk}"
+#    done
     
     launch_rserver
     
@@ -733,6 +738,10 @@ elif [[ "${action}" == "start" ]]; then
     msg="${msg} Any R session started times out after being idle for $(rsession_timeout) minutes."
     msg="${msg} To stop the server, press Ctrl-C here, or run 'rsc stop' on $(rserver_hostname) in another shell."
     echo "${msg}"
-    mdebug "Waiting for 'rserver' (pid $(rserver_pid)) to finish"
-    wait
+    mdebug "Waiting for 'rserver' (pid $(rserver_pid)) to finish ..."
+    wait "$(rserver_pid)"
+    res=$?
+    mdebug "'rserver' exit code: ${res}"
+    mdebug "Waiting for 'rserver' (pid $(rserver_pid)) to finish ... done"
+    mdebug "$0 is exiting..."
 fi
