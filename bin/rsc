@@ -39,7 +39,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.1-9000
+### Version: 0.2.1-9001
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -497,6 +497,11 @@ function on_exit {
     mdebug "on_exit() ... done"
 }
 
+function on_sigterm {
+    mdebug "on_sigterm() ..."
+    exit 0
+    mdebug "on_sigterm() ... done"
+}
 
 # -------------------------------------------------------------------------
 # MAIN
@@ -708,9 +713,14 @@ elif [[ "${action}" == "start" ]]; then
     make_rsession_sh
     make_rsession_conf
 
+    mdebug "PID for rsc (this process): $$"
+
     ## Make sure to stop the RStudio Server and any R sessions on exit
-    mdebug "Registering 'trap on_exit EXIT'"
+    mdebug "Registering 'trap on_exit EXIT', which perform cleanups"
     trap on_exit EXIT
+
+    mdebug "Registering 'trap on_sigterm SIGTERM', which will trigger the EXIT trap"
+    trap on_sigterm SIGTERM
     
     launch_rserver
     

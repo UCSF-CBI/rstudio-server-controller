@@ -1,8 +1,11 @@
 # rstudio-server-launcher
 
-## Version 0.2.1-9000
+## Version 0.2.1-9001
 
-* ...
+Bug fixes:
+
+* `rsc start` failed to shut down nicely when receiving SIGTERM,
+  resulting in R sessions and lock files being left behind.
 
 
 ## Version 0.2.1
