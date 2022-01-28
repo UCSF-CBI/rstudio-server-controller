@@ -356,19 +356,27 @@ END
 
 function check_pid {
     ## Output PID if there is such a process, otherwise output nothing
+    mdebug "check_pid '$1' ..."
     if [[ -n "${1}" ]] && [[ -d "/proc/${1}" ]]; then
+        mdebug "- $(hostname):/proc/$1 is directory"
         echo "${1}"
     else
+        mdebug "- $(hostname):/proc/$1 is NOT directory"
         echo ""
     fi
+    mdebug "check_pid '$1' ... done"
 }
 
 function read_pid {
     local pid
+    mdebug "read_pid '$1' ..."
     pid=
     if [[ -f "$1" ]]; then
+        mdebug "- reading ..."
         pid=$(cat "$1")
     fi
+    mdebug "- pid=${pid}"
+    mdebug "read_pid '$1' ... done"
     check_pid "${pid}"
 }    
 
@@ -427,6 +435,7 @@ function rserver_url {
 
 function launch_rserver {
     local workdir
+    local rs_pid
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
 
@@ -436,7 +445,8 @@ function launch_rserver {
     pid_file=$(rserver_pid_file)
     rserver --config-file="${workdir}/rserver.conf" &
     echo $! > "${pid_file}"
-    mdebug "RStudio Server started (pid $(rserver_pid))"
+    rs_pid=$(rserver_pid)
+    mdebug "RStudio Server started (pid ${rs_pid})"
 }
 
 
@@ -724,6 +734,11 @@ elif [[ "${action}" == "start" ]]; then
 
     mdebug "PID for rsc (this process): $$"
 
+    ## For troubleshooting/debugging Slurm termination /HB 2022-01-27
+##    for kk in {0..64}; do
+##        trap "echo '$0: Caught signal ${kk}'" "${kk}"
+##    done
+    
     ## Make sure to stop the RStudio Server and any R sessions on exit
     mdebug "Registering 'trap shutdown EXIT', which perform cleanups"
     trap shutdown EXIT
@@ -734,10 +749,6 @@ elif [[ "${action}" == "start" ]]; then
     mdebug "Registering 'trap on_sigterm SIGCONT', which triggers the EXIT trap"
     trap on_sigcont SIGCONT
 
-#    for kk in {1..64}; do
-#        trap 'echo "Caught signal ${kk}"' "${kk}"
-#    done
-    
     launch_rserver
     
     if on_local_machine; then
@@ -749,10 +760,12 @@ elif [[ "${action}" == "start" ]]; then
     msg="${msg} Any R session started times out after being idle for $(rsession_timeout) minutes."
     msg="${msg} To stop the server, press Ctrl-C here, or run 'rsc stop' on $(rserver_hostname) in another shell."
     echo "${msg}"
-    mdebug "Waiting for 'rserver' (pid $(rserver_pid)) to finish ..."
-    wait "$(rserver_pid)"
+    
+    rs_pid="$(rserver_pid)"
+    mdebug "Waiting for 'rserver' (pid ${rs_pid}) to finish ..."
+    wait "${rs_pid}"
     res=$?
     mdebug "'rserver' exit code: ${res}"
-    mdebug "Waiting for 'rserver' (pid $(rserver_pid)) to finish ... done"
+    mdebug "Waiting for 'rserver' (pid ${rs_pid}) to finish ... done"
     mdebug "$0 is exiting..."
 fi
