@@ -39,7 +39,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.1-9002
+### Version: 0.2.1-9003
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -102,15 +102,10 @@ function validate_auth {
 
 function validate_port {
     [[ -z $1 ]] && error "Port must not be empty"
+    assert_integer "$1"
     if [[ $1 -lt 0 ]] || [[ $1 -gt 65535 ]]; then
         error "Port out of range [0,65535]: $1"
     fi
-}
-
-
-## Assert executable exist
-function assert_executable {
-  command -v "$1" &> /dev/null || error "No such executable: $1"
 }
 
 
@@ -210,11 +205,6 @@ function make_rserver_conf {
         ## The web port for the RStudio Server
         echo "www-port=${port:?}"
     } > "${workdir}/rserver.conf"
-}
-
-
-function assert_integer {
-    echo "${1:?}" | grep -q "^[[:digit:]]+" && error "Not an integer: ${1}"
 }
 
 function dhms_to_minutes {

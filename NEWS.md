@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.2.1-9002
+## Version 0.2.1-9003
 
 Bug fixes:
 

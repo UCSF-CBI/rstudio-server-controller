@@ -28,3 +28,13 @@ function assert_dir_exists {
     [[ -n "$1" ]] || error "Directory name must be non-empty: '$1'"
     [[ -d "$1" ]] || error "No such directory: '$1' (working directory '${PWD}')"
 }
+
+## Usage: assert_executable command
+function assert_executable {
+  command -v "${1:?}" &> /dev/null || error "No such executable: ${1}"
+}
+
+## Usage: assert_executable string
+function assert_integer {
+    echo "${1:?}" | grep -q -E "^[[:digit:]]+$" || error "Not an integer: ${1}"
+}
