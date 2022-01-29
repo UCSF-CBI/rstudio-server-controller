@@ -62,11 +62,6 @@ source "${incl}/output.sh"
 # -------------------------------------------------------------------------
 # Utility functions
 # -------------------------------------------------------------------------
-function ruler {
-    ## 70-symbols wide
-    echo "----------------------------------------------------------------------"
-}
-
 function free_port {
     # get unused socket per https://unix.stackexchange.com/a/132524
     # tiny race condition between the Python and launching the rserver
@@ -653,9 +648,9 @@ if [[ "${action}" == "config" ]]; then
         echo
         for file in "${files[@]}"; do
             if [[ -f "${file}" ]]; then
-                ruler
+                ruler "-"
                 echo "${file}"
-                ruler
+                ruler "-"
                 cat "${file}"
             fi
         done
@@ -664,9 +659,9 @@ elif [[ "${action}" == "log" ]]; then
     workdir=$(config_dir)
     file=${workdir}/rsession.log
     if [[ -f "${file}" ]]; then
-        ruler
+        ruler "-"
         echo "${file}"
-        ruler
+        ruler "-"
         cat "${file}"
     else
         echo "No rsession log file: ${file}"
