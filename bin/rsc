@@ -57,47 +57,13 @@ source "${incl}/conditions.sh"
 source "${incl}/files.sh"
 # shellcheck source=incl/output.sh
 source "${incl}/output.sh"
+# shellcheck source=incl/ports.sh
+source "${incl}/ports.sh"
 
 
 # =========================================================================
 # Utility functions
 # =========================================================================
-
-# -------------------------------------------------------------------------
-# Ports utilities
-# -------------------------------------------------------------------------
-function free_port {
-    local port
-    # get unused socket per https://unix.stackexchange.com/a/132524
-    # tiny race condition between the Python and launching the rserver
-    port=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
-    assert_port "${port}"
-    echo "${port}"
-}    
-
-## Usage: is_port_free <port>
-function is_port_free {
-    local port
-    local res
-    port=${1:?}
-    assert_integer "${port}"
-    res=$(python -c "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_STREAM); print(s.connect_ex((\"\", ${port})) != 0); s.close()")
-    [[ "${res}" == "True" ]]
-}
-
-function assert_port {
-    [[ -z $1 ]] && error "Port must not be empty"
-    assert_integer "$1"
-    if [[ $1 -lt 0 ]] || [[ $1 -gt 65535 ]]; then
-        error "Port out of range [0,65535]: $1"
-    fi
-}
-
-function assert_port_free {
-    assert_port "${1}"
-    is_port_free "$1" || error "Port is already in use on $(hostname): ${1}"
-}
-
 
 # -------------------------------------------------------------------------
 # Authentication utilities
@@ -543,12 +509,16 @@ function terminate_rserver {
 function launch_rserver {
     local workdir
     local rs_pid
+    local port
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
 
     hostname > "${workdir}/rserver.hostname"
     grep -E "www-port=" ~/.config/rsc/rserver.conf | sed 's/www-port=//' > "${workdir}/rserver.port"
 
+    port=$(rserver_port)
+    assert_port_free "${port}"
+    
     pid_file=$(rserver_pid_file)
     rserver --config-file="${workdir}/rserver.conf" &
     rs_pid=$!
@@ -783,10 +753,11 @@ elif [[ "${action}" == "start" ]]; then
     assert_executable R
     assert_executable rserver
     assert_executable rsession
-  
+    assert_port_free "${port}"
+    
     validate_auth
   
-    make_config_dir  
+    make_config_dir
     acquired_lock_file
     
     make_database_conf
