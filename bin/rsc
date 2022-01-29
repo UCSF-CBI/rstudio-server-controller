@@ -533,7 +533,8 @@ function launch_rserver {
 
     pid_file=$(rserver_pid_file)
     rserver --config-file="${workdir}/rserver.conf" &
-    echo $! > "${pid_file}"
+    rs_pid=$!
+    echo "${rs_pid}" > "${pid_file}"
     rs_pid=$(rserver_pid)
     mdebug "RStudio Server started (pid ${rs_pid})"
 }
@@ -802,9 +803,12 @@ elif [[ "${action}" == "start" ]]; then
     fi
     msg="${msg} Any R session started times out after being idle for $(rsession_timeout) minutes."
     msg="${msg} To stop the server, press Ctrl-C here, or run 'rsc stop' on $(rserver_hostname) in another shell."
-    echo "${msg}"
     
     rs_pid="$(rserver_pid)"
+    [[ -z "${rs_pid}" ]] && error "RStudio Server failed to start for unknown reasons. One reason for this might that the port (${port}) is already occupied."
+
+    echo "${msg}"
+    
     mdebug "Waiting for 'rserver' (pid ${rs_pid}) to finish ..."
     wait "${rs_pid}"
     res=$?
