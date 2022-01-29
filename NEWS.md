@@ -1,6 +1,10 @@
 # rstudio-server-launcher
 
-## Version 0.2.1-9003
+## Version 0.2.1-9004
+
+New features:
+
+* The `rsc start` instructions now include information on $USER.
 
 Bug fixes:
 

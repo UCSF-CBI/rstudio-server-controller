@@ -39,7 +39,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.1-9003
+### Version: 0.2.1-9004
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -737,10 +737,10 @@ elif [[ "${action}" == "start" ]]; then
     launch_rserver
     
     if on_local_machine; then
-        msg="Your personal RStudio Server is available on <http://127.0.0.1:$(rserver_port)> from this machine ($(rserver_hostname))."
+        msg="${USER}, your personal RStudio Server is available on <http://127.0.0.1:$(rserver_port)> from this machine ($(rserver_hostname))."
     else
         LOCALPORT=${LOCALPORT:-8787}
-        msg="Your personal RStudio Server is available on <http://$(rserver_hostname):$(rserver_port)>. If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:${LOCALPORT}> by running 'ssh -J ${USER}@$(find_login_host) -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal."
+        msg="${USER}, your personal RStudio Server is available on <http://$(rserver_hostname):$(rserver_port)>. If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:${LOCALPORT}> by running 'ssh -J ${USER}@$(find_login_host) -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal."
     fi
     msg="${msg} Any R session started times out after being idle for $(rsession_timeout) minutes."
     msg="${msg} To stop the server, press Ctrl-C here, or run 'rsc stop' on $(rserver_hostname) in another shell."
