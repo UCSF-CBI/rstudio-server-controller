@@ -336,6 +336,26 @@ function find_login_host {
 # -------------------------------------------------------------------------
 # rsession utilities
 # -------------------------------------------------------------------------
+## Usage: rs_process_status <pid> <hostname>
+function rs_process_status {
+    local pid
+    local hostname
+    local this_hostname
+    pid=${1:-}
+    hostname=${2:-}
+    this_hostname="$(hostname)"
+    
+    if [[ -n "${pid}" ]]; then
+        if [[ "${this_hostname}" == "${hostname}" ]]; then
+            echo "running (pid ${pid})"
+        else
+            echo "unknown (pid ${pid} on ${hostname}, but current host is ${this_hostname})"
+        fi
+    else
+        echo "not running"
+    fi
+}
+
 function rsession_timeout {
     local timeout
     local bfr
@@ -453,6 +473,10 @@ function terminate_rsession {
     [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rsession (PID ${pid}) terminated"
 }
 
+function rsession_status {
+    rs_process_status "$(rsession_pid)" "$(rserver_hostname)"
+}    
+
 
 # -------------------------------------------------------------------------
 # rserver utilities
@@ -508,6 +532,10 @@ function launch_rserver {
     rs_pid=$(rserver_pid)
     mdebug "RStudio Server started (pid ${rs_pid})"
 }
+
+function rserver_status {
+    rs_process_status "$(rserver_pid)" "$(rserver_hostname)"
+}    
 
 
 # -------------------------------------------------------------------------
@@ -695,30 +723,8 @@ elif [[ "${action}" == "log" ]]; then
         echo "No rsession log file: ${file}"
     fi
 elif [[ "${action}" == "status" ]]; then
-    this_hostname="$(hostname)"
-    rserver_hostname="$(rserver_hostname)"
-    same_hostname=false
-    [[ "${this_hostname}" == "${rserver_hostname}" ]] && same_hostname=true
-    pid=$(rserver_pid)
-    if [[ -n "${pid}" ]]; then
-        if ${same_hostname}; then
-            echo "rserver: running (pid ${pid})"
-        else
-            echo "rserver: unknown (pid ${pid} on ${rserver_hostname}, but current host is ${this_hostname})"
-        fi
-    else
-        echo "rserver: not running"
-    fi
-    pid=$(rsession_pid)
-    if [[ -n "${pid}" ]]; then
-        if ${same_hostname}; then
-            echo "rserver: running (pid ${pid})"
-        else
-            echo "rserver: unknown (pid ${pid} on ${rserver_hostname}, but current host is ${this_hostname})"
-        fi
-    else
-        echo "rsession: not running"
-    fi
+    printf "%s: %s\n" "rserver" "$(rserver_status)"
+    printf "%s: %s\n" "rsession" "$(rsession_status)"
     workdir=$(config_dir)
     lockfile=${workdir}/pid.lock
     if [[ -f "${lockfile}" ]]; then
