@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.2.2-9001
+## Version 0.2.2-9002
 
 New features:
 
@@ -9,6 +9,10 @@ New features:
 
 * `rsc start` now detect when RStudio Server fails to launch and
   gives an informative error message.
+
+* `rsc start` now asserts that the port is available before trying
+  to launch the RStudio Server.
+
 
 ## Version 0.2.2
 
