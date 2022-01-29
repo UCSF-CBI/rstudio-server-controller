@@ -753,7 +753,7 @@ elif [[ "${action}" == "start" ]]; then
     assert_executable R
     assert_executable rserver
     assert_executable rsession
-    assert_port_free "${port}"
+    [[ "${port}" != "random" ]] && assert_port_free "${port}"
     
     validate_auth
   
