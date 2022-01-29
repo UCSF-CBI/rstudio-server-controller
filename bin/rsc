@@ -122,12 +122,12 @@ function acquired_lock_file {
     workdir=$(config_dir)
     lockfile=${workdir}/pid.lock
     if [[ -f "${lockfile}" ]]; then
-	if [[ -z "$(rserver_pid)" ]] && [[ -z "$(rsession_pid)" ]]; then
+        if [[ -z "$(rserver_pid)" ]] && [[ -z "$(rsession_pid)" ]]; then
             warn "Detected a stray lock file (${lockfile}). This file was removed to allow for a new RStudio Studio instance to run, because there was no evidence that another instance was running on this system (no PID files for neither 'rserver' nor 'rsession' were found)."
-	    rm "${lockfile}"
-	else    
+            rm "${lockfile}"
+        else
             error "${USER}, another RStudio Server session of yours is already running on $(rserver_hostname) on this system. See 'rsc status' for details. Please terminate that first, e.g. call 'rsc stop' from that machine. As a last resort, call 'pkill rserver; pkill rsession', remove lock file '${lockfile}', and retry."
-	fi
+        fi
     fi
     echo "${PPID}" > "${lockfile}"
 }
@@ -252,9 +252,9 @@ function dhms_to_minutes {
         mdebug "Parsing: ${bfr}"
         echo "${bfr}" | grep -q -F "[[:digit:]]+$" && error "Syntax error: ${bfr}"
         value=$(echo "${bfr}" | sed -E 's/^(.*[[:digit:]]+[:-]|)([[:digit:]]+)$/\2/')
-	assert_integer "${value}"
+        assert_integer "${value}"
         bfr=$(echo "${bfr}" | sed -E 's/[:-]?([[:digit:]]+)$//')
-	parts+=("${value}")
+        parts+=("${value}")
     done
     mdebug "parts=${parts[*]}"
 
@@ -262,9 +262,9 @@ function dhms_to_minutes {
     multipliers=(1 60 3600 86400)
     total=0
     for (( kk=0; kk < ${#parts[@]}; kk++ )); do
-	value=$(( multipliers[kk] * parts[kk] ))
-	mdebug "$(printf "%d. %d*%d = %d\n" "${kk}" "${multipliers[${kk}]}" "${parts[${kk}]}" "${value}")"
-	total=$(( total + value ))
+        value=$(( multipliers[kk] * parts[kk] ))
+        mdebug "$(printf "%d. %d*%d = %d\n" "${kk}" "${multipliers[${kk}]}" "${parts[${kk}]}" "${value}")"
+        total=$(( total + value ))
     done
     mdebug "total=${total} seconds"
 
@@ -296,7 +296,7 @@ function find_login_host_via_who {
         ## Extract the hostname
         bfr=$(echo "${bfr}" | sed -E 's/(.*[[:space:]]+[(]|[)][[:space:]]*)//g')
         mdebug "4. ${bfr}"
-    fi	
+    fi        
     echo "${bfr}"
 }
 
@@ -317,7 +317,7 @@ function find_login_host {
     if [[ -n "${host}" ]]; then
         if full=$(host "${host}"); then
             host=$(echo "${full}" | cut -d ' ' -f 1)
-	fi
+        fi
     fi
     echo "${host}"
 }
@@ -352,14 +352,14 @@ function rsession_timeout {
 
     ## Running as a Slurm job?
     if [[ -n "${SLURM_JOB_ID}" ]]; then
-	## Query Slurm for it's requested run-time
-	if bfr=$(squeue --jobs="${SLURM_JOB_ID}" --noheader --format="%l" 2> /dev/null); then
-	    bfr=$(echo "${bfr}" | head -n 1)
+        ## Query Slurm for it's requested run-time
+        if bfr=$(squeue --jobs="${SLURM_JOB_ID}" --noheader --format="%l" 2> /dev/null); then
+            bfr=$(echo "${bfr}" | head -n 1)
             mdebug "Slurm run-time limit: '${bfr}'"
-	    if [[ -n "${bfr}" ]]; then
+            if [[ -n "${bfr}" ]]; then
                 timeout=$(dhms_to_minutes "${bfr}")
             fi
-	fi
+        fi
     fi
     
     if [[ -z "${timeout}" ]]; then
