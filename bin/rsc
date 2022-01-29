@@ -39,7 +39,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.1-9004
+### Version: 0.2.1-9005
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -667,15 +667,27 @@ elif [[ "${action}" == "log" ]]; then
         echo "No rsession log file: ${file}"
     fi
 elif [[ "${action}" == "status" ]]; then
+    this_hostname="$(hostname)"
+    rserver_hostname="$(rserver_hostname)"
+    same_hostname=false
+    [[ "${this_hostname}" == "${rserver_hostname}" ]] && same_hostname=true
     pid=$(rserver_pid)
     if [[ -n "${pid}" ]]; then
-        echo "rserver: running (pid ${pid})"
+        if ${same_hostname}; then
+            echo "rserver: running (pid ${pid})"
+        else
+            echo "rserver: unknown (pid ${pid} on ${rserver_hostname}, but current host is ${this_hostname})"
+        fi
     else
         echo "rserver: not running"
     fi
     pid=$(rsession_pid)
     if [[ -n "${pid}" ]]; then
-        echo "rsession: running (pid ${pid})"
+        if ${same_hostname}; then
+            echo "rserver: running (pid ${pid})"
+        else
+            echo "rserver: unknown (pid ${pid} on ${rserver_hostname}, but current host is ${this_hostname})"
+        fi
     else
         echo "rsession: not running"
     fi

@@ -1,12 +1,15 @@
 # rstudio-server-launcher
 
-## Version 0.2.1-9004
+## Version 0.2.1-9005
 
 New features:
 
-* THe `rsc start` instructions include information on $USER.
+* `rsc start` instructions include information on `$USER`.
 
-* The `rsc status` report on the lock file too.
+* `rsc status` report on the lock file too.
+
+* `rsc status` now reports on "unknown" statuses if the RStudio
+  Server is running on another machine.
 
 Bug fixes:
 
