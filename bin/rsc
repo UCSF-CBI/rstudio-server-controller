@@ -39,7 +39,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.2-9000
+### Version: 0.2.2-9001
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -138,7 +138,12 @@ function acquired_lock_file {
     workdir=$(config_dir)
     lockfile=${workdir}/pid.lock
     if [[ -f "${lockfile}" ]]; then
-        error "Another RStudio Server session of yours is already running on $(rserver_hostname) on this system. Please terminate that first, e.g. call 'rsc stop' from that machine. As a last resort, call 'pkill rserver; pkill rsession', remove lock file '${lockfile}', and retry."
+	if [[ -z "$(rserver_pid)" ]] && [[ -z "$(rsession_pid)" ]]; then
+            warn "Detected a stray lock file (${lockfile}). This file was removed to allow for a new RStudio Studio instance to run, because there is no evidence that there exist another instance running on this system (no PID files for neither 'rserver' nor 'rsession' exist)."
+	    rm "${lockfile}"
+	else    
+            error "${USER}, another RStudio Server session of yours is already running on $(rserver_hostname) on this system. See 'rsc status' for details. Please terminate that first, e.g. call 'rsc stop' from that machine. As a last resort, call 'pkill rserver; pkill rsession', remove lock file '${lockfile}', and retry."
+	fi
     fi
     echo "${PPID}" > "${lockfile}"
 }

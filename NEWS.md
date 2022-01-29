@@ -1,8 +1,11 @@
 # rstudio-server-launcher
 
-## Version 0.2.2-9000
+## Version 0.2.2-9001
 
-* ...
+New features:
+
+* `rsc start` now ignores a stray lock file if there is no other
+  evidence that an RStudio Server instance is running.
 
 
 ## Version 0.2.2
