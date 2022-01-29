@@ -67,16 +67,15 @@ function free_port {
     # tiny race condition between the Python and launching the rserver
     python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
 }    
-   
-function warn_auth_logfile {
-  warn "*************************************************************"
-  warn "* Environment variable 'AUTH_LOGFILE' is set.  All usernames"
-  warn "* and passwords entered at the RStudio Server login prompt"
-  warn "* will be recorded to the file:"
-  warn "* ${AUTH_LOGFILE}"
-  warn "*************************************************************"
-  echo
+
+function validate_port {
+    [[ -z $1 ]] && error "Port must not be empty"
+    assert_integer "$1"
+    if [[ $1 -lt 0 ]] || [[ $1 -gt 65535 ]]; then
+        error "Port out of range [0,65535]: $1"
+    fi
 }
+   
 
 function auth_tool {
     local path
@@ -94,13 +93,14 @@ function validate_auth {
     [[ -n ${AUTH_LOGFILE} ]] && warn_auth_logfile
 }
 
-
-function validate_port {
-    [[ -z $1 ]] && error "Port must not be empty"
-    assert_integer "$1"
-    if [[ $1 -lt 0 ]] || [[ $1 -gt 65535 ]]; then
-        error "Port out of range [0,65535]: $1"
-    fi
+function warn_auth_logfile {
+  warn "*************************************************************"
+  warn "* Environment variable 'AUTH_LOGFILE' is set.  All usernames"
+  warn "* and passwords entered at the RStudio Server login prompt"
+  warn "* will be recorded to the file:"
+  warn "* ${AUTH_LOGFILE}"
+  warn "*************************************************************"
+  echo
 }
 
 
