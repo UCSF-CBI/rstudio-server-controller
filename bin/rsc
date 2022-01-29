@@ -59,8 +59,12 @@ source "${incl}/files.sh"
 source "${incl}/output.sh"
 
 
-# -------------------------------------------------------------------------
+# =========================================================================
 # Utility functions
+# =========================================================================
+
+# -------------------------------------------------------------------------
+# Ports utilities
 # -------------------------------------------------------------------------
 function free_port {
     # get unused socket per https://unix.stackexchange.com/a/132524
@@ -77,6 +81,9 @@ function validate_port {
 }
    
 
+# -------------------------------------------------------------------------
+# Authentication utilities
+# -------------------------------------------------------------------------
 function auth_tool {
     local path
     path=${utils}/auth-via-su
@@ -104,6 +111,9 @@ function warn_auth_logfile {
 }
 
 
+# -------------------------------------------------------------------------
+# Configuration utilities
+# -------------------------------------------------------------------------
 ## Need a workdir for sqlite database, otherwise we'd have to be root.
 ## Also for our rsession.sh
 function config_dir {
@@ -117,6 +127,10 @@ function make_config_dir {
     chmod 700 "${workdir}"/{run,tmp,var/lib/rstudio-server,/var/run/rstudio-server}
 }
 
+
+# -------------------------------------------------------------------------
+# Lock-file utilities
+# -------------------------------------------------------------------------
 ## Prevent user from running multiple instances of the RStudio Server
 function acquired_lock_file {
     local workdir
@@ -137,6 +151,10 @@ function remove_lock_file {
     [[ -f "${lockfile}" ]] && rm "${lockfile}" && mdebug "Lock file removed: ${lockfile}"
 }    
 
+
+# -------------------------------------------------------------------------
+# Configuration utilities
+# -------------------------------------------------------------------------
 function make_database_conf {
     local workdir
     workdir=$(config_dir)
@@ -202,6 +220,36 @@ function make_rserver_conf {
     } > "${workdir}/rserver.conf"
 }
 
+
+# -------------------------------------------------------------------------
+# Misc. utilities
+# -------------------------------------------------------------------------
+function check_pid {
+    ## Output PID if there is such a process, otherwise output nothing
+    mdebug "check_pid '$1' ..."
+    if [[ -n "${1}" ]] && [[ -d "/proc/${1}" ]]; then
+        mdebug "- $(hostname):/proc/$1 is directory"
+        echo "${1}"
+    else
+        mdebug "- $(hostname):/proc/$1 is NOT directory"
+        echo ""
+    fi
+    mdebug "check_pid '$1' ... done"
+}
+
+function read_pid {
+    local pid
+    mdebug "read_pid '$1' ..."
+    pid=
+    if [[ -f "$1" ]]; then
+        mdebug "- reading ..."
+        pid=$(cat "$1")
+    fi
+    mdebug "- pid=${pid}"
+    mdebug "read_pid '$1' ... done"
+    check_pid "${pid}"
+}    
+
 function dhms_to_minutes {
     local bfr
     local value
@@ -238,6 +286,56 @@ function dhms_to_minutes {
     echo "${total}"
 }
 
+function on_local_machine {
+    ## If who shows a entry with LINE that has :0 or similar, then that
+    ## suggests the user is on the current machine, and not logged in
+    ## from elsewhere
+    who | grep -E "^${USER}" | grep -q -E "[[:space:]]:[[:digit:]]+[[:space:]]"
+}
+
+function find_login_host_via_who {
+    local bfr
+    bfr=$(who | grep -E "^${USER}")
+    if [[ -n "${bfr}" ]]; then
+        mdebug "1. ${bfr}"
+        ## Drop entries with LINE suggesting direct login
+        bfr=$(echo "${bfr}" | grep -v -E "[[:space:]]:[[:digit:]]+[[:space:]]")
+        mdebug "2. ${bfr}"
+        ## Look only at the last entry
+        bfr=$(echo "${bfr}" | tail -n -1)
+        mdebug "3. ${bfr}"
+        ## Extract the hostname
+        bfr=$(echo "${bfr}" | sed -E 's/(.*[[:space:]]+[(]|[)][[:space:]]*)//g')
+        mdebug "4. ${bfr}"
+    fi	
+    echo "${bfr}"
+}
+
+function find_login_host {
+    local host
+    local full
+    host=${LOGIN_HOSTNAME}
+    
+    if [[ -z "${host}" ]]; then
+        host=$(find_login_host_via_who)
+    fi
+    
+    if [[ -z "${host}" ]]; then
+        host="<login-machine>"
+    fi
+
+    ## Attempt to look up the DNS entry
+    if [[ -n "${host}" ]]; then
+        if full=$(host "${host}"); then
+            host=$(echo "${full}" | cut -d ' ' -f 1)
+	fi
+    fi
+    echo "${host}"
+}
+
+# -------------------------------------------------------------------------
+# rsession utilities
+# -------------------------------------------------------------------------
 function rsession_timeout {
     local timeout
     local bfr
@@ -339,45 +437,6 @@ END
 }
 
 
-function check_pid {
-    ## Output PID if there is such a process, otherwise output nothing
-    mdebug "check_pid '$1' ..."
-    if [[ -n "${1}" ]] && [[ -d "/proc/${1}" ]]; then
-        mdebug "- $(hostname):/proc/$1 is directory"
-        echo "${1}"
-    else
-        mdebug "- $(hostname):/proc/$1 is NOT directory"
-        echo ""
-    fi
-    mdebug "check_pid '$1' ... done"
-}
-
-function read_pid {
-    local pid
-    mdebug "read_pid '$1' ..."
-    pid=
-    if [[ -f "$1" ]]; then
-        mdebug "- reading ..."
-        pid=$(cat "$1")
-    fi
-    mdebug "- pid=${pid}"
-    mdebug "read_pid '$1' ... done"
-    check_pid "${pid}"
-}    
-
-
-function rserver_pid_file {
-    local workdir
-    workdir=$(config_dir)
-    ## Note, this file is created by the 'rsession.sh' script, so
-    ## it does not exist until user logs in
-    echo "${workdir}/rserver.pid"
-}
-
-function rserver_pid {
-    read_pid "$(rserver_pid_file)"
-}
-
 function rsession_pid_file {
     local workdir
     workdir=$(config_dir)
@@ -388,16 +447,26 @@ function rsession_pid {
     read_pid "$(rsession_pid_file)"
 }
 
-function terminate_rserver {
-    local pid
-    pid=$(rserver_pid)
-    [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rserver (PID ${pid}) terminated"
-}
-
 function terminate_rsession {
     local pid
     pid=$(rsession_pid)
     [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rsession (PID ${pid}) terminated"
+}
+
+
+# -------------------------------------------------------------------------
+# rserver utilities
+# -------------------------------------------------------------------------
+function rserver_pid_file {
+    local workdir
+    workdir=$(config_dir)
+    ## Note, this file is created by the 'rsession.sh' script, so
+    ## it does not exist until user logs in
+    echo "${workdir}/rserver.pid"
+}
+
+function rserver_pid {
+    read_pid "$(rserver_pid_file)"
 }
 
 function rserver_hostname {
@@ -418,6 +487,12 @@ function rserver_url {
     echo "http://$(rserver_hostname):$(rserver_port)"
 }
 
+function terminate_rserver {
+    local pid
+    pid=$(rserver_pid)
+    [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rserver (PID ${pid}) terminated"
+}
+
 function launch_rserver {
     local workdir
     local rs_pid
@@ -435,56 +510,9 @@ function launch_rserver {
 }
 
 
-function on_local_machine {
-    ## If who shows a entry with LINE that has :0 or similar, then that
-    ## suggests the user is on the current machine, and not logged in
-    ## from elsewhere
-    who | grep -E "^${USER}" | grep -q -E "[[:space:]]:[[:digit:]]+[[:space:]]"
-}
-
-
-
-function find_login_host_via_who {
-    local bfr
-    bfr=$(who | grep -E "^${USER}")
-    if [[ -n "${bfr}" ]]; then
-        mdebug "1. ${bfr}"
-        ## Drop entries with LINE suggesting direct login
-        bfr=$(echo "${bfr}" | grep -v -E "[[:space:]]:[[:digit:]]+[[:space:]]")
-        mdebug "2. ${bfr}"
-        ## Look only at the last entry
-        bfr=$(echo "${bfr}" | tail -n -1)
-        mdebug "3. ${bfr}"
-        ## Extract the hostname
-        bfr=$(echo "${bfr}" | sed -E 's/(.*[[:space:]]+[(]|[)][[:space:]]*)//g')
-        mdebug "4. ${bfr}"
-    fi	
-    echo "${bfr}"
-}
-
-function find_login_host {
-    local host
-    local full
-    host=${LOGIN_HOSTNAME}
-    
-    if [[ -z "${host}" ]]; then
-        host=$(find_login_host_via_who)
-    fi
-    
-    if [[ -z "${host}" ]]; then
-        host="<login-machine>"
-    fi
-
-    ## Attempt to look up the DNS entry
-    if [[ -n "${host}" ]]; then
-        if full=$(host "${host}"); then
-            host=$(echo "${full}" | cut -d ' ' -f 1)
-	fi
-    fi
-    echo "${host}"
-}
-
-
+# -------------------------------------------------------------------------
+# Signal trap functions
+# -------------------------------------------------------------------------
 function shutdown {
     mdebug "shutdown() ..."
     terminate_rsession
