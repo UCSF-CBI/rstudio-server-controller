@@ -1,5 +1,19 @@
 # rstudio-server-launcher
 
+## Version 0.2.3
+
+New features:
+
+* `rsc start` now ignores a stray lock file if there is no other
+  evidence that an RStudio Server instance is running.
+
+* `rsc start` now detect when RStudio Server fails to launch and
+  gives an informative error message.
+
+* `rsc start` now asserts that the port is available before trying
+  to launch the RStudio Server.
+
+
 ## Version 0.2.2
 
 New features:

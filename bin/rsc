@@ -39,7 +39,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.2
+### Version: 0.2.3
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -57,26 +57,17 @@ source "${incl}/conditions.sh"
 source "${incl}/files.sh"
 # shellcheck source=incl/output.sh
 source "${incl}/output.sh"
+# shellcheck source=incl/ports.sh
+source "${incl}/ports.sh"
 
 
-# -------------------------------------------------------------------------
+# =========================================================================
 # Utility functions
+# =========================================================================
+
 # -------------------------------------------------------------------------
-function free_port {
-    # get unused socket per https://unix.stackexchange.com/a/132524
-    # tiny race condition between the Python and launching the rserver
-    python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
-}    
-
-function validate_port {
-    [[ -z $1 ]] && error "Port must not be empty"
-    assert_integer "$1"
-    if [[ $1 -lt 0 ]] || [[ $1 -gt 65535 ]]; then
-        error "Port out of range [0,65535]: $1"
-    fi
-}
-   
-
+# Authentication utilities
+# -------------------------------------------------------------------------
 function auth_tool {
     local path
     path=${utils}/auth-via-su
@@ -104,6 +95,9 @@ function warn_auth_logfile {
 }
 
 
+# -------------------------------------------------------------------------
+# Configuration utilities
+# -------------------------------------------------------------------------
 ## Need a workdir for sqlite database, otherwise we'd have to be root.
 ## Also for our rsession.sh
 function config_dir {
@@ -117,6 +111,10 @@ function make_config_dir {
     chmod 700 "${workdir}"/{run,tmp,var/lib/rstudio-server,/var/run/rstudio-server}
 }
 
+
+# -------------------------------------------------------------------------
+# Lock-file utilities
+# -------------------------------------------------------------------------
 ## Prevent user from running multiple instances of the RStudio Server
 function acquired_lock_file {
     local workdir
@@ -124,7 +122,12 @@ function acquired_lock_file {
     workdir=$(config_dir)
     lockfile=${workdir}/pid.lock
     if [[ -f "${lockfile}" ]]; then
-        error "Another RStudio Server session of yours is already running on $(rserver_hostname) on this system. Please terminate that first, e.g. call 'rsc stop' from that machine. As a last resort, call 'pkill rserver; pkill rsession', remove lock file '${lockfile}', and retry."
+        if [[ -z "$(rserver_pid)" ]] && [[ -z "$(rsession_pid)" ]]; then
+            warn "Detected a stray lock file (${lockfile}). This file was removed to allow for a new RStudio Studio instance to run, because there was no evidence that another instance was running on this system (no PID files for neither 'rserver' nor 'rsession' were found)."
+            rm "${lockfile}"
+        else
+            error "${USER}, another RStudio Server session of yours is already running on $(rserver_hostname) on this system. See 'rsc status' for details. Please terminate that first, e.g. call 'rsc stop' from that machine. As a last resort, call 'pkill rserver; pkill rsession', remove lock file '${lockfile}', and retry."
+        fi
     fi
     echo "${PPID}" > "${lockfile}"
 }
@@ -137,6 +140,10 @@ function remove_lock_file {
     [[ -f "${lockfile}" ]] && rm "${lockfile}" && mdebug "Lock file removed: ${lockfile}"
 }    
 
+
+# -------------------------------------------------------------------------
+# Configuration utilities
+# -------------------------------------------------------------------------
 function make_database_conf {
     local workdir
     workdir=$(config_dir)
@@ -157,8 +164,8 @@ function make_rserver_conf {
     if [[ "${port}" == "random" ]]; then
         port=$(free_port)
     fi
-    validate_port "${port}"
-    
+    assert_port_free "${port}"
+
     {
         ## For legacy accounts with UID in [500,999] on C4
         echo "auth-minimum-user-id=500"
@@ -202,6 +209,36 @@ function make_rserver_conf {
     } > "${workdir}/rserver.conf"
 }
 
+
+# -------------------------------------------------------------------------
+# Misc. utilities
+# -------------------------------------------------------------------------
+function check_pid {
+    ## Output PID if there is such a process, otherwise output nothing
+    mdebug "check_pid '$1' ..."
+    if [[ -n "${1}" ]] && [[ -d "/proc/${1}" ]]; then
+        mdebug "- $(hostname):/proc/$1 is directory"
+        echo "${1}"
+    else
+        mdebug "- $(hostname):/proc/$1 is NOT directory"
+        echo ""
+    fi
+    mdebug "check_pid '$1' ... done"
+}
+
+function read_pid {
+    local pid
+    mdebug "read_pid '$1' ..."
+    pid=
+    if [[ -f "$1" ]]; then
+        mdebug "- reading ..."
+        pid=$(cat "$1")
+    fi
+    mdebug "- pid=${pid}"
+    mdebug "read_pid '$1' ... done"
+    check_pid "${pid}"
+}    
+
 function dhms_to_minutes {
     local bfr
     local value
@@ -215,9 +252,9 @@ function dhms_to_minutes {
         mdebug "Parsing: ${bfr}"
         echo "${bfr}" | grep -q -F "[[:digit:]]+$" && error "Syntax error: ${bfr}"
         value=$(echo "${bfr}" | sed -E 's/^(.*[[:digit:]]+[:-]|)([[:digit:]]+)$/\2/')
-	assert_integer "${value}"
+        assert_integer "${value}"
         bfr=$(echo "${bfr}" | sed -E 's/[:-]?([[:digit:]]+)$//')
-	parts+=("${value}")
+        parts+=("${value}")
     done
     mdebug "parts=${parts[*]}"
 
@@ -225,9 +262,9 @@ function dhms_to_minutes {
     multipliers=(1 60 3600 86400)
     total=0
     for (( kk=0; kk < ${#parts[@]}; kk++ )); do
-	value=$(( multipliers[kk] * parts[kk] ))
-	mdebug "$(printf "%d. %d*%d = %d\n" "${kk}" "${multipliers[${kk}]}" "${parts[${kk}]}" "${value}")"
-	total=$(( total + value ))
+        value=$(( multipliers[kk] * parts[kk] ))
+        mdebug "$(printf "%d. %d*%d = %d\n" "${kk}" "${multipliers[${kk}]}" "${parts[${kk}]}" "${value}")"
+        total=$(( total + value ))
     done
     mdebug "total=${total} seconds"
 
@@ -238,6 +275,76 @@ function dhms_to_minutes {
     echo "${total}"
 }
 
+function on_local_machine {
+    ## If who shows a entry with LINE that has :0 or similar, then that
+    ## suggests the user is on the current machine, and not logged in
+    ## from elsewhere
+    who | grep -E "^${USER}" | grep -q -E "[[:space:]]:[[:digit:]]+[[:space:]]"
+}
+
+function find_login_host_via_who {
+    local bfr
+    bfr=$(who | grep -E "^${USER}")
+    if [[ -n "${bfr}" ]]; then
+        mdebug "1. ${bfr}"
+        ## Drop entries with LINE suggesting direct login
+        bfr=$(echo "${bfr}" | grep -v -E "[[:space:]]:[[:digit:]]+[[:space:]]")
+        mdebug "2. ${bfr}"
+        ## Look only at the last entry
+        bfr=$(echo "${bfr}" | tail -n -1)
+        mdebug "3. ${bfr}"
+        ## Extract the hostname
+        bfr=$(echo "${bfr}" | sed -E 's/(.*[[:space:]]+[(]|[)][[:space:]]*)//g')
+        mdebug "4. ${bfr}"
+    fi        
+    echo "${bfr}"
+}
+
+function find_login_host {
+    local host
+    local full
+    host=${LOGIN_HOSTNAME}
+    
+    if [[ -z "${host}" ]]; then
+        host=$(find_login_host_via_who)
+    fi
+    
+    if [[ -z "${host}" ]]; then
+        host="<login-machine>"
+    fi
+
+    ## Attempt to look up the DNS entry
+    if [[ -n "${host}" ]]; then
+        if full=$(host "${host}"); then
+            host=$(echo "${full}" | cut -d ' ' -f 1)
+        fi
+    fi
+    echo "${host}"
+}
+
+# -------------------------------------------------------------------------
+# rsession utilities
+# -------------------------------------------------------------------------
+## Usage: rs_process_status <pid> <hostname>
+function rs_process_status {
+    local pid
+    local hostname
+    local this_hostname
+    pid=${1:-}
+    hostname=${2:-}
+    this_hostname="$(hostname)"
+    
+    if [[ -n "${pid}" ]]; then
+        if [[ "${this_hostname}" == "${hostname}" ]]; then
+            echo "running (pid ${pid})"
+        else
+            echo "unknown (pid ${pid} on ${hostname}, but current host is ${this_hostname})"
+        fi
+    else
+        echo "not running"
+    fi
+}
+
 function rsession_timeout {
     local timeout
     local bfr
@@ -245,14 +352,14 @@ function rsession_timeout {
 
     ## Running as a Slurm job?
     if [[ -n "${SLURM_JOB_ID}" ]]; then
-	## Query Slurm for it's requested run-time
-	if bfr=$(squeue --jobs="${SLURM_JOB_ID}" --noheader --format="%l" 2> /dev/null); then
-	    bfr=$(echo "${bfr}" | head -n 1)
+        ## Query Slurm for it's requested run-time
+        if bfr=$(squeue --jobs="${SLURM_JOB_ID}" --noheader --format="%l" 2> /dev/null); then
+            bfr=$(echo "${bfr}" | head -n 1)
             mdebug "Slurm run-time limit: '${bfr}'"
-	    if [[ -n "${bfr}" ]]; then
+            if [[ -n "${bfr}" ]]; then
                 timeout=$(dhms_to_minutes "${bfr}")
             fi
-	fi
+        fi
     fi
     
     if [[ -z "${timeout}" ]]; then
@@ -339,45 +446,6 @@ END
 }
 
 
-function check_pid {
-    ## Output PID if there is such a process, otherwise output nothing
-    mdebug "check_pid '$1' ..."
-    if [[ -n "${1}" ]] && [[ -d "/proc/${1}" ]]; then
-        mdebug "- $(hostname):/proc/$1 is directory"
-        echo "${1}"
-    else
-        mdebug "- $(hostname):/proc/$1 is NOT directory"
-        echo ""
-    fi
-    mdebug "check_pid '$1' ... done"
-}
-
-function read_pid {
-    local pid
-    mdebug "read_pid '$1' ..."
-    pid=
-    if [[ -f "$1" ]]; then
-        mdebug "- reading ..."
-        pid=$(cat "$1")
-    fi
-    mdebug "- pid=${pid}"
-    mdebug "read_pid '$1' ... done"
-    check_pid "${pid}"
-}    
-
-
-function rserver_pid_file {
-    local workdir
-    workdir=$(config_dir)
-    ## Note, this file is created by the 'rsession.sh' script, so
-    ## it does not exist until user logs in
-    echo "${workdir}/rserver.pid"
-}
-
-function rserver_pid {
-    read_pid "$(rserver_pid_file)"
-}
-
 function rsession_pid_file {
     local workdir
     workdir=$(config_dir)
@@ -388,16 +456,30 @@ function rsession_pid {
     read_pid "$(rsession_pid_file)"
 }
 
-function terminate_rserver {
-    local pid
-    pid=$(rserver_pid)
-    [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rserver (PID ${pid}) terminated"
-}
-
 function terminate_rsession {
     local pid
     pid=$(rsession_pid)
     [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rsession (PID ${pid}) terminated"
+}
+
+function rsession_status {
+    rs_process_status "$(rsession_pid)" "$(rserver_hostname)"
+}    
+
+
+# -------------------------------------------------------------------------
+# rserver utilities
+# -------------------------------------------------------------------------
+function rserver_pid_file {
+    local workdir
+    workdir=$(config_dir)
+    ## Note, this file is created by the 'rsession.sh' script, so
+    ## it does not exist until user logs in
+    echo "${workdir}/rserver.pid"
+}
+
+function rserver_pid {
+    read_pid "$(rserver_pid_file)"
 }
 
 function rserver_hostname {
@@ -418,73 +500,41 @@ function rserver_url {
     echo "http://$(rserver_hostname):$(rserver_port)"
 }
 
+function terminate_rserver {
+    local pid
+    pid=$(rserver_pid)
+    [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rserver (PID ${pid}) terminated"
+}
+
 function launch_rserver {
     local workdir
     local rs_pid
+    local port
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
 
     hostname > "${workdir}/rserver.hostname"
     grep -E "www-port=" ~/.config/rsc/rserver.conf | sed 's/www-port=//' > "${workdir}/rserver.port"
 
+    port=$(rserver_port)
+    assert_port_free "${port}"
+    
     pid_file=$(rserver_pid_file)
     rserver --config-file="${workdir}/rserver.conf" &
-    echo $! > "${pid_file}"
+    rs_pid=$!
+    echo "${rs_pid}" > "${pid_file}"
     rs_pid=$(rserver_pid)
     mdebug "RStudio Server started (pid ${rs_pid})"
 }
 
-
-function on_local_machine {
-    ## If who shows a entry with LINE that has :0 or similar, then that
-    ## suggests the user is on the current machine, and not logged in
-    ## from elsewhere
-    who | grep -E "^${USER}" | grep -q -E "[[:space:]]:[[:digit:]]+[[:space:]]"
-}
+function rserver_status {
+    rs_process_status "$(rserver_pid)" "$(rserver_hostname)"
+}    
 
 
-
-function find_login_host_via_who {
-    local bfr
-    bfr=$(who | grep -E "^${USER}")
-    if [[ -n "${bfr}" ]]; then
-        mdebug "1. ${bfr}"
-        ## Drop entries with LINE suggesting direct login
-        bfr=$(echo "${bfr}" | grep -v -E "[[:space:]]:[[:digit:]]+[[:space:]]")
-        mdebug "2. ${bfr}"
-        ## Look only at the last entry
-        bfr=$(echo "${bfr}" | tail -n -1)
-        mdebug "3. ${bfr}"
-        ## Extract the hostname
-        bfr=$(echo "${bfr}" | sed -E 's/(.*[[:space:]]+[(]|[)][[:space:]]*)//g')
-        mdebug "4. ${bfr}"
-    fi	
-    echo "${bfr}"
-}
-
-function find_login_host {
-    local host
-    local full
-    host=${LOGIN_HOSTNAME}
-    
-    if [[ -z "${host}" ]]; then
-        host=$(find_login_host_via_who)
-    fi
-    
-    if [[ -z "${host}" ]]; then
-        host="<login-machine>"
-    fi
-
-    ## Attempt to look up the DNS entry
-    if [[ -n "${host}" ]]; then
-        if full=$(host "${host}"); then
-            host=$(echo "${full}" | cut -d ' ' -f 1)
-	fi
-    fi
-    echo "${host}"
-}
-
-
+# -------------------------------------------------------------------------
+# Signal trap functions
+# -------------------------------------------------------------------------
 function shutdown {
     mdebug "shutdown() ..."
     terminate_rsession
@@ -518,7 +568,7 @@ verbose=false
 args=()
 full=false
 port=${RSTUDIO_PORT:-8787}
-[[ -n ${port} ]] && validate_port "$port"
+[[ -n ${port} ]] && assert_port "${port}"
 
 # Parse command-line options
 while [[ $# -gt 0 ]]; do
@@ -565,7 +615,7 @@ while [[ $# -gt 0 ]]; do
         if [[ "${key}" == "port" ]]; then
             port=${value}
             if [[ "${value}" != "random" ]]; then
-                validate_port "${port}"
+                assert_port "${port}"
             fi
         else
             merror "Unknown option: $1"
@@ -667,30 +717,8 @@ elif [[ "${action}" == "log" ]]; then
         echo "No rsession log file: ${file}"
     fi
 elif [[ "${action}" == "status" ]]; then
-    this_hostname="$(hostname)"
-    rserver_hostname="$(rserver_hostname)"
-    same_hostname=false
-    [[ "${this_hostname}" == "${rserver_hostname}" ]] && same_hostname=true
-    pid=$(rserver_pid)
-    if [[ -n "${pid}" ]]; then
-        if ${same_hostname}; then
-            echo "rserver: running (pid ${pid})"
-        else
-            echo "rserver: unknown (pid ${pid} on ${rserver_hostname}, but current host is ${this_hostname})"
-        fi
-    else
-        echo "rserver: not running"
-    fi
-    pid=$(rsession_pid)
-    if [[ -n "${pid}" ]]; then
-        if ${same_hostname}; then
-            echo "rserver: running (pid ${pid})"
-        else
-            echo "rserver: unknown (pid ${pid} on ${rserver_hostname}, but current host is ${this_hostname})"
-        fi
-    else
-        echo "rsession: not running"
-    fi
+    printf "%s: %s\n" "rserver" "$(rserver_status)"
+    printf "%s: %s\n" "rsession" "$(rsession_status)"
     workdir=$(config_dir)
     lockfile=${workdir}/pid.lock
     if [[ -f "${lockfile}" ]]; then
@@ -725,10 +753,11 @@ elif [[ "${action}" == "start" ]]; then
     assert_executable R
     assert_executable rserver
     assert_executable rsession
-  
+    [[ "${port}" != "random" ]] && assert_port_free "${port}"
+    
     validate_auth
   
-    make_config_dir  
+    make_config_dir
     acquired_lock_file
     
     make_database_conf
@@ -763,9 +792,12 @@ elif [[ "${action}" == "start" ]]; then
     fi
     msg="${msg} Any R session started times out after being idle for $(rsession_timeout) minutes."
     msg="${msg} To stop the server, press Ctrl-C here, or run 'rsc stop' on $(rserver_hostname) in another shell."
-    echo "${msg}"
     
     rs_pid="$(rserver_pid)"
+    [[ -z "${rs_pid}" ]] && error "RStudio Server failed to start for unknown reasons. One reason for this might that the port (${port}) is already occupied."
+
+    echo "${msg}"
+    
     mdebug "Waiting for 'rserver' (pid ${rs_pid}) to finish ..."
     wait "${rs_pid}"
     res=$?
