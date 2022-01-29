@@ -4,7 +4,9 @@
 
 New features:
 
-* The `rsc start` instructions now include information on $USER.
+* THe `rsc start` instructions include information on $USER.
+
+* The `rsc status` report on the lock file too.
 
 Bug fixes:
 

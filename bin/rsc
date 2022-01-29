@@ -679,6 +679,13 @@ elif [[ "${action}" == "status" ]]; then
     else
         echo "rsession: not running"
     fi
+    workdir=$(config_dir)
+    lockfile=${workdir}/pid.lock
+    if [[ -f "${lockfile}" ]]; then
+        echo "lock file: exists (${lockfile})"
+    else
+        echo "lock file: does not exist"
+    fi
 elif [[ "${action}" == "stop" ]]; then
     workdir=$(config_dir)
     lockfile=${workdir}/pid.lock
