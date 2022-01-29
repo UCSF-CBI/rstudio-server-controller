@@ -39,7 +39,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.1
+### Version: 0.2.2
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -62,26 +62,20 @@ source "${incl}/output.sh"
 # -------------------------------------------------------------------------
 # Utility functions
 # -------------------------------------------------------------------------
-function ruler {
-    ## 70-symbols wide
-    echo "----------------------------------------------------------------------"
-}
-
 function free_port {
     # get unused socket per https://unix.stackexchange.com/a/132524
     # tiny race condition between the Python and launching the rserver
     python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
 }    
-   
-function warn_auth_logfile {
-  warn "*************************************************************"
-  warn "* Environment variable 'AUTH_LOGFILE' is set.  All usernames"
-  warn "* and passwords entered at the RStudio Server login prompt"
-  warn "* will be recorded to the file:"
-  warn "* ${AUTH_LOGFILE}"
-  warn "*************************************************************"
-  echo
+
+function validate_port {
+    [[ -z $1 ]] && error "Port must not be empty"
+    assert_integer "$1"
+    if [[ $1 -lt 0 ]] || [[ $1 -gt 65535 ]]; then
+        error "Port out of range [0,65535]: $1"
+    fi
 }
+   
 
 function auth_tool {
     local path
@@ -99,18 +93,14 @@ function validate_auth {
     [[ -n ${AUTH_LOGFILE} ]] && warn_auth_logfile
 }
 
-
-function validate_port {
-    [[ -z $1 ]] && error "Port must not be empty"
-    if [[ $1 -lt 0 ]] || [[ $1 -gt 65535 ]]; then
-        error "Port out of range [0,65535]: $1"
-    fi
-}
-
-
-## Assert executable exist
-function assert_executable {
-  command -v "$1" &> /dev/null || error "No such executable: $1"
+function warn_auth_logfile {
+  warn "*************************************************************"
+  warn "* Environment variable 'AUTH_LOGFILE' is set.  All usernames"
+  warn "* and passwords entered at the RStudio Server login prompt"
+  warn "* will be recorded to the file:"
+  warn "* ${AUTH_LOGFILE}"
+  warn "*************************************************************"
+  echo
 }
 
 
@@ -144,7 +134,7 @@ function remove_lock_file {
     local lockfile
     workdir=$(config_dir)
     lockfile=${workdir}/pid.lock
-    [[ -f "${lockfile}" ]] && rm "${lockfile}"
+    [[ -f "${lockfile}" ]] && rm "${lockfile}" && mdebug "Lock file removed: ${lockfile}"
 }    
 
 function make_database_conf {
@@ -210,11 +200,6 @@ function make_rserver_conf {
         ## The web port for the RStudio Server
         echo "www-port=${port:?}"
     } > "${workdir}/rserver.conf"
-}
-
-
-function assert_integer {
-    echo "${1:?}" | grep -q "^[[:digit:]]+" && error "Not an integer: ${1}"
 }
 
 function dhms_to_minutes {
@@ -320,8 +305,9 @@ export RSESSION_LOG_FILE
 
 {
     echo "Launching rsession:"
-    echo "Time: \$(date)"
+    echo "Time: \$(date --rfc-3339=seconds)"
     echo "HOSTNAME: \${HOSTNAME}"
+    echo "hostname: \$(hostname)"
     echo "PPID: \${PPID}"
     echo "PWD: \${PWD}"
     echo "PATH: \${PATH}"
@@ -355,19 +341,27 @@ END
 
 function check_pid {
     ## Output PID if there is such a process, otherwise output nothing
+    mdebug "check_pid '$1' ..."
     if [[ -n "${1}" ]] && [[ -d "/proc/${1}" ]]; then
+        mdebug "- $(hostname):/proc/$1 is directory"
         echo "${1}"
     else
+        mdebug "- $(hostname):/proc/$1 is NOT directory"
         echo ""
     fi
+    mdebug "check_pid '$1' ... done"
 }
 
 function read_pid {
     local pid
+    mdebug "read_pid '$1' ..."
     pid=
     if [[ -f "$1" ]]; then
+        mdebug "- reading ..."
         pid=$(cat "$1")
     fi
+    mdebug "- pid=${pid}"
+    mdebug "read_pid '$1' ... done"
     check_pid "${pid}"
 }    
 
@@ -426,6 +420,7 @@ function rserver_url {
 
 function launch_rserver {
     local workdir
+    local rs_pid
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
 
@@ -435,7 +430,8 @@ function launch_rserver {
     pid_file=$(rserver_pid_file)
     rserver --config-file="${workdir}/rserver.conf" &
     echo $! > "${pid_file}"
-    mdebug "RStudio Server started (pid $(rserver_pid))" 1>&2
+    rs_pid=$(rserver_pid)
+    mdebug "RStudio Server started (pid ${rs_pid})"
 }
 
 
@@ -488,6 +484,28 @@ function find_login_host {
     echo "${host}"
 }
 
+
+function shutdown {
+    mdebug "shutdown() ..."
+    terminate_rsession
+    terminate_rserver
+    remove_lock_file
+    mdebug "shutdown() ... done"
+}
+
+function on_sigterm {
+    mdebug "on_sigterm() ..."
+    shutdown
+    exit 0
+    mdebug "on_sigterm() ... done"
+}
+
+function on_sigcont {
+    mdebug "on_sigcont() ..."
+    shutdown
+    exit 0
+    mdebug "on_sigcont() ... done"
+}
 
 # -------------------------------------------------------------------------
 # MAIN
@@ -630,9 +648,9 @@ if [[ "${action}" == "config" ]]; then
         echo
         for file in "${files[@]}"; do
             if [[ -f "${file}" ]]; then
-                ruler
+                ruler "-"
                 echo "${file}"
-                ruler
+                ruler "-"
                 cat "${file}"
             fi
         done
@@ -641,31 +659,50 @@ elif [[ "${action}" == "log" ]]; then
     workdir=$(config_dir)
     file=${workdir}/rsession.log
     if [[ -f "${file}" ]]; then
-        ruler
+        ruler "-"
         echo "${file}"
-        ruler
+        ruler "-"
         cat "${file}"
     else
         echo "No rsession log file: ${file}"
     fi
 elif [[ "${action}" == "status" ]]; then
+    this_hostname="$(hostname)"
+    rserver_hostname="$(rserver_hostname)"
+    same_hostname=false
+    [[ "${this_hostname}" == "${rserver_hostname}" ]] && same_hostname=true
     pid=$(rserver_pid)
     if [[ -n "${pid}" ]]; then
-        echo "rserver: running (pid ${pid})"
+        if ${same_hostname}; then
+            echo "rserver: running (pid ${pid})"
+        else
+            echo "rserver: unknown (pid ${pid} on ${rserver_hostname}, but current host is ${this_hostname})"
+        fi
     else
         echo "rserver: not running"
     fi
     pid=$(rsession_pid)
     if [[ -n "${pid}" ]]; then
-        echo "rsession: running (pid ${pid})"
+        if ${same_hostname}; then
+            echo "rserver: running (pid ${pid})"
+        else
+            echo "rserver: unknown (pid ${pid} on ${rserver_hostname}, but current host is ${this_hostname})"
+        fi
     else
         echo "rsession: not running"
+    fi
+    workdir=$(config_dir)
+    lockfile=${workdir}/pid.lock
+    if [[ -f "${lockfile}" ]]; then
+        echo "lock file: exists (${lockfile})"
+    else
+        echo "lock file: does not exist"
     fi
 elif [[ "${action}" == "stop" ]]; then
     workdir=$(config_dir)
     lockfile=${workdir}/pid.lock
     ## If running, make sure we're stopping from the correct machine
-    if [[ -f "${lockfile}" ]] && [[ "${HOSTNAME}" != "$(rserver_hostname)" ]]; then
+    if [[ -f "${lockfile}" ]] && [[ "$(hostname)" != "$(rserver_hostname)" ]]; then
         error "Stopping the RStudio Server can only be made from the machine ($(rserver_hostname)) where it was started from"
     fi
 
@@ -699,21 +736,40 @@ elif [[ "${action}" == "start" ]]; then
     make_rsession_sh
     make_rsession_conf
 
-    ## Make sure to stop the RStudio Server and any R sessions on exit
-    mdebug "Registering 'trap ... EXIT"
-    trap "terminate_rsession; terminate_rserver; remove_lock_file" EXIT
+    mdebug "PID for rsc (this process): $$"
+
+    ## For troubleshooting/debugging Slurm termination /HB 2022-01-27
+##    for kk in {0..64}; do
+##        trap "echo '$0: Caught signal ${kk}'" "${kk}"
+##    done
     
+    ## Make sure to stop the RStudio Server and any R sessions on exit
+    mdebug "Registering 'trap shutdown EXIT', which perform cleanups"
+    trap shutdown EXIT
+
+    mdebug "Registering 'trap on_sigterm SIGTERM', which triggers the EXIT trap"
+    trap on_sigterm SIGTERM
+
+    mdebug "Registering 'trap on_sigterm SIGCONT', which triggers the EXIT trap"
+    trap on_sigcont SIGCONT
+
     launch_rserver
     
     if on_local_machine; then
-        msg="Your personal RStudio Server is available on <http://127.0.0.1:$(rserver_port)> from this machine ($(rserver_hostname))."
+        msg="${USER}, your personal RStudio Server is available on <http://127.0.0.1:$(rserver_port)> from this machine ($(rserver_hostname))."
     else
         LOCALPORT=${LOCALPORT:-8787}
-        msg="Your personal RStudio Server is available on <http://$(rserver_hostname):$(rserver_port)>. If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:${LOCALPORT}> by running 'ssh -J ${USER}@$(find_login_host) -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal."
+        msg="${USER}, your personal RStudio Server is available on <http://$(rserver_hostname):$(rserver_port)>. If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:${LOCALPORT}> by running 'ssh -J ${USER}@$(find_login_host) -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal."
     fi
     msg="${msg} Any R session started times out after being idle for $(rsession_timeout) minutes."
     msg="${msg} To stop the server, press Ctrl-C here, or run 'rsc stop' on $(rserver_hostname) in another shell."
     echo "${msg}"
-    mdebug "Waiting for 'rserver' (pid $(rserver_pid)) to finish"
-    wait
+    
+    rs_pid="$(rserver_pid)"
+    mdebug "Waiting for 'rserver' (pid ${rs_pid}) to finish ..."
+    wait "${rs_pid}"
+    res=$?
+    mdebug "'rserver' exit code: ${res}"
+    mdebug "Waiting for 'rserver' (pid ${rs_pid}) to finish ... done"
+    mdebug "$0 is exiting..."
 fi

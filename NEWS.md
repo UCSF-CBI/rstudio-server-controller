@@ -1,5 +1,25 @@
 # rstudio-server-launcher
 
+## Version 0.2.2
+
+New features:
+
+* `rsc start` instructions include information on `$USER`.
+
+* `rsc status` report on the lock file too.
+
+* `rsc status` now reports on "unknown" statuses if the RStudio
+  Server is running on another machine.
+
+Bug fixes:
+
+* `rsc start` failed to shut down nicely when receiving SIGTERM,
+  resulting in R sessions and lock files being left behind.
+
+* `src stop` would fail on machines where environment `HOSTNAME`
+  is not correct. Now relying on `hostname` instead.
+
+
 ## Version 0.2.1
 
 New features:
