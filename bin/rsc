@@ -170,19 +170,27 @@ function remove_stray_pid_file {
     local what
     what=${1:?}
 
+    mdebug "remove_stray_pid_file(what='${what}'):"
+    
     workdir=$(config_dir)
     
-    if [[ "${what}" != "rserver" ]] && [[ "${what}" != "rsession" ]]; then
+    if [[ "${what}" == "rserver" ]]; then
+        pid_file="$(rserver_pid_file)"
+    elif [[ "${what}" == "rsession" ]]; then
+        pid_file="$(rsession_pid_file)"
+    else
         error "Unknown PID file type: ${what}"
     fi
-    pid_file="${workdir}/${what}.pid"
+    mdebug " - pid_file=${pid_file}"
     
     ## Nothing to do?
     [[ ! -f "${pid_file}" ]] && return 0;
 
     ## Get PID
-    pid=$(cat "${pid_file}")
-    ## Nothing to do?
+    pid=$(read_pid true "${pid_file}")
+    mdebug " - pid=${pid}"
+    
+    ## Empty PID (shouldn't really happen)
     if [[ -z "${pid}" ]]; then
         rm "${pid_file}"
          warn "Detected a stray PID file (${pid_file}). This file was removed, because it was empty."
@@ -191,14 +199,17 @@ function remove_stray_pid_file {
 
     ## Nothing to do?
     file="${workdir}/rserver.hostname"
+    mdebug " - rserver hostname file=${file}"
     [[ ! -f "${file}" ]] && return 0;
 
     ## Get rserver hostname
     rserver_hostname=$(cat "${workdir}/rserver.hostname")
+    mdebug " - rserver hostname=${rserver_hostname}"
+    mdebug " - hostname=$(hostname)"
 
     ## Nothing todo?
     [[ "${rserver_hostname}" != "$(hostname)" ]] && return 0;
-    
+
     ## If this process is not running, remove the PID file
     if [[ -z $(check_pid "${pid}") ]]; then
         rm "${pid_file}"
