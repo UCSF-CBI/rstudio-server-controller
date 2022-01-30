@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.2.3-9003
+## Version 0.2.3-9004
 
 * Add support for `--port-seed=<seed>`, which sets the random seed used
   when finding a free, random port (`--port=random`).
@@ -13,6 +13,9 @@
 * Add support for `--dryrun`, which does everything but launching the
   RStudio Server.  This is useful for troubleshooting and development.
 
+* Now `rsc` removes stray PID and lock files, if it can be concluded
+  that they are stray files.
+  
 
 ## Version 0.2.3
 

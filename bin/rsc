@@ -43,7 +43,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.3-9003
+### Version: 0.2.3-9004
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -125,8 +125,6 @@ function acquired_lock_file {
     local lockfile
     workdir=$(config_dir)
 
-    remove_stray_lockfile
-    
     lockfile=${workdir}/pid.lock
     if [[ -f "${lockfile}" ]]; then
         error "${USER}, another RStudio Server session of yours is already running on $(rserver_hostname) on this system. See 'rsc status' for details. Please terminate that first, e.g. call 'rsc stop' from that machine. As a last resort, call 'pkill rserver; pkill rsession', remove lock file '${lockfile}', and retry."
@@ -158,6 +156,54 @@ function remove_stray_lockfile {
     rm "${lockfile}"
     warn "Detected a stray lock file (${lockfile}). This file was removed, because there was no evidence that another instance was running on this system (no PID files for neither 'rserver' nor 'rsession' were found)."
 }
+
+
+function remove_stray_pid_file {
+    local workdir
+    local file
+    local pid_file
+    local pid
+    local rserver_hostname
+    local what
+    what=${1:?}
+
+    workdir=$(config_dir)
+    
+    if [[ "${what}" != "rserver" ]] && [[ "${what}" != "rsession" ]]; then
+        error "Unknown PID file type: ${what}"
+    fi
+    pid_file="${workdir}/${what}.pid"
+    
+    ## Nothing to do?
+    [[ ! -f "${pid_file}" ]] && return 0;
+
+    ## Get PID
+    pid=$(cat "${pid_file}")
+    ## Nothing to do?
+    if [[ -z "${pid}" ]]; then
+        rm "${pid_file}"
+         warn "Detected a stray PID file (${pid_file}). This file was removed, because it was empty."
+        return 0
+    fi
+
+    ## Nothing to do?
+    file="${workdir}/rserver.hostname"
+    [[ ! -f "${file}" ]] && return 0;
+
+    ## Get rserver hostname
+    rserver_hostname=$(cat "${workdir}/rserver.hostname")
+
+    ## Nothing todo?
+    [[ "${rserver_hostname}" != "$(hostname)" ]] && return 0;
+    
+    ## If this process is not running, remove the PID file
+    if [[ -z $(check_pid "${pid}") ]]; then
+        rm "${pid_file}"
+        warn "Detected a stray PID file (${pid_file}). This file was removed, because it referred to a ${what} process (PID ${pid} on ${rserver_hostname}) which is no longer running."
+        return 0
+    fi
+}
+
 
 
 # -------------------------------------------------------------------------
@@ -695,6 +741,11 @@ mdebug "port_seed: ${port_seed}"
 mdebug "args: [n=${#args[@]}] ${args[*]}"
 
 
+## Remove any stray files
+remove_stray_lockfile
+remove_stray_pid_file rsession
+remove_stray_pid_file rserver
+
 if [[ "${action}" == "config" ]]; then
     files=()
     workdir=$(config_dir)
@@ -784,7 +835,7 @@ elif [[ "${action}" == "reset" ]]; then
     $force || acquired_lock_file
     workdir=$(config_dir)
     [[ -d "${workdir}" ]] && rm -rf "${workdir}"
-elif [[ "${action}" == "start" ]]; then
+elif [[ "${action}" == "start" ]]; then    
     ## Assert executables are available
     assert_executable R
     assert_executable rserver
