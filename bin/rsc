@@ -445,7 +445,7 @@ function make_rsession_envs {
     local workdir
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
-    declare -x > "${workdir}/rsession.env"
+    declare -x > "${workdir}/rsession.env.parent"
 }
 
 function make_rsession_conf {
@@ -484,16 +484,17 @@ echo "\${PPID}" > "$workdir/rserver.pid"
 RSESSION_LOG_FILE="$workdir/rsession.log"
 export RSESSION_LOG_FILE
 
+declare -x > "$workdir/rsession.env.rstudio"
+
 ## Import inherited environment variables?
 if ${rsession_inherit_env}; then
     ## (a) Record current env vars
-    declare -x > "$workdir/rsession.env.tmp"
     ## (b) Load inherited env vars
-    source "$workdir/rsession.env"
+    source "$workdir/rsession.env.parent"
     ## (c) Load recorded env vars (in case they where overwritten)
-    source "$workdir/rsession.env.tmp"
+    source "$workdir/rsession.env.rstudio"
     ## (d) Log env vars to be used
-    env > "$workdir/rsession.env.final"
+    declare -x > "$workdir/rsession.env"
 fi
 
 {
