@@ -22,7 +22,6 @@ function free_random_port {
 
 function free_uid_port {
     local port
-    local ports
     local uid
 
     uid=${1:-$(id -u)}
@@ -32,17 +31,9 @@ function free_uid_port {
     # tiny race condition between the Python and launching the rserver
     assert_executable python
 
-    mapfile ports < <(printf "import random;\nrandom.seed(%d);\nfor i in range(1000):print(random.randrange(1024,65535));" "${uid}" | python -)
-    
-    for port in "${ports[@]}"; do
-        if is_port_free "${port}"; then
-            echo "${port}"
-            return 0
-        fi
-    done
-    
-    echo ""
-    return 1
+    port=$(printf "import random\nimport socket\ns=socket.socket(socket.AF_INET, socket.SOCK_STREAM)\nrandom.seed(%d)\nfor i in range(1000):\n  port=random.randrange(1024,65535)\n  if s.connect_ex((\"\", port)) != 0: break\nprint(port)" "${uid}" | python -)
+    assert_port "${port}"
+    echo "${port}"
 }    
 
 ## Usage: is_port_free <port>
