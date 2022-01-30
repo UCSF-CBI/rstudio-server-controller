@@ -408,6 +408,12 @@ function rs_process_status {
     hostname=${2:-}
     this_hostname="$(hostname)"
     mdebug "rs_process_status(pid=${pid}, hostname=${hostname}):"
+    
+    ## Check the pid, if possible
+    if [[ "${this_hostname}" == "${hostname}" ]]; then
+	pid=$(check_pid "${pid}")
+    fi
+    
     if [[ -n "${pid}" ]]; then
         if [[ "${this_hostname}" == "${hostname}" ]]; then
             echo "running (pid ${pid})"
