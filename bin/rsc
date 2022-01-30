@@ -43,7 +43,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.4-9000
+### Version: 0.2.4-9001
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -439,6 +439,13 @@ function rsession_timeout {
 }
 
 
+function make_rsession_envs {
+    local workdir
+    workdir=$(config_dir)
+    assert_dir_exists "${workdir}"
+    declare -x > "${workdir}/rsession.env"
+}
+
 function make_rsession_conf {
     local workdir
     workdir=$(config_dir)
@@ -461,7 +468,7 @@ function make_rsession_sh {
     assert_dir_exists "${workdir}"
 
     cat > "${workdir}/rsession.sh" <<END
-#!/bin/sh
+#!/usr/bin/env bash
 
 # Set OMP_NUM_THREADS to prevent OpenBLAS (and any other OpenMP-enhanced
 # libraries used by R) from spawning more threads than the number of processors
@@ -475,11 +482,22 @@ echo "\${PPID}" > "$workdir/rserver.pid"
 RSESSION_LOG_FILE="$workdir/rsession.log"
 export RSESSION_LOG_FILE
 
+## Import inherited environment variables?
+if ${rsession_inherit_env}; then
+    ## (a) Record current env vars
+    declare -x > "$workdir/rsession.env.tmp"
+    ## (b) Load inherited env vars
+    source "$workdir/rsession.env"
+    ## (c) Load recorded env vars (in case they where overwritten)
+    source "$workdir/rsession.env.tmp"
+    ## (d) Log env vars to be used
+    env > "$workdir/rsession.env.final"
+fi
+
 {
-    echo "Launching rsession:"
     echo "Time: \$(date --rfc-3339=seconds)"
-    echo "HOSTNAME: \${HOSTNAME}"
     echo "hostname: \$(hostname)"
+    echo "HOSTNAME: \${HOSTNAME}"
     echo "PPID: \${PPID}"
     echo "PWD: \${PWD}"
     echo "PATH: \${PATH}"
@@ -647,6 +665,15 @@ port=${RSTUDIO_PORT:-8787}
 [[ -n ${port} ]] && assert_port "${port}"
 port_seed=${RSTUDIO_PORT_SEED:-}
 [[ -n ${port_seed} ]] && assert_integer "${port_seed}"
+
+## Should 'rsession' inherit exported environment variables from the
+## 'rsc' process?  If 'false', then the default behavior of 'rserver'
+## is to use a a clean set of environment variables.  That default
+## behavior prevents R from seeing, for instance, environment variables
+## set by a job scheduler.
+## Comment: Hardcoded for now /HB 2022-01-29
+rsession_inherit_env=true
+    
 
 # Parse command-line options
 while [[ $# -gt 0 ]]; do
@@ -855,6 +882,7 @@ elif [[ "${action}" == "start" ]]; then
     
     make_database_conf
     make_rserver_conf "${port}"
+    make_rsession_envs
     make_rsession_sh
     make_rsession_conf
 
@@ -884,7 +912,7 @@ elif [[ "${action}" == "start" ]]; then
         msg="${USER}, your personal RStudio Server is available on <http://$(rserver_hostname):$(rserver_port)>. If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:${LOCALPORT}> by running 'ssh -J ${USER}@$(find_login_host) -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal."
     fi
     msg="${msg} Any R session started times out after being idle for $(rsession_timeout) minutes."
-    msg="${msg} To stop the server, press Ctrl-C here, or run 'rsc stop' on $(rserver_hostname) in another shell."
+
     
     rs_pid="$(rserver_pid)"
     [[ -z "${rs_pid}" ]] && error "RStudio Server failed to start for unknown reasons. One reason for this might that the port (${port}) is already occupied."

@@ -1,11 +1,17 @@
 # rstudio-server-launcher
 
-## Version 0.2.4-9000
+## Version 0.2.4-9001
 
-* ...
+Significant changes:
 
+* The R session now inherits all environment variables that was exported
+  in the shell where `rsc start` was called.  Previously, R would only
+  have environment variables set that are predefined by the RStudio Server.
+  
 
 ## Version 0.2.4
+
+New features:
 
 * Add support for `--port-seed=<seed>`, which sets the random seed used
   when finding a free, random port (`--port=random`).
