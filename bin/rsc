@@ -528,7 +528,7 @@ function launch_rserver {
     if $dryrun; then
         rserver --config-file="${workdir}/rserver.conf" &
     else
-        echo "[DRYRUN]: rserver --config-file=\"${workdir}/rserver.conf\" &"
+        echo "DRYRUN: rserver --config-file=\"${workdir}/rserver.conf\""
         sleep 60 &
     fi
     rs_pid=$!
