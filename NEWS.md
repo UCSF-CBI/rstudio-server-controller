@@ -7,6 +7,7 @@ Significant changes:
 * The R session now inherits all environment variables that was exported
   in the shell where `rsc start` was called.  Previously, R would only
   have environment variables set that are predefined by the RStudio Server.
+  Any terminal opened in RStudio will also have these variables set.
   
 
 ## Version 0.2.4
