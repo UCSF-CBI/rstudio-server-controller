@@ -723,7 +723,6 @@ elif [[ $action == "help" ]]; then
     _exit 0
 elif [[ $action == "version" ]]; then
     version
-    $full && catfs_version
     _exit 0
 fi
 
