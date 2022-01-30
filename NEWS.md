@@ -1,11 +1,14 @@
 # rstudio-server-launcher
 
-## Version 0.2.3-9001
+## Version 0.2.3-9002
 
-* Add support for `--port=uid`, which use the first available port in
-  a pseudo-random sequence of ports. This sequence is unique to each user
-  based on their UID and deterministic. This strategy for finding a port
-  increase the chance for a user to get the same port in subsequent calls.
+* Add support for `--port-seed=<seed>`, which sets the random seed used
+  when finding a free, random port (`--port=random`).
+
+* Add support for `--port=uid`, which is short for `--port-seed=$(id -u)`
+  and `--port=random`.  This makes the sequence of random ports tests
+  deterministic and unique to the current user.  This strategy increases
+  the chance for a user to get the same port in subsequent calls.
 
 
 ## Version 0.2.3
