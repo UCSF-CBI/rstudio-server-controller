@@ -20,8 +20,9 @@
 ###  --force            Force an action
 ###  --full             Output more information
 ### 
-###  --port=<int>       The port RStudio Server will use (Default: 8787)
-###  --port-seed=<int>  A random seed used to draw a random port (Default: none)
+###  --port=<int>       A port in [1,65535]. If 'random', a free random port in
+###                     [1024,65535] is used. (Default: 8787)
+###  --port-seed=<int>  Random seed used to draw a random port (Default: none)
 ### ---
 ###
 ### Example:
@@ -31,8 +32,8 @@
 ###  rsc start
 ###  rsc start --port=8787
 ###  rsc start --port=random
-###  rsc start --port-seed=$(id -u) --port=random
-###  rsc start --port=uid  ## same as --port-seed=$(id -u) --port=random
+###  rsc start --port-seed="$(id -u)" --port=random
+###  rsc start --port=uid  ## same as --port-seed="$(id -u)" --port=random
 ###
 ###  rsc status
 ###

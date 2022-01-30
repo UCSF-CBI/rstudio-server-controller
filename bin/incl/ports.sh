@@ -12,7 +12,7 @@ source "${pwd}"/asserts.sh
 
 ## Usage:
 ## free_random_port <seed>
-## If seed=0, then no random seed is set.
+## If 'seed' is not set, then no random seed is set.
 ## Outputs a free port in [1024,65535].
 function free_random_port {
     local port
@@ -47,8 +47,8 @@ function is_port_free {
 function assert_port {
     [[ -z $1 ]] && error "Port must not be empty"
     assert_integer "$1"
-    if [[ $1 -lt 0 ]] || [[ $1 -gt 65535 ]]; then
-        error "Port out of range [0,65535]: $1"
+    if [[ $1 -lt 1 ]] || [[ $1 -gt 65535 ]]; then
+        error "Port out of range [1,65535]: $1"
     fi
 }
 
