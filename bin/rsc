@@ -20,8 +20,13 @@
 ###  --force            Force an action
 ###  --full             Output more information
 ### 
-###  --port=<int>       A port in [1,65535]. If 'random', a free random port in
-###                     [1024,65535] is used. (Default: 8787)
+###  --env=<spec>       Controls environment variables to be exported. If
+###                     'all', all are exported. If 'none', none are exported
+###                     (Default: all)
+###  --port=<int>       A port in [1,65535]. If 'random', a free random port
+###                     in [1024,65535] is used. If 'uid', similar to 'random'
+###                     but is likely to be unique and deterministic for each
+###                     user (Default: 8787)
 ###  --port-seed=<int>  Random seed used to draw a random port (Default: none)
 ### ---
 ###
@@ -29,7 +34,6 @@
 ###  rsc --help
 ###  rsc --version
 ###
-###  rsc start
 ###  rsc start --port=8787
 ###  rsc start --port=random
 ###  rsc start --port-seed="$(id -u)" --port=random
@@ -43,7 +47,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.4
+### Version: 0.3.0
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -149,9 +153,10 @@ function remove_stray_lockfile {
 
     ## Nothing to do?
     [[ ! -f "${lockfile}" ]] && return 0;
+    [[ "$(rserver_hostname)" != "$(hostname)" ]] && return 0;
     [[ -n "$(rserver_pid)" ]] && return 0;
     [[ -n "$(rsession_pid)" ]] && return 0;
-
+    
     ## Here we know that there's neither a rserver PID nor a rsession PID
     rm "${lockfile}"
     warn "Detected a stray lock file (${lockfile}). This file was removed, because there was no evidence that another instance was running on this system (no PID files for neither 'rserver' nor 'rsession' were found)."
@@ -167,19 +172,27 @@ function remove_stray_pid_file {
     local what
     what=${1:?}
 
+    mdebug "remove_stray_pid_file(what='${what}'):"
+    
     workdir=$(config_dir)
     
-    if [[ "${what}" != "rserver" ]] && [[ "${what}" != "rsession" ]]; then
+    if [[ "${what}" == "rserver" ]]; then
+        pid_file="$(rserver_pid_file)"
+    elif [[ "${what}" == "rsession" ]]; then
+        pid_file="$(rsession_pid_file)"
+    else
         error "Unknown PID file type: ${what}"
     fi
-    pid_file="${workdir}/${what}.pid"
+    mdebug " - pid_file=${pid_file}"
     
     ## Nothing to do?
     [[ ! -f "${pid_file}" ]] && return 0;
 
     ## Get PID
-    pid=$(cat "${pid_file}")
-    ## Nothing to do?
+    pid=$(read_pid true "${pid_file}")
+    mdebug " - pid=${pid}"
+    
+    ## Empty PID (shouldn't really happen)
     if [[ -z "${pid}" ]]; then
         rm "${pid_file}"
          warn "Detected a stray PID file (${pid_file}). This file was removed, because it was empty."
@@ -188,14 +201,17 @@ function remove_stray_pid_file {
 
     ## Nothing to do?
     file="${workdir}/rserver.hostname"
+    mdebug " - rserver hostname file=${file}"
     [[ ! -f "${file}" ]] && return 0;
 
     ## Get rserver hostname
     rserver_hostname=$(cat "${workdir}/rserver.hostname")
+    mdebug " - rserver hostname=${rserver_hostname}"
+    mdebug " - hostname=$(hostname)"
 
     ## Nothing todo?
     [[ "${rserver_hostname}" != "$(hostname)" ]] && return 0;
-    
+
     ## If this process is not running, remove the PID file
     if [[ -z $(check_pid "${pid}") ]]; then
         rm "${pid_file}"
@@ -292,16 +308,22 @@ function check_pid {
 }
 
 function read_pid {
+    local keep
+    local file
     local pid
-    mdebug "read_pid '$1' ..."
+    keep="${1:?}"
+    file="${2:?}"
+    mdebug "read_pid(keep=${keep}, file='${file}') ..."
     pid=
-    if [[ -f "$1" ]]; then
+    if [[ -f "${file}" ]]; then
         mdebug "- reading ..."
-        pid=$(cat "$1")
+        pid=$(cat "${file}")
     fi
     mdebug "- pid=${pid}"
-    mdebug "read_pid '$1' ... done"
-    check_pid "${pid}"
+    ! $keep && pid=$(check_pid "${pid}")
+    mdebug "- pid=${pid}"
+    mdebug "read_pid(keep=${keep}, file='${file}') ... done"
+    echo "${pid}"
 }    
 
 function dhms_to_minutes {
@@ -398,6 +420,12 @@ function rs_process_status {
     pid=${1:-}
     hostname=${2:-}
     this_hostname="$(hostname)"
+    mdebug "rs_process_status(pid=${pid}, hostname=${hostname}):"
+    
+    ## Check the pid, if possible
+    if [[ "${this_hostname}" == "${hostname}" ]]; then
+	pid=$(check_pid "${pid}")
+    fi
     
     if [[ -n "${pid}" ]]; then
         if [[ "${this_hostname}" == "${hostname}" ]]; then
@@ -439,6 +467,13 @@ function rsession_timeout {
 }
 
 
+function make_rsession_envs {
+    local workdir
+    workdir=$(config_dir)
+    assert_dir_exists "${workdir}"
+    declare -x > "${workdir}/rsession.env.parent"
+}
+
 function make_rsession_conf {
     local workdir
     workdir=$(config_dir)
@@ -461,7 +496,7 @@ function make_rsession_sh {
     assert_dir_exists "${workdir}"
 
     cat > "${workdir}/rsession.sh" <<END
-#!/bin/sh
+#!/usr/bin/env bash
 
 # Set OMP_NUM_THREADS to prevent OpenBLAS (and any other OpenMP-enhanced
 # libraries used by R) from spawning more threads than the number of processors
@@ -475,11 +510,23 @@ echo "\${PPID}" > "$workdir/rserver.pid"
 RSESSION_LOG_FILE="$workdir/rsession.log"
 export RSESSION_LOG_FILE
 
+declare -x > "$workdir/rsession.env.rstudio"
+
+## Import inherited environment variables?
+if ${rsession_inherit_env}; then
+    ## (a) Record current env vars
+    ## (b) Load inherited env vars
+    source "$workdir/rsession.env.parent"
+    ## (c) Load recorded env vars (in case they where overwritten)
+    source "$workdir/rsession.env.rstudio"
+    ## (d) Log env vars to be used
+    declare -x > "$workdir/rsession.env"
+fi
+
 {
-    echo "Launching rsession:"
     echo "Time: \$(date --rfc-3339=seconds)"
-    echo "HOSTNAME: \${HOSTNAME}"
     echo "hostname: \$(hostname)"
+    echo "HOSTNAME: \${HOSTNAME}"
     echo "PPID: \${PPID}"
     echo "PWD: \${PWD}"
     echo "PATH: \${PATH}"
@@ -518,7 +565,7 @@ function rsession_pid_file {
 }
 
 function rsession_pid {
-    read_pid "$(rsession_pid_file)"
+    read_pid "${1:-false}" "$(rsession_pid_file)"
 }
 
 function terminate_rsession {
@@ -528,7 +575,7 @@ function terminate_rsession {
 }
 
 function rsession_status {
-    rs_process_status "$(rsession_pid)" "$(rserver_hostname)"
+    rs_process_status "$(rsession_pid true)" "$(rserver_hostname)"
 }    
 
 
@@ -544,7 +591,7 @@ function rserver_pid_file {
 }
 
 function rserver_pid {
-    read_pid "$(rserver_pid_file)"
+    read_pid "${1:-false}" "$(rserver_pid_file)"
 }
 
 function rserver_hostname {
@@ -599,7 +646,7 @@ function launch_rserver {
 }
 
 function rserver_status {
-    rs_process_status "$(rserver_pid)" "$(rserver_hostname)"
+    rs_process_status "$(rserver_pid true)" "$(rserver_hostname)"
 }    
 
 
@@ -644,9 +691,16 @@ verbose=false
 args=()
 full=false
 port=${RSTUDIO_PORT:-8787}
-[[ -n ${port} ]] && assert_port "${port}"
 port_seed=${RSTUDIO_PORT_SEED:-}
 [[ -n ${port_seed} ]] && assert_integer "${port_seed}"
+
+## Should 'rsession' inherit exported environment variables from the
+## 'rsc' process?  If 'false', then the default behavior of 'rserver'
+## is to use a a clean set of environment variables.  That default
+## behavior prevents R from seeing, for instance, environment variables
+## set by a job scheduler.
+rsession_inherit_env=true
+    
 
 # Parse command-line options
 while [[ $# -gt 0 ]]; do
@@ -703,6 +757,13 @@ while [[ $# -gt 0 ]]; do
         elif [[ "${key}" == "port-seed" ]]; then
             port_seed=${value}
             assert_integer "${port_seed}"
+        elif [[ "${key}" == "env" ]]; then
+            rsession_inherit_env=false
+            if [[ ${value} == "all" ]]; then
+                rsession_inherit_env=true
+            elif [[ ${value} == "none" ]]; then
+                rsession_inherit_env=false
+            fi
         else
             merror "Unknown option: $1"
         fi
@@ -723,7 +784,6 @@ elif [[ $action == "help" ]]; then
     _exit 0
 elif [[ $action == "version" ]]; then
     version
-    $full && catfs_version
     _exit 0
 fi
 
@@ -809,6 +869,7 @@ elif [[ "${action}" == "log" ]]; then
         echo "No rsession log file: ${file}"
     fi
 elif [[ "${action}" == "status" ]]; then
+    mdebug "rsc status ..."
     printf "%s: %s\n" "rserver" "$(rserver_status)"
     printf "%s: %s\n" "rsession" "$(rsession_status)"
     workdir=$(config_dir)
@@ -818,6 +879,7 @@ elif [[ "${action}" == "status" ]]; then
     else
         echo "lock file: does not exist"
     fi
+    mdebug "rsc status ... done"
 elif [[ "${action}" == "stop" ]]; then
     workdir=$(config_dir)
     lockfile=${workdir}/pid.lock
@@ -856,6 +918,7 @@ elif [[ "${action}" == "start" ]]; then
     
     make_database_conf
     make_rserver_conf "${port}"
+    make_rsession_envs
     make_rsession_sh
     make_rsession_conf
 
@@ -885,7 +948,7 @@ elif [[ "${action}" == "start" ]]; then
         msg="${USER}, your personal RStudio Server is available on <http://$(rserver_hostname):$(rserver_port)>. If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:${LOCALPORT}> by running 'ssh -J ${USER}@$(find_login_host) -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal."
     fi
     msg="${msg} Any R session started times out after being idle for $(rsession_timeout) minutes."
-    msg="${msg} To stop the server, press Ctrl-C here, or run 'rsc stop' on $(rserver_hostname) in another shell."
+
     
     rs_pid="$(rserver_pid)"
     [[ -z "${rs_pid}" ]] && error "RStudio Server failed to start for unknown reasons. One reason for this might that the port (${port}) is already occupied."

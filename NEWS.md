@@ -1,6 +1,26 @@
 # rstudio-server-launcher
 
+## Version 0.3.0
+
+Significant changes:
+
+* Add option `--env=<spec>`.  If `--env=all`, then the R session, and any
+  terminal opened in RStudio, inherits all environment variables that were
+  exported in the shell where `rsc start` was called.  If `--env=none`,
+  then only environment variables predefined by the RStudio Server are set.
+  
+Bug fixes:
+
+* `rsc` would incorrectly remove the lock file when the RStudio Server
+  was running on another machine on the same system.
+
+* `rsc status` reported that 'rserver' and 'rsession' were not running
+  when called on another machine than where they are running.
+
+
 ## Version 0.2.4
+
+New features:
 
 * Add support for `--port-seed=<seed>`, which sets the random seed used
   when finding a free, random port (`--port=random`).

@@ -36,15 +36,9 @@ function mdebug0 {
 }
 
 function merror {
-    local info version
+    local info
     {
-        info="ucsf-vpn $(version)"
-        version=$(openconnect_version 2> /dev/null)
-        if [[ -n $version ]]; then
-            info="$info, OpenConnect $version"
-        else
-            info="$info, OpenConnect version unknown"
-        fi
+        info="$(basename "$0") $(version)"
         [[ -n $info ]] && info=" [$info]"
         _tput setaf 1 ## red
         echo "ERROR: $*$info"
