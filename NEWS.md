@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.2.3-9004
+## Version 0.2.4
 
 * Add support for `--port-seed=<seed>`, which sets the random seed used
   when finding a free, random port (`--port=random`).
