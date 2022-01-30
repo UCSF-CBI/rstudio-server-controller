@@ -587,10 +587,10 @@ function launch_rserver {
     pid_file=$(rserver_pid_file)
     mdebug "rserver --config-file=\"${workdir}/rserver.conf\" &"
     if $dryrun; then
-        rserver --config-file="${workdir}/rserver.conf" &
-    else
         echo "DRYRUN: rserver --config-file=\"${workdir}/rserver.conf\""
         sleep 60 &
+    else
+        rserver --config-file="${workdir}/rserver.conf" &
     fi
     rs_pid=$!
     echo "${rs_pid}" > "${pid_file}"
@@ -611,6 +611,11 @@ function shutdown {
     terminate_rsession
     terminate_rserver
     remove_lock_file
+    {
+        remove_stray_lockfile
+        remove_stray_pid_file rsession
+        remove_stray_pid_file rserver
+    } > /dev/null
     mdebug "shutdown() ... done"
 }
 
@@ -667,7 +672,7 @@ while [[ $# -gt 0 ]]; do
         action=version
     elif [[ "$1" == "--debug" ]]; then
         debug=true
-    elif [[ "$1" == "--dry-run" ]]; then
+    elif [[ "$1" == "--dryrun" ]]; then
         dryrun=true
     elif [[ "$1" == "--verbose" ]]; then
         verbose=true
