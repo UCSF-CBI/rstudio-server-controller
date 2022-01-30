@@ -20,6 +20,8 @@
 ###  --force            Force an action
 ###  --full             Output more information
 ### 
+###  --env=<spec>       Controls environment variables to be exported.  If
+###                     'all', all are exported. If 'none', none are exported.
 ###  --port=<int>       A port in [1,65535]. If 'random', a free random port in
 ###                     [1024,65535] is used. (Default: 8787)
 ###  --port-seed=<int>  Random seed used to draw a random port (Default: none)
@@ -671,8 +673,7 @@ port_seed=${RSTUDIO_PORT_SEED:-}
 ## is to use a a clean set of environment variables.  That default
 ## behavior prevents R from seeing, for instance, environment variables
 ## set by a job scheduler.
-## Comment: Hardcoded for now /HB 2022-01-29
-rsession_inherit_env=true
+rsession_inherit_env=false
     
 
 # Parse command-line options
@@ -730,6 +731,13 @@ while [[ $# -gt 0 ]]; do
         elif [[ "${key}" == "port-seed" ]]; then
             port_seed=${value}
             assert_integer "${port_seed}"
+        elif [[ "${key}" == "env" ]]; then
+            rsession_inherit_env=false
+            if [[ ${value} == "all" ]]; then
+                rsession_inherit_env=true
+            elif [[ ${value} == "none" ]]; then
+                rsession_inherit_env=false
+            fi
         else
             merror "Unknown option: $1"
         fi
