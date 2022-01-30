@@ -45,7 +45,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.4-9003
+### Version: 0.2.4-9004
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -698,7 +698,7 @@ port_seed=${RSTUDIO_PORT_SEED:-}
 ## is to use a a clean set of environment variables.  That default
 ## behavior prevents R from seeing, for instance, environment variables
 ## set by a job scheduler.
-rsession_inherit_env=false
+rsession_inherit_env=true
     
 
 # Parse command-line options
