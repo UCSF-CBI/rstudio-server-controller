@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.2.4-9004
+## Version 0.2.4-9005
 
 Significant changes:
 
@@ -8,6 +8,8 @@ Significant changes:
   terminal opened in RStudio, inherits all environment variables that were
   exported in the shell where `rsc start` was called.  If `--env=none`,
   then only environment variables predefined by the RStudio Server are set.
+
+* `--port=uid` is the new default.
   
 Bug fixes:
 
