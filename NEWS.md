@@ -1,5 +1,22 @@
 # rstudio-server-launcher
 
+## Version 0.2.4
+
+* Add support for `--port-seed=<seed>`, which sets the random seed used
+  when finding a free, random port (`--port=random`).
+
+* Add support for `--port=uid`, which is short for `--port-seed=$(id -u)`
+  and `--port=random`.  This makes the sequence of random ports tests
+  deterministic and unique to the current user.  This strategy increases
+  the chance for a user to get the same port in subsequent calls.
+
+* Add support for `--dryrun`, which does everything but launching the
+  RStudio Server.  This is useful for troubleshooting and development.
+
+* Now `rsc` removes stray PID and lock files, if it can be concluded
+  that they are stray files.
+  
+
 ## Version 0.2.3
 
 New features:

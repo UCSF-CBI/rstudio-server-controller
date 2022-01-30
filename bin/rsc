@@ -5,22 +5,24 @@
 ###  rsc <command> [options]
 ### 
 ### Commands:
-###  start        Start the RStudio Server
-###  stop         Stop the RStudio Server and any R session
-###  status       Check whether the RStudio Server is running or not
-###  config       Output configuration details
-###  reset        Wipe all configuration
-###  log          Output rsession log
-###
-### Options:
-###  --help       Display the full help page with examples
-###  --version    Output version of this software
-###  --debug      Output detailed debug information
-###  --verbose    Output informative message
-###  --force      Force an action
-###  --full       Output more information
-###
-###  --port=<int> The port RStudio Server will use (Default: 8787)
+###  start              Start the RStudio Server
+###  stop               Stop the RStudio Server and any R session
+###  status             Check whether the RStudio Server is running or not
+###  config             Output configuration details
+###  reset              Wipe all configuration
+###  log                Output rsession log
+### 
+### Options: 
+###  --help             Display the full help page with examples
+###  --version          Output version of this software
+###  --debug            Output detailed debug information
+###  --verbose          Output informative message
+###  --force            Force an action
+###  --full             Output more information
+### 
+###  --port=<int>       A port in [1,65535]. If 'random', a free random port in
+###                     [1024,65535] is used. (Default: 8787)
+###  --port-seed=<int>  Random seed used to draw a random port (Default: none)
 ### ---
 ###
 ### Example:
@@ -30,6 +32,8 @@
 ###  rsc start
 ###  rsc start --port=8787
 ###  rsc start --port=random
+###  rsc start --port-seed="$(id -u)" --port=random
+###  rsc start --port=uid  ## same as --port-seed="$(id -u)" --port=random
 ###
 ###  rsc status
 ###
@@ -39,7 +43,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.3
+### Version: 0.2.4
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -120,14 +124,10 @@ function acquired_lock_file {
     local workdir
     local lockfile
     workdir=$(config_dir)
+
     lockfile=${workdir}/pid.lock
     if [[ -f "${lockfile}" ]]; then
-        if [[ -z "$(rserver_pid)" ]] && [[ -z "$(rsession_pid)" ]]; then
-            warn "Detected a stray lock file (${lockfile}). This file was removed to allow for a new RStudio Studio instance to run, because there was no evidence that another instance was running on this system (no PID files for neither 'rserver' nor 'rsession' were found)."
-            rm "${lockfile}"
-        else
-            error "${USER}, another RStudio Server session of yours is already running on $(rserver_hostname) on this system. See 'rsc status' for details. Please terminate that first, e.g. call 'rsc stop' from that machine. As a last resort, call 'pkill rserver; pkill rsession', remove lock file '${lockfile}', and retry."
-        fi
+        error "${USER}, another RStudio Server session of yours is already running on $(rserver_hostname) on this system. See 'rsc status' for details. Please terminate that first, e.g. call 'rsc stop' from that machine. As a last resort, call 'pkill rserver; pkill rsession', remove lock file '${lockfile}', and retry."
     fi
     echo "${PPID}" > "${lockfile}"
 }
@@ -139,6 +139,71 @@ function remove_lock_file {
     lockfile=${workdir}/pid.lock
     [[ -f "${lockfile}" ]] && rm "${lockfile}" && mdebug "Lock file removed: ${lockfile}"
 }    
+
+
+function remove_stray_lockfile {
+    local workdir
+    local lockfile
+    workdir=$(config_dir)
+    lockfile=${workdir}/pid.lock
+
+    ## Nothing to do?
+    [[ ! -f "${lockfile}" ]] && return 0;
+    [[ -n "$(rserver_pid)" ]] && return 0;
+    [[ -n "$(rsession_pid)" ]] && return 0;
+
+    ## Here we know that there's neither a rserver PID nor a rsession PID
+    rm "${lockfile}"
+    warn "Detected a stray lock file (${lockfile}). This file was removed, because there was no evidence that another instance was running on this system (no PID files for neither 'rserver' nor 'rsession' were found)."
+}
+
+
+function remove_stray_pid_file {
+    local workdir
+    local file
+    local pid_file
+    local pid
+    local rserver_hostname
+    local what
+    what=${1:?}
+
+    workdir=$(config_dir)
+    
+    if [[ "${what}" != "rserver" ]] && [[ "${what}" != "rsession" ]]; then
+        error "Unknown PID file type: ${what}"
+    fi
+    pid_file="${workdir}/${what}.pid"
+    
+    ## Nothing to do?
+    [[ ! -f "${pid_file}" ]] && return 0;
+
+    ## Get PID
+    pid=$(cat "${pid_file}")
+    ## Nothing to do?
+    if [[ -z "${pid}" ]]; then
+        rm "${pid_file}"
+         warn "Detected a stray PID file (${pid_file}). This file was removed, because it was empty."
+        return 0
+    fi
+
+    ## Nothing to do?
+    file="${workdir}/rserver.hostname"
+    [[ ! -f "${file}" ]] && return 0;
+
+    ## Get rserver hostname
+    rserver_hostname=$(cat "${workdir}/rserver.hostname")
+
+    ## Nothing todo?
+    [[ "${rserver_hostname}" != "$(hostname)" ]] && return 0;
+    
+    ## If this process is not running, remove the PID file
+    if [[ -z $(check_pid "${pid}") ]]; then
+        rm "${pid_file}"
+        warn "Detected a stray PID file (${pid_file}). This file was removed, because it referred to a ${what} process (PID ${pid} on ${rserver_hostname}) which is no longer running."
+        return 0
+    fi
+}
+
 
 
 # -------------------------------------------------------------------------
@@ -162,7 +227,7 @@ function make_rserver_conf {
     port=${1:?}
 
     if [[ "${port}" == "random" ]]; then
-        port=$(free_port)
+        port=$(free_random_port "${port_seed}")
     fi
     assert_port_free "${port}"
 
@@ -520,7 +585,13 @@ function launch_rserver {
     assert_port_free "${port}"
     
     pid_file=$(rserver_pid_file)
-    rserver --config-file="${workdir}/rserver.conf" &
+    mdebug "rserver --config-file=\"${workdir}/rserver.conf\" &"
+    if $dryrun; then
+        echo "DRYRUN: rserver --config-file=\"${workdir}/rserver.conf\""
+        sleep 60 &
+    else
+        rserver --config-file="${workdir}/rserver.conf" &
+    fi
     rs_pid=$!
     echo "${rs_pid}" > "${pid_file}"
     rs_pid=$(rserver_pid)
@@ -540,6 +611,11 @@ function shutdown {
     terminate_rsession
     terminate_rserver
     remove_lock_file
+    {
+        remove_stray_lockfile
+        remove_stray_pid_file rsession
+        remove_stray_pid_file rserver
+    } > /dev/null
     mdebug "shutdown() ... done"
 }
 
@@ -569,6 +645,8 @@ args=()
 full=false
 port=${RSTUDIO_PORT:-8787}
 [[ -n ${port} ]] && assert_port "${port}"
+port_seed=${RSTUDIO_PORT_SEED:-}
+[[ -n ${port_seed} ]] && assert_integer "${port_seed}"
 
 # Parse command-line options
 while [[ $# -gt 0 ]]; do
@@ -594,7 +672,7 @@ while [[ $# -gt 0 ]]; do
         action=version
     elif [[ "$1" == "--debug" ]]; then
         debug=true
-    elif [[ "$1" == "--dry-run" ]]; then
+    elif [[ "$1" == "--dryrun" ]]; then
         dryrun=true
     elif [[ "$1" == "--verbose" ]]; then
         verbose=true
@@ -614,9 +692,17 @@ while [[ $# -gt 0 ]]; do
         fi
         if [[ "${key}" == "port" ]]; then
             port=${value}
-            if [[ "${value}" != "random" ]]; then
+            if [[ "${port}" == "uid" ]]; then
+                port_seed=$(id -u)
+                assert_integer "${port_seed}"
+                port="random"
+            fi
+            if [[ "${port}" != "random" ]]; then
                 assert_port "${port}"
             fi
+        elif [[ "${key}" == "port-seed" ]]; then
+            port_seed=${value}
+            assert_integer "${port_seed}"
         else
             merror "Unknown option: $1"
         fi
@@ -656,8 +742,14 @@ mdebug "verbose: ${verbose}"
 mdebug "dryrun: ${dryrun}"
 mdebug "force: ${force}"
 mdebug "port: ${port}"
+mdebug "port_seed: ${port_seed}"
 mdebug "args: [n=${#args[@]}] ${args[*]}"
 
+
+## Remove any stray files
+remove_stray_lockfile
+remove_stray_pid_file rsession
+remove_stray_pid_file rserver
 
 if [[ "${action}" == "config" ]]; then
     files=()
@@ -748,12 +840,14 @@ elif [[ "${action}" == "reset" ]]; then
     $force || acquired_lock_file
     workdir=$(config_dir)
     [[ -d "${workdir}" ]] && rm -rf "${workdir}"
-elif [[ "${action}" == "start" ]]; then
+elif [[ "${action}" == "start" ]]; then    
     ## Assert executables are available
     assert_executable R
     assert_executable rserver
     assert_executable rsession
-    [[ "${port}" != "random" ]] && assert_port_free "${port}"
+    if [[ "${port}" != "random" ]]; then
+        assert_port_free "${port}"
+    fi
     
     validate_auth
   
