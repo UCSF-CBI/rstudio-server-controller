@@ -36,7 +36,7 @@ function mdebug0 {
 }
 
 function merror {
-    local info version
+    local info
     {
         info="$(basename "$0") $(version)"
         [[ -n $info ]] && info=" [$info]"
