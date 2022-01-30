@@ -29,6 +29,7 @@
 ###
 ###  rsc start
 ###  rsc start --port=8787
+###  rsc start --port=uid
 ###  rsc start --port=random
 ###
 ###  rsc status
@@ -39,7 +40,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.3-9000
+### Version: 0.2.3-9001
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -162,7 +163,9 @@ function make_rserver_conf {
     port=${1:?}
 
     if [[ "${port}" == "random" ]]; then
-        port=$(free_port)
+        port=$(free_random_port)
+    elif [[ "${port}" == "uid" ]]; then
+        port=$(free_uid_port "$(id -u)")
     fi
     assert_port_free "${port}"
 
@@ -614,7 +617,7 @@ while [[ $# -gt 0 ]]; do
         fi
         if [[ "${key}" == "port" ]]; then
             port=${value}
-            if [[ "${value}" != "random" ]]; then
+            if [[ "${value}" != "random" ]] && [[ "${value}" != "uid" ]]; then
                 assert_port "${port}"
             fi
         else
@@ -753,7 +756,9 @@ elif [[ "${action}" == "start" ]]; then
     assert_executable R
     assert_executable rserver
     assert_executable rsession
-    [[ "${port}" != "random" ]] && assert_port_free "${port}"
+    if [[ "${value}" != "random" ]] && [[ "${value}" != "uid" ]]; then
+        assert_port_free "${port}"
+    fi
     
     validate_auth
   

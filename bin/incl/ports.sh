@@ -10,7 +10,7 @@ pwd=${BASH_SOURCE%/*}
 # shellcheck source=incl/asserts.sh
 source "${pwd}"/asserts.sh
 
-function free_port {
+function free_random_port {
     local port
     # get unused socket per https://unix.stackexchange.com/a/132524
     # tiny race condition between the Python and launching the rserver
@@ -18,6 +18,31 @@ function free_port {
     port=$(python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
     assert_port "${port}"
     echo "${port}"
+}    
+
+function free_uid_port {
+    local port
+    local ports
+    local uid
+
+    uid=${1:-$(id -u)}
+    assert_integer "${uid}"
+    
+    # get unused socket per https://unix.stackexchange.com/a/132524
+    # tiny race condition between the Python and launching the rserver
+    assert_executable python
+
+    mapfile ports < <(printf "import random;\nrandom.seed(%d);\nfor i in range(1000):print(random.randrange(1024,65535));" "${uid}" | python -)
+    
+    for port in "${ports[@]}"; do
+        if is_port_free "${port}"; then
+            echo "${port}"
+            return 0
+        fi
+    done
+    
+    echo ""
+    return 1
 }    
 
 ## Usage: is_port_free <port>
@@ -43,3 +68,4 @@ function assert_port_free {
     assert_port "${1}"
     is_port_free "$1" || error "Port is already in use on $(hostname): ${1}"
 }
+
