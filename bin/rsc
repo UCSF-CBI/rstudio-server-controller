@@ -45,7 +45,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.4-9001
+### Version: 0.2.4-9003
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -151,9 +151,10 @@ function remove_stray_lockfile {
 
     ## Nothing to do?
     [[ ! -f "${lockfile}" ]] && return 0;
+    [[ "$(rserver_hostname)" != "$(hostname)" ]] && return 0;
     [[ -n "$(rserver_pid)" ]] && return 0;
     [[ -n "$(rsession_pid)" ]] && return 0;
-
+    
     ## Here we know that there's neither a rserver PID nor a rsession PID
     rm "${lockfile}"
     warn "Detected a stray lock file (${lockfile}). This file was removed, because there was no evidence that another instance was running on this system (no PID files for neither 'rserver' nor 'rsession' were found)."
@@ -294,16 +295,22 @@ function check_pid {
 }
 
 function read_pid {
+    local keep
+    local file
     local pid
-    mdebug "read_pid '$1' ..."
+    keep="${1:?}"
+    file="${2:?}"
+    mdebug "read_pid(keep=${keep}, file='${file}') ..."
     pid=
-    if [[ -f "$1" ]]; then
+    if [[ -f "${file}" ]]; then
         mdebug "- reading ..."
-        pid=$(cat "$1")
+        pid=$(cat "${file}")
     fi
     mdebug "- pid=${pid}"
-    mdebug "read_pid '$1' ... done"
-    check_pid "${pid}"
+    ! $keep && pid=$(check_pid "${pid}")
+    mdebug "- pid=${pid}"
+    mdebug "read_pid(keep=${keep}, file='${file}') ... done"
+    echo "${pid}"
 }    
 
 function dhms_to_minutes {
@@ -400,7 +407,7 @@ function rs_process_status {
     pid=${1:-}
     hostname=${2:-}
     this_hostname="$(hostname)"
-    
+    mdebug "rs_process_status(pid=${pid}, hostname=${hostname}):"
     if [[ -n "${pid}" ]]; then
         if [[ "${this_hostname}" == "${hostname}" ]]; then
             echo "running (pid ${pid})"
@@ -539,7 +546,7 @@ function rsession_pid_file {
 }
 
 function rsession_pid {
-    read_pid "$(rsession_pid_file)"
+    read_pid "${1:-false}" "$(rsession_pid_file)"
 }
 
 function terminate_rsession {
@@ -549,7 +556,7 @@ function terminate_rsession {
 }
 
 function rsession_status {
-    rs_process_status "$(rsession_pid)" "$(rserver_hostname)"
+    rs_process_status "$(rsession_pid true)" "$(rserver_hostname)"
 }    
 
 
@@ -565,7 +572,7 @@ function rserver_pid_file {
 }
 
 function rserver_pid {
-    read_pid "$(rserver_pid_file)"
+    read_pid "${1:-false}" "$(rserver_pid_file)"
 }
 
 function rserver_hostname {
@@ -620,7 +627,7 @@ function launch_rserver {
 }
 
 function rserver_status {
-    rs_process_status "$(rserver_pid)" "$(rserver_hostname)"
+    rs_process_status "$(rserver_pid true)" "$(rserver_hostname)"
 }    
 
 
@@ -844,6 +851,7 @@ elif [[ "${action}" == "log" ]]; then
         echo "No rsession log file: ${file}"
     fi
 elif [[ "${action}" == "status" ]]; then
+    mdebug "rsc status ..."
     printf "%s: %s\n" "rserver" "$(rserver_status)"
     printf "%s: %s\n" "rsession" "$(rsession_status)"
     workdir=$(config_dir)
@@ -853,6 +861,7 @@ elif [[ "${action}" == "status" ]]; then
     else
         echo "lock file: does not exist"
     fi
+    mdebug "rsc status ... done"
 elif [[ "${action}" == "stop" ]]; then
     workdir=$(config_dir)
     lockfile=${workdir}/pid.lock

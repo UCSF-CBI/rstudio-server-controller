@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.2.4-9001
+## Version 0.2.4-9003
 
 Significant changes:
 
@@ -9,6 +9,14 @@ Significant changes:
   exported in the shell where `rsc start` was called.  If `--env=none`,
   then only environment variables predefined by the RStudio Server are set.
   
+Bug fixes:
+
+* `rsc` would incorrectly remove the lock file when the RStudio Server
+  was running on another machine on the same system.
+
+* `rsc status` reported that 'rserver' and 'rsession' were not running
+  when called on another machine than where they are running.
+
 
 ## Version 0.2.4
 
