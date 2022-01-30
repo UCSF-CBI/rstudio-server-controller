@@ -43,7 +43,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.3-9002
+### Version: 0.2.3-9003
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -524,7 +524,13 @@ function launch_rserver {
     assert_port_free "${port}"
     
     pid_file=$(rserver_pid_file)
-    rserver --config-file="${workdir}/rserver.conf" &
+    mdebug "rserver --config-file=\"${workdir}/rserver.conf\" &"
+    if $dryrun; then
+        rserver --config-file="${workdir}/rserver.conf" &
+    else
+        echo "[DRYRUN]: rserver --config-file=\"${workdir}/rserver.conf\" &"
+        sleep 60 &
+    fi
     rs_pid=$!
     echo "${rs_pid}" > "${pid_file}"
     rs_pid=$(rserver_pid)
