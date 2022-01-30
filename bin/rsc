@@ -20,10 +20,13 @@
 ###  --force            Force an action
 ###  --full             Output more information
 ### 
-###  --env=<spec>       Controls environment variables to be exported.  If
-###                     'all', all are exported. If 'none', none are exported.
-###  --port=<int>       A port in [1,65535]. If 'random', a free random port in
-###                     [1024,65535] is used. (Default: uid)
+###  --env=<spec>       Controls environment variables to be exported. If
+###                     'all', all are exported. If 'none', none are exported
+###                     (Default: all)
+###  --port=<int>       A port in [1,65535]. If 'random', a free random port
+###                     in [1024,65535] is used. If 'uid', similar to 'random'
+###                     but is likely to be unique and deterministic for each
+###                     user (Default: 8787)
 ###  --port-seed=<int>  Random seed used to draw a random port (Default: none)
 ### ---
 ###
@@ -31,7 +34,6 @@
 ###  rsc --help
 ###  rsc --version
 ###
-###  rsc start             ## defaults to --port=uid
 ###  rsc start --port=8787
 ###  rsc start --port=random
 ###  rsc start --port-seed="$(id -u)" --port=random
@@ -45,7 +47,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.2.4-9005
+### Version: 0.3.0
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -688,13 +690,8 @@ force=false
 verbose=false
 args=()
 full=false
-port=${RSTUDIO_PORT:-uid}
+port=${RSTUDIO_PORT:-8787}
 port_seed=${RSTUDIO_PORT_SEED:-}
-if [[ "${port}" == "uid" ]]; then
-     port_seed=$(id -u)
-     assert_integer "${port_seed}"
-     port="random"
-fi
 [[ -n ${port_seed} ]] && assert_integer "${port_seed}"
 
 ## Should 'rsession' inherit exported environment variables from the

@@ -29,6 +29,14 @@ To use a random, available port, use:
 $ rsc start --port=random
 ```
 
+On multi-tenant system, we recommend:
+
+```sh
+$ rsc start --port=uid
+```
+
+which draws a random port likely to be unique to each user and stable over time.
+
 
 To check if the RStudio Server is running, use:
 
