@@ -80,13 +80,13 @@ Bug fixes:
 
 New features:
 
-* If 'rsc start' fails because there's already an existing RStudio
+* If `rsc start` fails because there's already an existing RStudio
   Server running, the error message now includes on what machine
   that instance is running.
 
 Bug fixes:
 
-* Internal validation of 'auth-via-su' could output messages to
+* Internal validation of `auth-via-su` could output messages to
   standard error. Those are now muffled.
 
 
@@ -94,10 +94,10 @@ Bug fixes:
 
 New features:
 
-* Now 'rsc start' only gives instructions how to access the RStudio
+* Now `rsc start` only gives instructions how to access the RStudio
   Server instance from a remote machine, when connected from one.
 
-* Now the 'rsc start' instructions on how to connect from a remote
+* Now the `rsc start` instructions on how to connect from a remote
   machine infers the login hostname from the current connection
   by querying `who` and `host`.
 
@@ -119,7 +119,7 @@ Bug fixes:
 
 New features:
 
-* Now the 'auth-via-su' script is distributed part of this software.
+* Now the `auth-via-su` script is distributed part of this software.
 
 Bug fixes:
 
@@ -142,7 +142,7 @@ New features:
 
 * Add `rsc log`.
 
-* Now 'rsc start' will make sure to terminate the RStudio Server instance
+* Now `rsc start` will make sure to terminate the RStudio Server instance
   and any running R sessions when exiting.
   
 
