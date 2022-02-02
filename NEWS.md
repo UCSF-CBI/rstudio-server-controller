@@ -1,8 +1,11 @@
 # rstudio-server-launcher
 
-## Version 0.3.0-9000
+## Version 0.3.0-9001
 
-* ...
+New features:
+
+* Now `rsc` respects environment variable `XDG_CONFIG_HOME`.  If not set,
+  the default is `$HOME/.config`.
 
 
 ## Version 0.3.0

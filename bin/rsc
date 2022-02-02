@@ -47,7 +47,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.3.0-9000
+### Version: 0.3.0-9001
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -109,7 +109,9 @@ function warn_auth_logfile {
 ## Need a workdir for sqlite database, otherwise we'd have to be root.
 ## Also for our rsession.sh
 function config_dir {
-  echo "$HOME/.config/rsc"
+    local path
+    path=${XDG_CONFIG_HOME:-$HOME/.config}
+    echo "${path}/rsc"
 }
 
 function make_config_dir {
@@ -626,7 +628,7 @@ function launch_rserver {
     assert_dir_exists "${workdir}"
 
     hostname > "${workdir}/rserver.hostname"
-    grep -E "www-port=" ~/.config/rsc/rserver.conf | sed 's/www-port=//' > "${workdir}/rserver.port"
+    grep -E "www-port=" "$(config_dir)/rsc/rserver.conf" | sed 's/www-port=//' > "${workdir}/rserver.port"
 
     port=$(rserver_port)
     assert_port_free "${port}"
