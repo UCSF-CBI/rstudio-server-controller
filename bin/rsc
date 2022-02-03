@@ -628,7 +628,7 @@ function launch_rserver {
     assert_dir_exists "${workdir}"
 
     hostname > "${workdir}/rserver.hostname"
-    grep -E "www-port=" "$(config_dir)/rsc/rserver.conf" | sed 's/www-port=//' > "${workdir}/rserver.port"
+    grep -E "www-port=" "$(config_dir)/rserver.conf" | sed 's/www-port=//' > "${workdir}/rserver.port"
 
     port=$(rserver_port)
     assert_port_free "${port}"
