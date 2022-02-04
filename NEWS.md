@@ -1,8 +1,11 @@
 # rstudio-server-launcher
 
-## Version 0.3.1-9000
+## Version 0.3.1-9001
 
-* ...
+Bug fixes:
+
+* `rsc start` failed to remove stray lockfile, even when it was known
+  that there were no 'rserver' and 'rsession' processes running.
 
 
 ## Version 0.3.1
