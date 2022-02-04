@@ -9,7 +9,7 @@
 
 Bug fixes:
 
-* Internat check_pid() could give incorrect results when checking
+* Interna; `check_pid()` could give incorrect results when checking
   a process PID on another machine.
 
 
