@@ -47,7 +47,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.3.0
+### Version: 0.3.1
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -109,7 +109,9 @@ function warn_auth_logfile {
 ## Need a workdir for sqlite database, otherwise we'd have to be root.
 ## Also for our rsession.sh
 function config_dir {
-  echo "$HOME/.config/rsc"
+    local path
+    path=${XDG_CONFIG_HOME:-$HOME/.config}
+    echo "${path}/rsc"
 }
 
 function make_config_dir {
@@ -209,11 +211,8 @@ function remove_stray_pid_file {
     mdebug " - rserver hostname=${rserver_hostname}"
     mdebug " - hostname=$(hostname)"
 
-    ## Nothing todo?
-    [[ "${rserver_hostname}" != "$(hostname)" ]] && return 0;
-
     ## If this process is not running, remove the PID file
-    if [[ -z $(check_pid "${pid}") ]]; then
+    if [[ -z $(check_pid "${pid}" "${rserver_hostname}") ]]; then
         rm "${pid_file}"
         warn "Detected a stray PID file (${pid_file}). This file was removed, because it referred to a ${what} process (PID ${pid} on ${rserver_hostname}) which is no longer running."
         return 0
@@ -295,16 +294,37 @@ function make_rserver_conf {
 # Misc. utilities
 # -------------------------------------------------------------------------
 function check_pid {
+    local pid
+    local hostname
+    local pid_exists
+
+    pid=${1:?}
+    hostname=${2}
+    
     ## Output PID if there is such a process, otherwise output nothing
-    mdebug "check_pid '$1' ..."
-    if [[ -n "${1}" ]] && [[ -d "/proc/${1}" ]]; then
-        mdebug "- $(hostname):/proc/$1 is directory"
-        echo "${1}"
+    mdebug "check_pid '${pid}' ..."
+
+    pid_exists=false
+    if [[ -n "${pid}" ]]; then
+        ## Check PID on local machine or another machine?
+        if [[ "${hostname}" == "$(hostname)" ]]; then
+            mdebug "- Checking /proc/${pid} current machine (${hostname})"
+            [[ -d "/proc/${pid}" ]] && pid_exists=true
+	else
+            mdebug "- Checking /proc/${pid} on ${hostname} over SSH"
+	    #shellcheck disable=SC2029
+            ssh "$(hostname)" "[[ -d '/proc/${pid}' ]]" && pid_exists=true
+	fi
+    fi
+
+    if ${pid_exists}; then
+        mdebug "- $(hostname):/proc/${pid} exists"
+        echo "${pid}"
     else
-        mdebug "- $(hostname):/proc/$1 is NOT directory"
+        mdebug "- $(hostname):/proc/${pid} does not exist"
         echo ""
     fi
-    mdebug "check_pid '$1' ... done"
+    mdebug "check_pid '${pid}' ... done"
 }
 
 function read_pid {
@@ -424,7 +444,7 @@ function rs_process_status {
     
     ## Check the pid, if possible
     if [[ "${this_hostname}" == "${hostname}" ]]; then
-	pid=$(check_pid "${pid}")
+	pid=$(check_pid "${pid}" "${hostname}")
     fi
     
     if [[ -n "${pid}" ]]; then
@@ -626,7 +646,7 @@ function launch_rserver {
     assert_dir_exists "${workdir}"
 
     hostname > "${workdir}/rserver.hostname"
-    grep -E "www-port=" ~/.config/rsc/rserver.conf | sed 's/www-port=//' > "${workdir}/rserver.port"
+    grep -E "www-port=" "$(config_dir)/rserver.conf" | sed 's/www-port=//' > "${workdir}/rserver.port"
 
     port=$(rserver_port)
     assert_port_free "${port}"

@@ -1,11 +1,86 @@
 #!/usr/bin/env bash
-# Usage:
-#  freeport <preferred>
-#
-# Description:
-# Finds a free TCP port on the current machine
-#
-# Author: Henrik Bengtsson (2021) adopted from unknown author.
+### freeport: Find A Free Port
+### 
+### Gets a port in [<min>,<max] that is available using one of serveral
+### methods for scanning ports until a free one is found.
+###
+### If a free port is found, the port is outputted with exit code 0.
+### If no free port is found, then -1 is outputted with exist code 1.
+###
+### Usage:
+###  freeport [options]
+### 
+### Options: 
+###  --help             Display the full help page with examples
+###  --version          Output version of this software
+###  --debug            Output detailed debug information
+###
+###  --min=<min>        Minimum port number considered (Default: 1024)
+###  --max=<max>        Maximum port number considered (Default: 65535)
+###  --method=<mth>     Method use to find a port among {<min>, ..., <max>}.
+###                     If 'order', then the ports are scanned in order. If
+###                     'random', they are scanned in random order
+###  --seed=<seed>      Random seed used for --method=random
+###  --skip=<idx>       Number of ports to skip before being considered
+### ---
+###
+### Example:
+###  freeport --help
+###  freeport --version
+###
+###  freeport
+###
+###  # Find the first free port in [1024, 65535]
+###  freeport --method=ordered
+###
+###  # Don't consider ports the first two ports {1024, 1025}
+###  freeport --method=ordered --skip=2
+###
+###  # Alternative for the above
+###  freeport --method=ordered --min=1026
+###
+###  # Find a random free port in [1024, 65535]
+###  freeport --method=random
+###
+###  # Find a random free port in [1024, 65535] using 1000 as the random seed
+###  freeport --method=random --seed=1000
+###
+###  # Find a random free port in [1024, 65535] using UID as the random seed 
+###  freeport --method=random --seed="$(id -u)"
+###
+###  # Test if port 4321 is free
+###  freeport --min=4321 --max=4321 > /dev/null
+###  is_free=$?
+###
+###  # Alternative for the above
+###  freeport --test=4321
+###  is_free=$?
+###
+### Requirements:
+### * python
+###
+### Version: 0.0.0-9000
+### Copyright: Henrik Bengtsson (2021)
+### License: MIT
+
+## Import bash utility functions
+incl="${BASH_SOURCE%/*}/incl"
+
+# shellcheck source=incl/asserts.sh
+source "${incl}/asserts.sh"
+# shellcheck source=incl/cli.sh
+source "${incl}/cli.sh"
+# shellcheck source=incl/conditions.sh
+source "${incl}/conditions.sh"
+# shellcheck source=incl/files.sh
+source "${incl}/files.sh"
+# shellcheck source=incl/output.sh
+source "${incl}/output.sh"
+# shellcheck source=incl/ports.sh
+source "${incl}/ports.sh"
+
+
+error "Sorry, $(basename "$0") is not yet implemented"
 
 ## Was a preferred port specified?
 if [[ -n ${1} ]]; then
