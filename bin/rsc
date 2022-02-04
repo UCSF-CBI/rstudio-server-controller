@@ -444,10 +444,8 @@ function rs_process_status {
     this_hostname="$(hostname)"
     mdebug "rs_process_status(pid=${pid}, hostname=${hostname}):"
     
-    ## Check the pid, if possible
-    if [[ "${this_hostname}" == "${hostname}" ]]; then
-	pid=$(check_pid "${pid}" "${hostname}")
-    fi
+    ## Check if pid is still active
+    [[ -n "${pid}" ]] && pid=$(check_pid "${pid}" "${hostname}")
     
     if [[ -n "${pid}" ]]; then
         echo "running (pid ${pid}) on current machine (${hostname})"
