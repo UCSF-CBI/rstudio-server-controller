@@ -440,10 +440,9 @@ function find_login_host {
 function rs_process_status {
     local pid
     local hostname
-    local this_hostname
-    pid=${1:-}
-    hostname=${2:-}
-    this_hostname="$(hostname)"
+    pid=${1}
+    hostname=${2}
+    
     mdebug "rs_process_status(pid=${pid}, hostname=${hostname}):"
     
     ## Check if pid is still active
