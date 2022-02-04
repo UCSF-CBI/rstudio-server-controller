@@ -342,8 +342,10 @@ function read_pid {
         pid=$(cat "${file}")
     fi
     mdebug "- pid=${pid}"
-    ! $keep && pid=$(check_pid "${pid}")
+
+    ! $keep && [[ -n ${pid} ]] && pid=$(check_pid "${pid}")
     mdebug "- pid=${pid}"
+    
     mdebug "read_pid(keep=${keep}, file='${file}') ... done"
     echo "${pid}"
 }    
