@@ -47,7 +47,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.3.2
+### Version: 0.3.3
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -156,7 +156,7 @@ function remove_stray_lockfile {
     mdebug "remove_stray_lockfile() ..."
     
     ## Nothing to do?
-    [[ ! -f "${lockfile}" ]] && [[ -n "$(rserver_pid)" ]] && [[ -n "$(rsession_pid)" ]] && return 0;
+    [[ ! -f "${lockfile}" ]] || [[ -n "$(rserver_pid true)" ]] || [[ -n "$(rsession_pid true)" ]] && return 0;
     
     ## Here we know that there's neither a rserver PID nor a rsession PID
     rm "${lockfile}"
@@ -300,32 +300,33 @@ function check_pid {
     local pid_exists
 
     pid=${1:?}
-    hostname=${2}
+    hostname=${2:-$(hostname)}
     
     ## Output PID if there is such a process, otherwise output nothing
-    mdebug "check_pid '${pid}' ..."
+    mdebug "check_pid(pid=${pid}, hostname=${hostname}) ..."
 
     pid_exists=false
     if [[ -n "${pid}" ]]; then
         ## Check PID on local machine or another machine?
         if [[ "${hostname}" == "$(hostname)" ]]; then
-            mdebug "- Checking /proc/${pid} current machine (${hostname})"
+            mdebug "- Checking /proc/${pid} on current machine (${hostname})"
             [[ -d "/proc/${pid}" ]] && pid_exists=true
 	else
             mdebug "- Checking /proc/${pid} on ${hostname} over SSH"
 	    #shellcheck disable=SC2029
-            ssh "$(hostname)" "[[ -d '/proc/${pid}' ]]" && pid_exists=true
+            res=$(ssh "${hostname}" "[[ -d '/proc/${pid}' ]] && echo true || echo false") || error "Failed to check process PID ${pid} on ${hostname} over SSH"
+            [[ "${res}" == "true" ]] && pid_exists=true
 	fi
     fi
 
     if ${pid_exists}; then
-        mdebug "- $(hostname):/proc/${pid} exists"
+        mdebug "- ${hostname}:/proc/${pid} exists"
         echo "${pid}"
     else
-        mdebug "- $(hostname):/proc/${pid} does not exist"
+        mdebug "- ${hostname}:/proc/${pid} does not exist"
         echo ""
     fi
-    mdebug "check_pid '${pid}' ... done"
+    mdebug "check_pid(pid=${pid}, hostname=${hostname}) ... done"
 }
 
 function read_pid {
@@ -341,8 +342,10 @@ function read_pid {
         pid=$(cat "${file}")
     fi
     mdebug "- pid=${pid}"
-    ! $keep && pid=$(check_pid "${pid}")
+
+    ! $keep && [[ -n ${pid} ]] && pid=$(check_pid "${pid}")
     mdebug "- pid=${pid}"
+    
     mdebug "read_pid(keep=${keep}, file='${file}') ... done"
     echo "${pid}"
 }    
@@ -437,23 +440,16 @@ function find_login_host {
 function rs_process_status {
     local pid
     local hostname
-    local this_hostname
-    pid=${1:-}
-    hostname=${2:-}
-    this_hostname="$(hostname)"
+    pid=${1}
+    hostname=${2}
+    
     mdebug "rs_process_status(pid=${pid}, hostname=${hostname}):"
     
-    ## Check the pid, if possible
-    if [[ "${this_hostname}" == "${hostname}" ]]; then
-	pid=$(check_pid "${pid}" "${hostname}")
-    fi
+    ## Check if pid is still active
+    [[ -n "${pid}" ]] && pid=$(check_pid "${pid}" "${hostname}")
     
     if [[ -n "${pid}" ]]; then
-        if [[ "${this_hostname}" == "${hostname}" ]]; then
-            echo "running (pid ${pid})"
-        else
-            echo "unknown (pid ${pid} on ${hostname}, but current host is ${this_hostname})"
-        fi
+        echo "running (pid ${pid}) on current machine (${hostname})"
     else
         echo "not running"
     fi

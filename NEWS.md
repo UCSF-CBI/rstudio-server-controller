@@ -1,5 +1,13 @@
 # rstudio-server-launcher
 
+## Version 0.3.3
+
+Bug fixes:
+
+* Internat check_pid() could give incorrect results when checking
+  a process PID on another machine.
+
+
 ## Version 0.3.2
 
 Bug fixes:
