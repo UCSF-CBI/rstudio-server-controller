@@ -1,8 +1,11 @@
 # rstudio-server-launcher
 
-## Version 0.3.0-9001
+## Version 0.3.0-9002
 
 New features:
+
+* Now `rsc` can check process PIDs on another machine as well, which
+  requires SSH access to that other machine.
 
 * Now `rsc` respects environment variable `XDG_CONFIG_HOME`.  If not set,
   the default is `$HOME/.config`.
