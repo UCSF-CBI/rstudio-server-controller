@@ -47,7 +47,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.3.1
+### Version: 0.3.2
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -126,7 +126,7 @@ function make_config_dir {
 # Lock-file utilities
 # -------------------------------------------------------------------------
 ## Prevent user from running multiple instances of the RStudio Server
-function acquired_lock_file {
+function acquire_lock_file {
     local workdir
     local lockfile
     workdir=$(config_dir)
@@ -153,15 +153,16 @@ function remove_stray_lockfile {
     workdir=$(config_dir)
     lockfile=${workdir}/pid.lock
 
+    mdebug "remove_stray_lockfile() ..."
+    
     ## Nothing to do?
-    [[ ! -f "${lockfile}" ]] && return 0;
-    [[ "$(rserver_hostname)" != "$(hostname)" ]] && return 0;
-    [[ -n "$(rserver_pid)" ]] && return 0;
-    [[ -n "$(rsession_pid)" ]] && return 0;
+    [[ ! -f "${lockfile}" ]] && [[ -n "$(rserver_pid)" ]] && [[ -n "$(rsession_pid)" ]] && return 0;
     
     ## Here we know that there's neither a rserver PID nor a rsession PID
     rm "${lockfile}"
     warn "Detected a stray lock file (${lockfile}). This file was removed, because there was no evidence that another instance was running on this system (no PID files for neither 'rserver' nor 'rsession' were found)."
+
+    mdebug "remove_stray_lockfile() ... done"
 }
 
 
@@ -827,9 +828,9 @@ mdebug "args: [n=${#args[@]}] ${args[*]}"
 
 
 ## Remove any stray files
-remove_stray_lockfile
-remove_stray_pid_file rsession
 remove_stray_pid_file rserver
+remove_stray_pid_file rsession
+remove_stray_lockfile
 
 if [[ "${action}" == "config" ]]; then
     files=()
@@ -919,7 +920,7 @@ elif [[ "${action}" == "stop" ]]; then
     ## Remove lock file
     remove_lock_file    
 elif [[ "${action}" == "reset" ]]; then
-    $force || acquired_lock_file
+    $force || acquire_lock_file
     workdir=$(config_dir)
     [[ -d "${workdir}" ]] && rm -rf "${workdir}"
 elif [[ "${action}" == "start" ]]; then    
@@ -934,7 +935,7 @@ elif [[ "${action}" == "start" ]]; then
     validate_auth
   
     make_config_dir
-    acquired_lock_file
+    acquire_lock_file
     
     make_database_conf
     make_rserver_conf "${port}"
