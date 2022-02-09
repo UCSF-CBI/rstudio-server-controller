@@ -490,13 +490,17 @@ function make_rsession_envs {
     local workdir
     local tf
     local pattern
+    local outfile
 
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
 
+    outfile="${workdir}/rsession.env.parent"
+    
     ## Nothing to do?
     if [[ -z ${rsession_inherit_env_pattern} ]]; then
-        rm -f "${workdir}/rsession.env.parent"
+        rm -f "${outfile}"
+        mdebug "Removed: ${workdir}/rsession.env.parent"
         return 0
     fi
     
@@ -506,7 +510,8 @@ function make_rsession_envs {
     pattern=${pattern//$/=.*$}
     grep -E "${pattern}" "${tf}" > "${tf}.tmp"
     mv "${tf}.tmp" "${tf}" 
-    mv "${tf}" "${workdir}/rsession.env.parent"
+    mv "${tf}" "${outfile}"
+    mdebug "Created: ${outfile} [$(wc -l "${outfile}" | cut -d ' ' -f 1) variables: $(sed -E 's/(^declare -x |=.*$)//g' "${outfile}" | tr $'\n' ' ' | sed -E 's/ $//' | sed 's/ /, /g')]"
 }
 
 function make_rsession_conf {
