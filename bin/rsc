@@ -20,11 +20,9 @@
 ###  --force            Force an action
 ###  --full             Output more information
 ### 
-###  --env=<spec>       Controls environment variables to be exported. If
-###                     'all', all are exported. If 'none', none are exported
-###                     (Default: all)
-###  --env-pattern=<re> Regular expression matching environment variables to
-###                     be exported. (Default: "^.+$")
+###  --env-pattern=<re> Regular expression matching environment variables to be
+###                     exported. To export all, use "^.+$". To export none,
+###                     use "^$". (Default: "^.+$")
 ###  --port=<int>       A port in [1,65535]. If 'random', a free random port
 ###                     in [1024,65535] is used. If 'uid', similar to 'random'
 ###                     but is likely to be unique and deterministic for each
@@ -498,7 +496,7 @@ function make_rsession_envs {
     outfile="${workdir}/rsession.env.parent"
     
     ## Nothing to do?
-    if [[ -z ${rsession_inherit_env_pattern} ]]; then
+    if [[ -z ${rsession_inherit_env_pattern} ]] || [[ ${rsession_inherit_env_pattern} == "^$" ]]; then
         rm -f "${outfile}"
         mdebug "Removed: ${workdir}/rsession.env.parent"
         return 0
