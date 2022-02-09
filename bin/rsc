@@ -985,7 +985,7 @@ elif [[ "${action}" == "start" ]]; then
         msg="${USER}, your personal RStudio Server is available on <http://127.0.0.1:$(rserver_port)> from this machine ($(rserver_hostname))."
     else
         LOCALPORT=${LOCALPORT:-8787}
-        msg="${USER}, your personal RStudio Server is available on <http://$(rserver_hostname):$(rserver_port)>. If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:${LOCALPORT}> by running 'ssh -J ${USER}@$(find_login_host) -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) $(rserver_hostname)' in a second terminal."
+        msg="${USER}, your personal RStudio Server is available on <http://$(rserver_hostname):$(rserver_port)>. If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:${LOCALPORT}> by running 'ssh -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) ${USER}@$(find_login_host)' in a second terminal."
     fi
     msg="${msg} Any R session started times out after being idle for $(rsession_timeout) minutes."
 
