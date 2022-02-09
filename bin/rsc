@@ -47,7 +47,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.3.4-9000
+### Version: 0.3.4-9001
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -502,7 +502,8 @@ function make_rsession_envs {
         return 0
     fi
     
-    tf=$(mktemp)
+    tf=$(mktemp) || error "Failed to create a temporary file using 'mktemp' with TMPDIR=${TMPDIR:-<not set>}"
+    
     declare -x > "${tf}"
     pattern=${rsession_inherit_env_pattern//^/^declare -x }
     pattern=${pattern//$/=.*$}
