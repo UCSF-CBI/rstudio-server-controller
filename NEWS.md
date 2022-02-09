@@ -1,10 +1,21 @@
 # rstudio-server-launcher
 
+## Version 0.3.3-9001
+
+New features:
+
+* Add option `--env-pattern=<regular expression>`.
+
+Deprecated and defunct:
+
+* Remove option `--env` in favor of `--env-pattern`.
+
+
 ## Version 0.3.3
 
 Bug fixes:
 
-* Internat check_pid() could give incorrect results when checking
+* Interna; `check_pid()` could give incorrect results when checking
   a process PID on another machine.
 
 
@@ -177,5 +188,3 @@ New features:
 * Add `launch_rstudio_server`, which launches the RStudio Server on the current
   machine at a random port.  The server and any running R session it launched
   will be terminated when `launch_rstudio_server` terminates, e.g. from Ctrl-C.
-
-
