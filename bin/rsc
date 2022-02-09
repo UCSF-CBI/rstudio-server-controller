@@ -23,6 +23,8 @@
 ###  --env=<spec>       Controls environment variables to be exported. If
 ###                     'all', all are exported. If 'none', none are exported
 ###                     (Default: all)
+###  --env-pattern=<re> Regular expression matching environment variables to
+###                     be exported. (Default: "^.+$")
 ###  --port=<int>       A port in [1,65535]. If 'random', a free random port
 ###                     in [1024,65535] is used. If 'uid', similar to 'random'
 ###                     but is likely to be unique and deterministic for each
@@ -47,7 +49,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.3.3-9000
+### Version: 0.3.3-9001
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -311,12 +313,12 @@ function check_pid {
         if [[ "${hostname}" == "$(hostname)" ]]; then
             mdebug "- Checking /proc/${pid} on current machine (${hostname})"
             [[ -d "/proc/${pid}" ]] && pid_exists=true
-	else
+        else
             mdebug "- Checking /proc/${pid} on ${hostname} over SSH"
-	    #shellcheck disable=SC2029
+            #shellcheck disable=SC2029
             res=$(ssh "${hostname}" "[[ -d '/proc/${pid}' ]] && echo true || echo false") || error "Failed to check process PID ${pid} on ${hostname} over SSH"
             [[ "${res}" == "true" ]] && pid_exists=true
-	fi
+        fi
     fi
 
     if ${pid_exists}; then
@@ -486,9 +488,25 @@ function rsession_timeout {
 
 function make_rsession_envs {
     local workdir
+    local tf
+    local pattern
+
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
-    declare -x > "${workdir}/rsession.env.parent"
+
+    ## Nothing to do?
+    if [[ -z ${rsession_inherit_env_pattern} ]]; then
+        rm -f "${workdir}/rsession.env.parent"
+        return 0
+    fi
+    
+    tf=$(mktemp)
+    declare -x > "${tf}"
+    pattern=${rsession_inherit_env_pattern//^/^declare -x }
+    pattern=${pattern//$/=.*$}
+    grep -E "${pattern}" "${tf}" > "${tf}.tmp"
+    mv "${tf}.tmp" "${tf}" 
+    mv "${tf}" "${workdir}/rsession.env.parent"
 }
 
 function make_rsession_conf {
@@ -527,11 +545,10 @@ echo "\${PPID}" > "$workdir/rserver.pid"
 RSESSION_LOG_FILE="$workdir/rsession.log"
 export RSESSION_LOG_FILE
 
-declare -x > "$workdir/rsession.env.rstudio"
-
 ## Import inherited environment variables?
-if ${rsession_inherit_env}; then
+if [[ -f "${workdir}/rsession.env.parent" ]]; then
     ## (a) Record current env vars
+    declare -x > "$workdir/rsession.env.rstudio"
     ## (b) Load inherited env vars
     source "$workdir/rsession.env.parent"
     ## (c) Load recorded env vars (in case they where overwritten)
@@ -716,7 +733,7 @@ port_seed=${RSTUDIO_PORT_SEED:-}
 ## is to use a a clean set of environment variables.  That default
 ## behavior prevents R from seeing, for instance, environment variables
 ## set by a job scheduler.
-rsession_inherit_env=true
+rsession_inherit_env_pattern="^.+$"
     
 
 # Parse command-line options
@@ -775,12 +792,14 @@ while [[ $# -gt 0 ]]; do
             port_seed=${value}
             assert_integer "${port_seed}"
         elif [[ "${key}" == "env" ]]; then
-            rsession_inherit_env=false
+            rsession_inherit_env_pattern="^$"
             if [[ ${value} == "all" ]]; then
-                rsession_inherit_env=true
+                rsession_inherit_env_pattern="^[[:alnum:]]+$"
             elif [[ ${value} == "none" ]]; then
-                rsession_inherit_env=false
+                rsession_inherit_env_pattern="^$"
             fi
+        elif [[ "${key}" == "env-pattern" ]]; then
+            rsession_inherit_env_pattern="${value}"
         else
             merror "Unknown option: $1"
         fi
@@ -820,6 +839,7 @@ mdebug "dryrun: ${dryrun}"
 mdebug "force: ${force}"
 mdebug "port: ${port}"
 mdebug "port_seed: ${port_seed}"
+mdebug "rsession_inherit_env_pattern: ${rsession_inherit_env_pattern}"
 mdebug "args: [n=${#args[@]}] ${args[*]}"
 
 

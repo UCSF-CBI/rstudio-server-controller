@@ -1,8 +1,8 @@
 # rstudio-server-launcher
 
-## Version 0.3.3-9000
+## Version 0.3.3-9001
 
-* ...
+* Add option `--env-pattern=<regular expression>`.
 
 
 ## Version 0.3.3
@@ -182,5 +182,3 @@ New features:
 * Add `launch_rstudio_server`, which launches the RStudio Server on the current
   machine at a random port.  The server and any running R session it launched
   will be terminated when `launch_rstudio_server` terminates, e.g. from Ctrl-C.
-
-
