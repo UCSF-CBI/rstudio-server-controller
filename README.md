@@ -94,10 +94,11 @@ $ rsc stop
 
 ```sh
 $ cd /path/to/software
-$ curl -L -O https://github.com/UCSF-CBI/rstudio-server-controller/archive/refs/tags/0.3.3.tar.gz
-$ tar xf 0.3.3.tar.gz
-$ PATH=/path/to/softwarerstudio-server-controller-0.3.3/bin:$PATH
+$ curl -L -O https://github.com/UCSF-CBI/rstudio-server-controller/archive/refs/tags/0.3.4.tar.gz
+$ tar xf 0.3.4.tar.gz
+$ PATH=/path/to/softwarerstudio-server-controller-0.3.4/bin:$PATH
 $ export PATH
 $ rsc --version
-0.3.3
+0.3.4
 ```
+
