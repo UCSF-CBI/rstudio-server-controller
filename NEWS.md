@@ -2,7 +2,13 @@
 
 ## Version 0.3.3-9001
 
+New features:
+
 * Add option `--env-pattern=<regular expression>`.
+
+Deprecated and defunct:
+
+* Remove option `--env` in favor of `--env-pattern`.
 
 
 ## Version 0.3.3
