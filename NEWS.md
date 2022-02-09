@@ -15,7 +15,7 @@ Deprecated and defunct:
 
 Bug fixes:
 
-* Interna; `check_pid()` could give incorrect results when checking
+* Internal `check_pid()` could give incorrect results when checking
   a process PID on another machine.
 
 
