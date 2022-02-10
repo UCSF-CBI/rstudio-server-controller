@@ -47,7 +47,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.3.4-9001
+### Version: 0.3.4-9002
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -684,7 +684,13 @@ function launch_rserver {
 }
 
 function rserver_status {
-    rs_process_status "$(rserver_pid true)" "$(rserver_hostname)"
+    local res
+    local port
+    res=$(rs_process_status "$(rserver_pid true)" "$(rserver_hostname)")
+    if [[ "${res}" != "not running" ]]; then
+        res="${res} listening on port $(rserver_port)"
+    fi
+    echo "${res}"
 }    
 
 

@@ -1,6 +1,10 @@
 # rstudio-server-launcher
 
-## Version 0.3.4-9001
+## Version 0.3.4-9002
+
+New features:
+
+* `rsc status` now reports also on the RStudio Server's listening port.
 
 Bug fixes:
 
