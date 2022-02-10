@@ -47,7 +47,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.3.4-9002
+### Version: 0.3.4-9003
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -737,6 +737,7 @@ full=false
 port=${RSTUDIO_PORT:-8787}
 port_seed=${RSTUDIO_PORT_SEED:-}
 [[ -n ${port_seed} ]] && assert_integer "${port_seed}"
+field=
 
 ## Should 'rsession' inherit exported environment variables from the
 ## 'rsc' process?  If 'false', then the default behavior of 'rserver'
@@ -810,6 +811,8 @@ while [[ $# -gt 0 ]]; do
             fi
         elif [[ "${key}" == "env-pattern" ]]; then
             rsession_inherit_env_pattern="${value}"
+        elif [[ "${key}" == "field" ]]; then
+            field="${value}"
         else
             merror "Unknown option: $1"
         fi
@@ -850,6 +853,7 @@ mdebug "force: ${force}"
 mdebug "port: ${port}"
 mdebug "port_seed: ${port_seed}"
 mdebug "rsession_inherit_env_pattern: ${rsession_inherit_env_pattern}"
+mdebug "field: ${field}"
 mdebug "args: [n=${#args[@]}] ${args[*]}"
 
 
@@ -917,14 +921,24 @@ elif [[ "${action}" == "log" ]]; then
     fi
 elif [[ "${action}" == "status" ]]; then
     mdebug "rsc status ..."
-    printf "%s: %s\n" "rserver" "$(rserver_status)"
-    printf "%s: %s\n" "rsession" "$(rsession_status)"
-    workdir=$(config_dir)
-    lockfile=${workdir}/pid.lock
-    if [[ -f "${lockfile}" ]]; then
-        echo "lock file: exists (${lockfile})"
+    rserver_status=$(rserver_status)
+    if [[ -z ${field} ]]; then
+        printf "%s: %s\n" "rserver" "${rserver_status}"
+        printf "%s: %s\n" "rsession" "$(rsession_status)"
+        workdir=$(config_dir)
+        lockfile=${workdir}/pid.lock
+        if [[ -f "${lockfile}" ]]; then
+            echo "lock file: exists (${lockfile})"
+        else
+            echo "lock file: does not exist"
+        fi
     else
-        echo "lock file: does not exist"
+        [[ "${rserver_status}" == "not running" ]] && error "Not running"
+        if [[ "${field}" == "port" ]]; then
+            rserver_port
+        elif [[ "${field}" == "hostname" ]]; then
+            rserver_hostname
+        fi
     fi
     mdebug "rsc status ... done"
 elif [[ "${action}" == "stop" ]]; then

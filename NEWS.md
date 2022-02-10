@@ -1,8 +1,11 @@
 # rstudio-server-launcher
 
-## Version 0.3.4-9002
+## Version 0.3.4-9003
 
 New features:
+
+* `rsc status --field=hostname` and `rsc status --field=port` report on the
+  hostname and the port of the running RStudio Server.
 
 * `rsc status` now reports also on the RStudio Server's listening port.
 
