@@ -1,5 +1,36 @@
 # rstudio-server-launcher
 
+## Version 0.4.0
+
+New features:
+
+* Add support to specify an alternative authentication method for the
+  RStudio Server login, e.g. `rsc start --auth=<file>`, where `<file> can
+  be the path to an executable, or one of the built-in ones, which are
+  'auth-via-su' (default) and 'auto-via-env'.
+
+* `rsc status --field=hostname` and `rsc status --field=port` report on the
+  hostname and the port of the running RStudio Server.
+
+* `rsc status --force --field=...` skips any attempts to check and clean up
+  stray files.
+
+* `rsc status` now reports also on the RStudio Server's listening port.
+
+* Now `rsc` tries extra hard to infer the hostname, which is done by first
+  querying `$HOSTNAME` and `hostname` as a fallback. If neither works, then
+  an informative error is produced.
+
+* Now `rsc reset --force` produces an informative warning.
+
+* Added `rsc wait`, which waits until `rsc start &` is fully running.
+
+Bug fixes:
+
+* `rsc start` no longer uses `mktemp` in case that fails, which, by the way,
+  is extremely rare and a problem with the system setup.
+
+
 ## Version 0.3.4
 
 New features:

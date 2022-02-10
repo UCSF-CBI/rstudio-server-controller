@@ -6,6 +6,7 @@
 ### 
 ### Commands:
 ###  start              Start the RStudio Server
+###  wait               Wait for RStudio Server instance to be available
 ###  stop               Stop the RStudio Server and any R session
 ###  status             Check whether the RStudio Server is running or not
 ###  config             Output configuration details
@@ -17,6 +18,11 @@
 ###  --version          Output version of this software
 ###  --debug            Output detailed debug information
 ###  --verbose          Output informative message
+###  --auth=<file>      Path to authentication executable, or name of one of
+###                     the built-in ones: 'auto-via-su' authenticates via
+###                     'su', 'auth-via-env' authenticates toward password in
+###                     environment variable 'RSC_PASSWORD'
+###                     (Default: auth-via-su)
 ###  --force            Force an action
 ###  --full             Output more information
 ### 
@@ -47,7 +53,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.3.4
+### Version: 0.4.0
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -77,11 +83,23 @@ source "${incl}/ports.sh"
 # Authentication utilities
 # -------------------------------------------------------------------------
 function auth_tool {
-    local path
-    path=${utils}/auth-via-su
-    assert_executable "${path}"
-    path=$(realpath "${path}")
-    echo "${path}"
+    local file
+
+    mdebug "auth_tool() ..."
+    mdebug " - auth: ${auth}"
+    
+    ## Look up authentication executable
+    file=$(PATH=${utils}:${PATH} command -v "${auth}")
+    mdebug " - file: ${file}"
+    [[ -z ${file} ]] && error "No such authentication executable: ${auth}"
+    
+    assert_executable "${file}"
+    file=$(realpath "${file}")
+    mdebug " - absolute(file): ${file}"
+
+    mdebug "auth_tool() ... done"
+    
+    echo "${file}"
 }
 
 function validate_auth {
@@ -208,7 +226,7 @@ function remove_stray_pid_file {
     [[ ! -f "${file}" ]] && return 0;
 
     ## Get rserver hostname
-    rserver_hostname=$(cat "${workdir}/rserver.hostname")
+    rserver_hostname=$(cat "${file}")
     mdebug " - rserver hostname=${rserver_hostname}"
     mdebug " - hostname=$(hostname)"
 
@@ -294,6 +312,31 @@ function make_rserver_conf {
 # -------------------------------------------------------------------------
 # Misc. utilities
 # -------------------------------------------------------------------------
+function wait_for_file {
+    local file
+    local maxseconds
+    
+    file=${1:?}
+    maxseconds=${2:-300}
+    
+    t0=${SECONDS}
+    mdebug "Waiting for file ${file} ..."
+    until [[ -f "${file}" && $((SECONDS - t0)) -lt "${maxseconds}" ]]; do
+        sleep 1.0
+    done
+    [[ ! -f "${file}" ]] && error "Waited for file ${file}, but gave up after ${maxseconds} seconds"
+    mdebug "Waiting for file ${file} ... done"
+}
+
+## A version of 'hostname' that will use either $HOSTNAME or hostname
+function hostname {
+    local res
+    res=${HOSTNAME}
+    [[ -z ${res} ]] && res=$(command hostname)
+    [[ -z ${res} ]] && error "Failed to infer hostname"
+    echo "${res}"
+}
+
 function check_pid {
     local pid
     local hostname
@@ -486,7 +529,6 @@ function rsession_timeout {
 
 function make_rsession_envs {
     local workdir
-    local tf
     local pattern
     local outfile
 
@@ -502,13 +544,12 @@ function make_rsession_envs {
         return 0
     fi
     
-    tf=$(mktemp)
-    declare -x > "${tf}"
+    declare -x > "${outfile}.tmp"
     pattern=${rsession_inherit_env_pattern//^/^declare -x }
     pattern=${pattern//$/=.*$}
-    grep -E "${pattern}" "${tf}" > "${tf}.tmp"
-    mv "${tf}.tmp" "${tf}" 
-    mv "${tf}" "${outfile}"
+    grep -E "${pattern}" "${outfile}.tmp" > "${outfile}.tmp.tmp"
+    mv "${outfile}.tmp.tmp" "${outfile}"
+    rm -f "${outfile}.tmp"
     mdebug "Created: ${outfile} [$(wc -l "${outfile}" | cut -d ' ' -f 1) variables: $(sed -E 's/(^declare -x |=.*$)//g' "${outfile}" | tr $'\n' ' ' | sed -E 's/ $//' | sed 's/ /, /g')]"
 }
 
@@ -633,16 +674,26 @@ function rserver_pid {
 
 function rserver_hostname {
     local workdir
+    local file
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
-    cat "${workdir}/rserver.hostname"
+    file="${workdir}/rserver.hostname"
+    assert_file_exists "${file}"
+    res=$(cat "${file}")
+    [[ -z "${res}" ]] && error "File is empty: ${file}"
+    echo "${res}"
 }
 
 function rserver_port {
     local workdir
+    local file
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
-    cat "${workdir}/rserver.port"
+    file="${workdir}/rserver.port"
+    assert_file_exists "${file}"
+    res=$(cat "${file}")
+    [[ -z "${res}" ]] && error "File is empty: ${file}"
+    echo "${res}"
 }
 
 function rserver_url {
@@ -683,7 +734,13 @@ function launch_rserver {
 }
 
 function rserver_status {
-    rs_process_status "$(rserver_pid true)" "$(rserver_hostname)"
+    local res
+    local port
+    res=$(rs_process_status "$(rserver_pid true)" "$(rserver_hostname)")
+    if [[ "${res}" != "not running" ]]; then
+        res="${res} listening on port $(rserver_port)"
+    fi
+    echo "${res}"
 }    
 
 
@@ -730,6 +787,8 @@ full=false
 port=${RSTUDIO_PORT:-8787}
 port_seed=${RSTUDIO_PORT_SEED:-}
 [[ -n ${port_seed} ]] && assert_integer "${port_seed}"
+field=
+auth="auth-via-su"
 
 ## Should 'rsession' inherit exported environment variables from the
 ## 'rsc' process?  If 'false', then the default behavior of 'rserver'
@@ -744,6 +803,8 @@ while [[ $# -gt 0 ]]; do
     mdebug "Next CLI argument: $1"
     ## Commands:
     if [[ "$1" == "start" ]]; then
+        action="$1"
+    elif [[ "$1" == "wait" ]]; then
         action="$1"
     elif [[ "$1" == "status" ]]; then
         action="$1"
@@ -803,6 +864,11 @@ while [[ $# -gt 0 ]]; do
             fi
         elif [[ "${key}" == "env-pattern" ]]; then
             rsession_inherit_env_pattern="${value}"
+        elif [[ "${key}" == "field" ]]; then
+            field="${value}"
+        elif [[ "${key}" == "auth" ]]; then
+            [[ -z "${value}" ]] && error "Option '--auth' must not be empty"
+            auth="${value}"
         else
             merror "Unknown option: $1"
         fi
@@ -843,13 +909,16 @@ mdebug "force: ${force}"
 mdebug "port: ${port}"
 mdebug "port_seed: ${port_seed}"
 mdebug "rsession_inherit_env_pattern: ${rsession_inherit_env_pattern}"
+mdebug "field: ${field}"
 mdebug "args: [n=${#args[@]}] ${args[*]}"
 
 
 ## Remove any stray files
-remove_stray_pid_file rserver
-remove_stray_pid_file rsession
-remove_stray_lockfile
+if ! ${force}; then
+    remove_stray_pid_file rserver
+    remove_stray_pid_file rsession
+    remove_stray_lockfile
+fi    
 
 if [[ "${action}" == "config" ]]; then
     files=()
@@ -910,14 +979,23 @@ elif [[ "${action}" == "log" ]]; then
     fi
 elif [[ "${action}" == "status" ]]; then
     mdebug "rsc status ..."
-    printf "%s: %s\n" "rserver" "$(rserver_status)"
-    printf "%s: %s\n" "rsession" "$(rsession_status)"
-    workdir=$(config_dir)
-    lockfile=${workdir}/pid.lock
-    if [[ -f "${lockfile}" ]]; then
-        echo "lock file: exists (${lockfile})"
+    if [[ -z ${field} ]]; then
+        printf "%s: %s\n" "rserver" "$(rserver_status)"
+        printf "%s: %s\n" "rsession" "$(rsession_status)"
+        workdir=$(config_dir)
+        lockfile=${workdir}/pid.lock
+        if [[ -f "${lockfile}" ]]; then
+            echo "lock file: exists (${lockfile})"
+        else
+            echo "lock file: does not exist"
+        fi
     else
-        echo "lock file: does not exist"
+        ! ${force} && [[ "$(rserver_status)" == "not running" ]] && error "Not running"
+        if [[ "${field}" == "port" ]]; then
+            rserver_port
+        elif [[ "${field}" == "hostname" ]]; then
+            rserver_hostname
+        fi
     fi
     mdebug "rsc status ... done"
 elif [[ "${action}" == "stop" ]]; then
@@ -939,9 +1017,25 @@ elif [[ "${action}" == "stop" ]]; then
     ## Remove lock file
     remove_lock_file    
 elif [[ "${action}" == "reset" ]]; then
-    $force || acquire_lock_file
     workdir=$(config_dir)
-    [[ -d "${workdir}" ]] && rm -rf "${workdir}"
+    if [[ -d "${workdir}" ]]; then
+        if $force; then
+            warn "Deleting rsc folder without checking if there is an active RStudio Server instance: ${workdir}"
+        else
+            acquire_lock_file
+        fi
+        rm -rf "${workdir}"
+    fi
+elif [[ "${action}" == "wait" ]]; then
+    workdir=$(config_dir)
+    [[ ! -d "${workdir}" ]] && error "There appear to be no RStudio Server instance started"
+
+    ## Wait for PID, hostname, and port file to appear (for up to 5 minutes)
+    wait_for_file "${workdir}/rserver.pid"
+    wait_for_file "${workdir}/rserver.hostname"
+    wait_for_file "${workdir}/rserver.port"
+    rserver_hostname
+    rserver_port
 elif [[ "${action}" == "start" ]]; then    
     ## Assert executables are available
     assert_executable R

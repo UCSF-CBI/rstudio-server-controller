@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+logfile=${2}
+
+function debug() {
+    if [[ -z ${logfile} ]]; then
+	echo "$@"
+    else
+	echo "$@" >> "${logfile}"
+    fi
+}
+
+
+# Confirm username is supplied
+if [[ $# -lt 1 ]]; then
+  debug "Usage: $(basename "$0") <username>"
+  exit 1
+fi
+USERNAME="${1}"
+
+# Confirm password environment variable exists
+if [[ -z ${RSC_PASSWORD} ]]; then
+  debug "The environment variable RSC_PASSWORD is not set"
+  exit 1
+fi
+
+if [[ "${USERNAME}" != "${USER}" ]]; then
+  debug "Invalid authentication (incorrect username)"
+  exit 1
+fi
+
+# Read in the password from user
+read -r -s -p "Password: " password
+
+if [[ "${password}" != "${RSC_PASSWORD}" ]]; then
+  debug "Invalid authentication (incorrect password)"
+  exit 1
+fi
+
+debug "Successful authentication"
+exit 0
