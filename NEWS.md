@@ -1,8 +1,11 @@
 # rstudio-server-launcher
 
-## Version 0.3.4-9006
+## Version 0.3.4-9007
 
 New features:
+
+* Add support to specify an alternative authentication method for the
+  RStudio Server login, e.g. `rsc start --auth=<file>`.
 
 * `rsc status --field=hostname` and `rsc status --field=port` report on the
   hostname and the port of the running RStudio Server.
