@@ -6,6 +6,7 @@
 ### 
 ### Commands:
 ###  start              Start the RStudio Server
+###  wait               Wait for RStudio Server instance to be available
 ###  stop               Stop the RStudio Server and any R session
 ###  status             Check whether the RStudio Server is running or not
 ###  config             Output configuration details
@@ -52,7 +53,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.3.4-9009
+### Version: 0.3.4-9010
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -787,6 +788,8 @@ while [[ $# -gt 0 ]]; do
     ## Commands:
     if [[ "$1" == "start" ]]; then
         action="$1"
+    elif [[ "$1" == "wait" ]]; then
+        action="$1"
     elif [[ "$1" == "status" ]]; then
         action="$1"
     elif [[ "$1" == "stop" ]]; then
@@ -1007,6 +1010,19 @@ elif [[ "${action}" == "reset" ]]; then
         fi
         rm -rf "${workdir}"
     fi
+elif [[ "${action}" == "wait" ]]; then
+    workdir=$(config_dir)
+    [[ ! -d "${workdir}" ]] && error "There appear to be no RStudio Server instance started"
+    ## Wait for PID file to appear (for up to 5 minutes)
+    t0=${SECONDS}
+    file=$(rserver_pid_file)
+    mdebug "PID file: ${file}"
+    until [[ -f "${file}" && $((SECONDS - t0)) -lt 300 ]]; do
+        sleep 1.0
+    done
+    rserver_hostname
+    rserver_port
+    [[ ! -f "${file}" ]] && error "Waited for the RStudio Server instance to start, but gave up after $((SECONDS - t0))) seconds"
 elif [[ "${action}" == "start" ]]; then    
     ## Assert executables are available
     assert_executable R

@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.3.4-9009
+## Version 0.3.4-9010
 
 New features:
 
@@ -22,6 +22,8 @@ New features:
   an informative error is produced.
 
 * Now `rsc reset --force` produces an informative warning.
+
+* Added `rsc wait`, which waits until `rsc start &` is fully running.
 
 Bug fixes:
 
