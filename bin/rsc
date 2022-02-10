@@ -18,7 +18,10 @@
 ###  --debug            Output detailed debug information
 ###  --verbose          Output informative message
 ###  --auth=<file>      Path to authentication executable, or name of one of
-###                     the built-in ones (Default: auth-via-su)
+###                     the built-in ones: 'auto-via-su' authenticates via
+###                     'su', 'auth-via-env' authenticates toward password in
+###                     environment variable 'RSC_PASSWORD'
+###                     (Default: auth-via-su)
 ###  --force            Force an action
 ###  --full             Output more information
 ### 
@@ -848,8 +851,8 @@ while [[ $# -gt 0 ]]; do
         elif [[ "${key}" == "field" ]]; then
             field="${value}"
         elif [[ "${key}" == "auth" ]]; then
+            [[ -z "${value}" ]] && error "Option '--auth' must not be empty"
             auth="${value}"
-            [[ -z "${value}" ]] || error "Option '--auth' must not be empty"
         else
             merror "Unknown option: $1"
         fi

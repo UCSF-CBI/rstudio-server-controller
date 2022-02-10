@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+# Confirm username is supplied
+if [[ $# -lt 1 ]]; then
+  echo "Usage: $(basename "$0") <username>"
+  exit 1
+fi
+USERNAME="${1}"
+
+# Confirm password environment variable exists
+if [[ -z ${RSC_PASSWORD} ]]; then
+  echo "The environment variable RSC_PASSWORD is not set"
+  exit 1
+fi
+
+if [[ "${USERNAME}" != "${USER}" ]]; then
+  echo "Invalid authentication (incorrect username)"
+  exit 1
+fi
+
+# Read in the password from user
+read -r -s -p "Password: " password
+echo ""
+
+if [[ "${password}" != "${RSC_PASSWORD}" ]]; then
+  echo "Invalid authentication (incorrect password)"
+  exit 1
+fi
+
+echo "Successful authentication"
+exit 0
