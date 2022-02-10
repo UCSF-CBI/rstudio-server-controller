@@ -47,7 +47,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.3.4-9005
+### Version: 0.3.4-9006
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -877,9 +877,11 @@ mdebug "args: [n=${#args[@]}] ${args[*]}"
 
 
 ## Remove any stray files
-remove_stray_pid_file rserver
-remove_stray_pid_file rsession
-remove_stray_lockfile
+if ! ${force}; then
+    remove_stray_pid_file rserver
+    remove_stray_pid_file rsession
+    remove_stray_lockfile
+fi    
 
 if [[ "${action}" == "config" ]]; then
     files=()
@@ -940,9 +942,8 @@ elif [[ "${action}" == "log" ]]; then
     fi
 elif [[ "${action}" == "status" ]]; then
     mdebug "rsc status ..."
-    rserver_status=$(rserver_status)
     if [[ -z ${field} ]]; then
-        printf "%s: %s\n" "rserver" "${rserver_status}"
+        printf "%s: %s\n" "rserver" "$(rserver_status)"
         printf "%s: %s\n" "rsession" "$(rsession_status)"
         workdir=$(config_dir)
         lockfile=${workdir}/pid.lock
@@ -952,7 +953,7 @@ elif [[ "${action}" == "status" ]]; then
             echo "lock file: does not exist"
         fi
     else
-        [[ "${rserver_status}" == "not running" ]] && error "Not running"
+        ! ${force} && [[ "$(rserver_status)" == "not running" ]] && error "Not running"
         if [[ "${field}" == "port" ]]; then
             rserver_port
         elif [[ "${field}" == "hostname" ]]; then
