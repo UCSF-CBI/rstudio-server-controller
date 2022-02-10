@@ -312,6 +312,22 @@ function make_rserver_conf {
 # -------------------------------------------------------------------------
 # Misc. utilities
 # -------------------------------------------------------------------------
+function wait_for_file {
+    local file
+    local maxseconds
+    
+    file=${1:?}
+    maxseconds=${2:-300}
+    
+    t0=${SECONDS}
+    mdebug "Waiting for file ${file} ..."
+    until [[ -f "${file}" && $((SECONDS - t0)) -lt "${maxseconds}" ]]; do
+        sleep 1.0
+    done
+    [[ ! -f "${file}" ]] && error "Waited for file ${file}, but gave up after ${maxseconds} seconds"
+    mdebug "Waiting for file ${file} ... done"
+}
+
 ## A version of 'hostname' that will use either $HOSTNAME or hostname
 function hostname {
     local res
@@ -1013,16 +1029,13 @@ elif [[ "${action}" == "reset" ]]; then
 elif [[ "${action}" == "wait" ]]; then
     workdir=$(config_dir)
     [[ ! -d "${workdir}" ]] && error "There appear to be no RStudio Server instance started"
-    ## Wait for PID file to appear (for up to 5 minutes)
-    t0=${SECONDS}
-    file=$(rserver_pid_file)
-    mdebug "PID file: ${file}"
-    until [[ -f "${file}" && $((SECONDS - t0)) -lt 300 ]]; do
-        sleep 1.0
-    done
+
+    ## Wait for PID, hostname, and port file to appear (for up to 5 minutes)
+    wait_for_file "${workdir}/rserver.pid"
+    wait_for_file "${workdir}/rserver.hostname"
+    wait_for_file "${workdir}/rserver.port"
     rserver_hostname
     rserver_port
-    [[ ! -f "${file}" ]] && error "Waited for the RStudio Server instance to start, but gave up after $((SECONDS - t0))) seconds"
 elif [[ "${action}" == "start" ]]; then    
     ## Assert executables are available
     assert_executable R
