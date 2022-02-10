@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.3.4-9007
+## Version 0.3.4-9008
 
 New features:
 
@@ -23,9 +23,8 @@ New features:
 
 Bug fixes:
 
-* `rsc start` would not detect if `mktemp` failed, which is very rare and
-  is a problem with the system setup. Now it exits with an informative
-  error message.
+* `rsc start` no longer uses `mktemp` in case that fails, which, by the way,
+  is extremely rare and a problem with the system setup.
 
 
 ## Version 0.3.4

@@ -52,7 +52,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.3.4-9007
+### Version: 0.3.4-9008
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -512,7 +512,6 @@ function rsession_timeout {
 
 function make_rsession_envs {
     local workdir
-    local tf
     local pattern
     local outfile
 
@@ -528,14 +527,12 @@ function make_rsession_envs {
         return 0
     fi
     
-    tf=$(mktemp) || error "Failed to create a temporary file using 'mktemp' with TMPDIR=${TMPDIR:-<not set>}"
-    
-    declare -x > "${tf}"
+    declare -x > "${outfile}.tmp"
     pattern=${rsession_inherit_env_pattern//^/^declare -x }
     pattern=${pattern//$/=.*$}
-    grep -E "${pattern}" "${tf}" > "${tf}.tmp"
-    mv "${tf}.tmp" "${tf}" 
-    mv "${tf}" "${outfile}"
+    grep -E "${pattern}" "${outfile}.tmp" > "${outfile}.tmp.tmp"
+    mv "${outfile}.tmp.tmp" "${outfile}"
+    rm -f "${outfile}.tmp"
     mdebug "Created: ${outfile} [$(wc -l "${outfile}" | cut -d ' ' -f 1) variables: $(sed -E 's/(^declare -x |=.*$)//g' "${outfile}" | tr $'\n' ' ' | sed -E 's/ $//' | sed 's/ /, /g')]"
 }
 
