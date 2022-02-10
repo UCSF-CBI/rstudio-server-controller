@@ -52,7 +52,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.3.4-9008
+### Version: 0.3.4-9009
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -998,9 +998,15 @@ elif [[ "${action}" == "stop" ]]; then
     ## Remove lock file
     remove_lock_file    
 elif [[ "${action}" == "reset" ]]; then
-    $force || acquire_lock_file
     workdir=$(config_dir)
-    [[ -d "${workdir}" ]] && rm -rf "${workdir}"
+    if [[ -d "${workdir}" ]]; then
+        if $force; then
+            warn "Deleting rsc folder without checking if there is an active RStudio Server instance: ${workdir}"
+        else
+            acquire_lock_file
+        fi
+        rm -rf "${workdir}"
+    fi
 elif [[ "${action}" == "start" ]]; then    
     ## Assert executables are available
     assert_executable R

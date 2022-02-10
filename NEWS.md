@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.3.4-9008
+## Version 0.3.4-9009
 
 New features:
 
@@ -20,6 +20,8 @@ New features:
 * Now `rsc` tries extra hard to infer the hostname, which is done by first
   querying `$HOSTNAME` and `hostname` as a fallback. If neither works, then
   an informative error is produced.
+
+* Now `rsc reset --force` produces an informative warning.
 
 Bug fixes:
 
