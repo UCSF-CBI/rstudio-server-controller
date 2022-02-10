@@ -47,7 +47,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.3.4-9003
+### Version: 0.3.4-9004
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -208,7 +208,7 @@ function remove_stray_pid_file {
     [[ ! -f "${file}" ]] && return 0;
 
     ## Get rserver hostname
-    rserver_hostname=$(cat "${workdir}/rserver.hostname")
+    rserver_hostname=$(cat "${file}")
     mdebug " - rserver hostname=${rserver_hostname}"
     mdebug " - hostname=$(hostname)"
 
@@ -634,16 +634,26 @@ function rserver_pid {
 
 function rserver_hostname {
     local workdir
+    local file
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
-    cat "${workdir}/rserver.hostname"
+    file="${workdir}/rserver.hostname"
+    assert_file_exists "${file}"
+    res=$(cat "${file}")
+    [[ -z "${res}" ]] && error "File is empty: ${file}"
+    echo "${res}"
 }
 
 function rserver_port {
     local workdir
+    local file
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
-    cat "${workdir}/rserver.port"
+    file="${workdir}/rserver.port"
+    assert_file_exists "${file}"
+    res=$(cat "${file}")
+    [[ -z "${res}" ]] && error "File is empty: ${file}"
+    echo "${res}"
 }
 
 function rserver_url {
