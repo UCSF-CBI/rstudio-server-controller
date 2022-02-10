@@ -47,7 +47,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.3.4-9004
+### Version: 0.3.4-9005
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -294,6 +294,15 @@ function make_rserver_conf {
 # -------------------------------------------------------------------------
 # Misc. utilities
 # -------------------------------------------------------------------------
+## A version of 'hostname' that will use either $HOSTNAME or hostname
+function hostname {
+    local res
+    res=${HOSTNAME}
+    [[ -z ${res} ]] && res=$(command hostname)
+    [[ -z ${res} ]] && error "Failed to infer hostname"
+    echo "${res}"
+}
+
 function check_pid {
     local pid
     local hostname
