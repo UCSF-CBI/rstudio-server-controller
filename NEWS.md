@@ -1,10 +1,10 @@
 # rstudio-server-launcher
 
-## Version 0.4.0-9002
+## Version 0.4.0-9003
 
 New features:
 
-* Add `rsc start --quiet` to silence the instructions.
+* Add option `--quiet` to silence the instructions.
 
 Alpha testing:
 
