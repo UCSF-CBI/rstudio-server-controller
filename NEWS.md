@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.4.0-9007
+## Version 0.4.0-9008
 
 Significant changes:
 
@@ -17,6 +17,9 @@ New features:
 
 * Add built-in 'auth-via-ssh' authenatication tool that use SSH toward a
   hostname to validate the password, e.g. `--auth=auth-via-ssh:log2`.
+
+* Now `rsc start --auth=<spec>` gives an informative error message if
+  the `<spec>` is incomplete, e.g. when the 'expect' tool is missing.
   
 Alpha testing:
 

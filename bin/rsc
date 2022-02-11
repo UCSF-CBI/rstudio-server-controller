@@ -58,7 +58,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.4.0-9007
+### Version: 0.4.0-9008
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -92,6 +92,9 @@ function auth_tool {
 
     mdebug "auth_tool() ..."
     mdebug " - auth: ${auth}"
+    [[ -z ${auth} ]] && error "[INTERNAL] No authentication tool specified"
+    
+    mdebug " - PATH: ${utils}:\${PATH}"
     
     ## Look up authentication executable
     file=$(PATH=${utils}:${PATH} command -v "${auth}")
@@ -108,19 +111,28 @@ function auth_tool {
 }
 
 function validate_auth {
-    local auth
-    auth=$(auth_tool)
+    local bin
+    local res
+    bin=$(auth_tool)
+    
     ## Validate correctness of auth-via-su executable (should return false)
-    echo "" | AUTH_LOGFILE="" "${auth}" "${USER}" &> /dev/null && error "Validation of '$(basename "${auth}")' failed: ${auth}"
-    [[ -n ${AUTH_LOGFILE} ]] && warn_auth_logfile
+    echo "" | RSC_AUTH_LOGFILE="" "${bin}" "${USER}" &> /dev/null
+    res=$?
+    mdebug "res=${res}"
+    
+    ## Something missing?
+    if [[ "${res}" -eq 2 ]]; then
+        error "Authenatication tool '$(basename "${bin}")' could not test credentials: $(echo "" | RSC_AUTH_LOGFILE="" "${bin}" "${USER}")"
+    elif [[ "${res}" -eq 0 ]]; then  ## we expect failure
+        error "Validation of '$(basename "${bin}")' failed: ${bin}"
+    fi         
+    [[ -n ${RSC_AUTH_LOGFILE} ]] && warn_auth_logfile
 }
 
 function warn_auth_logfile {
   warn "*************************************************************"
-  warn "* Environment variable 'AUTH_LOGFILE' is set.  All usernames"
-  warn "* and passwords entered at the RStudio Server login prompt"
-  warn "* will be recorded to the file:"
-  warn "* ${AUTH_LOGFILE}"
+  warn "* Environment variable 'RSC_AUTH_LOGFILE' is set:"
+  warn "* ${RSC_AUTH_LOGFILE}"
   warn "*************************************************************"
   echo
 }
@@ -916,6 +928,7 @@ while [[ $# -gt 0 ]]; do
             [[ -z "${auth}" ]] && error "Option '--auth' must not be empty"
             mapfile -t tmp < <(parse_auth "${value}")
             auth=${tmp[0]}
+            [[ -z "${auth}" ]] && error "Option '--auth=${value}' mispecified"
             RSC_AUTH_ARG_2=${tmp[1]}
             export RSC_AUTH_ARG_2
         elif [[ "${key}" == "revtunnel" ]]; then
@@ -1108,9 +1121,9 @@ elif [[ "${action}" == "start" ]]; then
     if [[ "${port}" != "random" ]]; then
         assert_port_free "${port}"
     fi
-    
+
     validate_auth
-  
+
     make_config_dir
     acquire_lock_file
     
