@@ -27,7 +27,7 @@ if [[ $# -lt 1 ]]; then
     debug "Usage: $(basename "$0") <username>"
     exit 1
 fi
-RSC_USERNAME="${1}"
+RSC_USERNAME=${1}
 
 if [[ "${RSC_USERNAME}" != "${USER}" ]]; then
     debug "Invalid authentication (incorrect username)"

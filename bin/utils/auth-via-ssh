@@ -1,6 +1,7 @@
 #! /usr/bin/env bash
 ## Usage:
 ## echo <password> | RSC_AUTH_SSH_HOST=<hostname> auth-via-ssh <username>
+## echo <password> | RSC_AUTH_ARG_2=<hostname> auth-via-ssh <username>
 ## echo <password> | auth-via-ssh <username> <hostname>
 ##
 ## Description:
@@ -34,10 +35,10 @@ if [[ $# -lt 1 ]]; then
     debug "Usage: $(basename "$0") <username>"
     exit 1
 fi
-RSC_USERNAME="${1}"
+RSC_USERNAME=${1}
 
 # Confirm SSH host is supplied
-RSC_AUTH_SSH_HOST=${RSC_AUTH_SSH_HOST:-${2:-}}
+RSC_AUTH_SSH_HOST=${RSC_AUTH_SSH_HOST:-${RSC_AUTH_ARG_2:-${2:-}}}
 if [[ -z ${RSC_AUTH_SSH_HOST} ]]; then
     debug "ERROR: $0 requires RSC_AUTH_SSH_HOST"
     exit 2
