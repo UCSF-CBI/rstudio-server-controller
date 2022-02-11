@@ -12,7 +12,7 @@ New features:
 New features:
 
 * Add support to specify an alternative authentication method for the
-  RStudio Server login, e.g. `rsc start --auth=<file>`, where `<file> can
+  RStudio Server login, e.g. `rsc start --auth=<file>`, where `<file>` can
   be the path to an executable, or one of the built-in ones, which are
   'auth-via-su' (default) and 'auto-via-env'.
 
