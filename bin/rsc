@@ -27,6 +27,7 @@
 ###                      (Default: auth-via-su)
 ###  --revtunnel=<spec>  Hostname and port where the RStudio Server instance
 ###                      should be exposed. (Default: local host and --port)
+###  --random-password   Generate a random password assigned to 'RSC_PASSWORD'
 ###  --force             Force an action
 ###  --full              Output more information
 ###  
@@ -58,7 +59,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.4.0-9008
+### Version: 0.4.0-9009
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -906,6 +907,10 @@ while [[ $# -gt 0 ]]; do
         force=true
     elif [[ "$1" == "--full" ]]; then
         full=true
+    elif [[ "$1" == "--random-password" ]]; then
+        RSC_PASSWORD=$(openssl rand -base64 15)
+        export RSC_PASSWORD
+        message "One-time random password: ${RSC_PASSWORD}"
         
     ## Options (--key=value):
     elif [[ "$1" =~ ^--.*=.*$ ]]; then

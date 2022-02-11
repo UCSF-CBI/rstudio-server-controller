@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.4.0-9008
+## Version 0.4.0-9009
 
 Significant changes:
 
@@ -20,7 +20,10 @@ New features:
 
 * Now `rsc start --auth=<spec>` gives an informative error message if
   the `<spec>` is incomplete, e.g. when the 'expect' tool is missing.
-  
+
+* Add `--random-password`, which sets `RSC_PASSWORD` randomly and echoes it.
+  This can be used in combination with `--auth=auth-via-env`.
+
 Alpha testing:
 
 * Add `rsc start --revtunnel=<spec>`.
