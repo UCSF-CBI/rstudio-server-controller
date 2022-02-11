@@ -18,6 +18,7 @@
 ###  --version          Output version of this software
 ###  --debug            Output detailed debug information
 ###  --verbose          Output informative message
+###  --quiet            Silence all output
 ###  --auth=<file>      Path to authentication executable, or name of one of
 ###                     the built-in ones: 'auto-via-su' authenticates via
 ###                     'su', 'auth-via-env' authenticates toward password in
@@ -55,7 +56,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.4.0-9000
+### Version: 0.4.0-9001
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -803,6 +804,7 @@ action=
 dryrun=false
 force=false
 verbose=false
+quiet=false
 args=()
 full=false
 port=${RSTUDIO_PORT:-8787}
@@ -850,6 +852,8 @@ while [[ $# -gt 0 ]]; do
         dryrun=true
     elif [[ "$1" == "--verbose" ]]; then
         verbose=true
+    elif [[ "$1" == "--quiet" ]]; then
+        quiet=true
     elif [[ "$1" == "--force" ]]; then
         force=true
     elif [[ "$1" == "--full" ]]; then
@@ -1114,7 +1118,7 @@ elif [[ "${action}" == "start" ]]; then
     rs_pid="$(rserver_pid)"
     [[ -z "${rs_pid}" ]] && error "RStudio Server failed to start for unknown reasons. One reason for this might that the port (${port}) is already occupied."
 
-    echo "${msg}"
+    ${quiet} || echo "${msg}"
     
     ## Reverse SSH tunnel?
     if [[ ${#revtunnel[@]} -gt 0 ]]; then
