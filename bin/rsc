@@ -35,7 +35,7 @@
 ###  --port=<int>       A port in [1,65535]. If 'random', a free random port
 ###                     in [1024,65535] is used. If 'uid', similar to 'random'
 ###                     but is likely to be unique and deterministic for each
-###                     user (Default: 8787)
+###                     user (Default: uid)
 ###  --port-seed=<int>  Random seed used to draw a random port (Default: none)
 ### ---
 ###
@@ -56,7 +56,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.4.0-9003
+### Version: 0.4.0-9004
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -523,7 +523,7 @@ function rs_process_status {
 function rsession_timeout {
     local timeout
     local bfr
-    timeout=${RSTUDIO_RSESSION_TIMEOUT}
+    timeout=${RSC_RSESSION_TIMEOUT}
 
     ## Running as a Slurm job?
     if [[ -n "${SLURM_JOB_ID}" ]]; then
@@ -544,7 +544,7 @@ function rsession_timeout {
     
     mdebug "rsession timeout: ${timeout} minutes"
     assert_integer "${timeout}"
-    export RSTUDIO_RSESSION_TIMEOUT="${timeout}"
+    export RSC_RSESSION_TIMEOUT="${timeout}"
     echo "${timeout}"
 }
 
@@ -817,8 +817,8 @@ verbose=false
 quiet=false
 args=()
 full=false
-port=${RSTUDIO_PORT:-8787}
-port_seed=${RSTUDIO_PORT_SEED:-}
+port=${RSC_PORT:-uid}
+port_seed=${RSC_PORT_SEED:-}
 [[ -n ${port_seed} ]] && assert_integer "${port_seed}"
 field=
 auth="auth-via-su"
@@ -880,14 +880,6 @@ while [[ $# -gt 0 ]]; do
         fi
         if [[ "${key}" == "port" ]]; then
             port=${value}
-            if [[ "${port}" == "uid" ]]; then
-                port_seed=$(id -u)
-                assert_integer "${port_seed}"
-                port="random"
-            fi
-            if [[ "${port}" != "random" ]]; then
-                assert_port "${port}"
-            fi
         elif [[ "${key}" == "port-seed" ]]; then
             port_seed=${value}
             assert_integer "${port_seed}"
@@ -935,6 +927,14 @@ fi
 # -------------------------------------------------------------------------
 # Validate options
 # -------------------------------------------------------------------------
+## Validate 'port'
+if [[ "${port}" == "uid" ]]; then
+    port_seed=$(id -u)
+    assert_integer "${port_seed}"
+    port="random"
+elif [[ "${port}" != "random" ]]; then
+    assert_port "${port}"
+fi
 
 
 # -------------------------------------------------------------------------

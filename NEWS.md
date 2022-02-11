@@ -1,6 +1,10 @@
 # rstudio-server-launcher
 
-## Version 0.4.0-9003
+## Version 0.4.0-9004
+
+Significant changes:
+
+* `--port=uid` is the new default.
 
 New features:
 
