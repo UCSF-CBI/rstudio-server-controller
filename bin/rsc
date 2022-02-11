@@ -23,6 +23,8 @@
 ###                     'su', 'auth-via-env' authenticates toward password in
 ###                     environment variable 'RSC_PASSWORD'
 ###                     (Default: auth-via-su)
+###  --revtunnel=<spec> Hostname and port where the RStudio Server instance
+###                     should be exposed. (Default: local host and --port)
 ###  --force            Force an action
 ###  --full             Output more information
 ### 
@@ -312,6 +314,25 @@ function make_rserver_conf {
 # -------------------------------------------------------------------------
 # Misc. utilities
 # -------------------------------------------------------------------------
+function parse_revtunnel {
+    local spec
+    local hostname
+    local port
+    spec=${1:?}
+    
+    if echo "${spec}" | grep -q -E "^([^:]+)$"; then
+        hostname=${spec}
+    elif echo "${spec}" | grep -q -E "^([^:]+):([[:digit:]]+)$"; then
+        hostname=${spec/:*/}
+        port=${spec/$hostname:/}
+	assert_port "${port}"
+    else
+        error "Invalid --revtunnel=<spec> specification: ${spec}"
+    fi
+    echo "${hostname}"
+    echo "${port}"
+}
+
 function wait_for_file {
     local file
     local maxseconds
@@ -789,6 +810,7 @@ port_seed=${RSTUDIO_PORT_SEED:-}
 [[ -n ${port_seed} ]] && assert_integer "${port_seed}"
 field=
 auth="auth-via-su"
+revtunnel=()
 
 ## Should 'rsession' inherit exported environment variables from the
 ## 'rsc' process?  If 'false', then the default behavior of 'rserver'
@@ -869,6 +891,9 @@ while [[ $# -gt 0 ]]; do
         elif [[ "${key}" == "auth" ]]; then
             [[ -z "${value}" ]] && error "Option '--auth' must not be empty"
             auth="${value}"
+        elif [[ "${key}" == "revtunnel" ]]; then
+            [[ -z "${value}" ]] && error "Option '--revtunnel' must not be empty"
+	    mapfile -t revtunnel < <(parse_revtunnel "${value}")
         else
             merror "Unknown option: $1"
         fi
@@ -910,6 +935,8 @@ mdebug "port: ${port}"
 mdebug "port_seed: ${port_seed}"
 mdebug "rsession_inherit_env_pattern: ${rsession_inherit_env_pattern}"
 mdebug "field: ${field}"
+mdebug "auth: ${auth}"
+mdebug "revtunnel: [n=${#revtunnel[@]}] ${revtunnel[*]}"
 mdebug "args: [n=${#args[@]}] ${args[*]}"
 
 
@@ -1088,6 +1115,25 @@ elif [[ "${action}" == "start" ]]; then
     [[ -z "${rs_pid}" ]] && error "RStudio Server failed to start for unknown reasons. One reason for this might that the port (${port}) is already occupied."
 
     echo "${msg}"
+    
+    ## Reverse SSH tunnel?
+    if [[ ${#revtunnel[@]} -gt 0 ]]; then
+	mdebug "Setting up reverse SSH tunnel ..."
+	rev_hostname=${revtunnel[0]}
+	rev_port=${revtunnel[1]}
+	mdebug " - hostname: ${rev_hostname}"
+	mdebug " - rev port: ${rev_port}"
+	[[ -z ${rev_port} ]] && rev_port=${port}
+	rev_spec=${rev_port}:localhost:${port}
+	mdebug " - rev spec: ${rev_spec}"
+	if $dryrun; then
+	    echo "DRYRUN: ssh -N -R \"${rev_spec}\" \"${rev_hostname}\" &"
+	else
+	    mdebug "ssh -N -R \"${rev_spec}\" \"${rev_hostname}\""
+	    ssh -4 -N -R "${rev_spec}" "${rev_hostname}"
+	fi
+	mdebug "Setting up reverse SSH tunnel ... done"
+    fi	    
     
     mdebug "Waiting for 'rserver' (pid ${rs_pid}) to finish ..."
     wait "${rs_pid}"
