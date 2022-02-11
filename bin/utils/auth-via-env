@@ -1,4 +1,16 @@
 #!/usr/bin/env bash
+## Usage:
+## echo "<password>" | RSC_PASSWORD=<the-password> auth-via-env "<username>"
+##
+## Description:
+## Validates the password on standard input for the user
+## specified as the first argument
+## 
+## Requires:
+## * expect (https://www.nist.gov/services-resources/software/expect)
+## * ssh
+##
+## Author: Henrik Bengtsson (2021)
 
 RSC_AUTH_LOGFILE=${RSC_AUTH_LOGFILE:-${2}}
 
