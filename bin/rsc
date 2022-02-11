@@ -1106,6 +1106,10 @@ elif [[ "${action}" == "start" ]]; then
 
     launch_rserver
     
+    ## Update 'port', in case it was 'uid' or 'random'
+    port=$(rserver_port)
+    mdebug "RStudio Server port: ${port}"
+    
     if on_local_machine; then
         msg="${USER}, your personal RStudio Server is available on <http://127.0.0.1:$(rserver_port)> from this machine ($(rserver_hostname))."
     else
