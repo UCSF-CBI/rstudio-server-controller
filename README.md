@@ -40,7 +40,7 @@ local web browser, either locally, or remotely via SSH tunneling.
   relies on `su` to authenticate using the system's authentication
   method. An alternative to this, is
   [`--auth=auth-via-ssh:<hostname>`](https://github.com/UCSF-CBI/rstudio-server-controller/blob/main/bin/utils/auth-via-ssh),
-  which authenticates using SSH towards host <hostname>. If neither
+  which authenticates using SSH towards host `<hostname>`. If neither
   are an option, [`--auth=auth-via-env
   --random-password`](https://github.com/UCSF-CBI/rstudio-server-controller/blob/main/bin/utils/auth-via-env)
   can be used to authenticate with a one-time, temporary password
