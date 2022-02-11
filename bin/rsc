@@ -326,7 +326,7 @@ function parse_revtunnel {
     elif echo "${spec}" | grep -q -E "^([^:]+):([[:digit:]]+)$"; then
         hostname=${spec/:*/}
         port=${spec/$hostname:/}
-	assert_port "${port}"
+        assert_port "${port}"
     else
         error "Invalid --revtunnel=<spec> specification: ${spec}"
     fi
@@ -1117,25 +1117,25 @@ elif [[ "${action}" == "start" ]]; then
     
     ## Reverse SSH tunnel?
     if [[ ${#revtunnel[@]} -gt 0 ]]; then
-	mdebug "Setting up reverse SSH tunnel ..."
-	rev_hostname=${revtunnel[0]}
-	rev_port=${revtunnel[1]}
-	mdebug " - hostname: ${rev_hostname}"
-	mdebug " - rev port: ${rev_port}"
-	[[ -z ${rev_port} ]] && rev_port=${port}
-	rev_spec=${rev_port}:localhost:${port}
-	mdebug " - rev spec: ${rev_spec}"
+        mdebug "Setting up reverse SSH tunnel ..."
+        rev_hostname=${revtunnel[0]}
+        rev_port=${revtunnel[1]}
+        mdebug " - hostname: ${rev_hostname}"
+        mdebug " - rev port: ${rev_port}"
+        [[ -z ${rev_port} ]] && rev_port=${port}
+        rev_spec=${rev_port}:localhost:${port}
+        mdebug " - rev spec: ${rev_spec}"
 
         message "${USER}, your personal RStudio Server is available on <http://${rev_hostname}:${rev_port}>."
         
-	if $dryrun; then
-	    echo "DRYRUN: ssh -N -R \"${rev_spec}\" \"${rev_hostname}\""
-	    sleep 60
-	else
-	    mdebug "ssh -N -R \"${rev_spec}\" \"${rev_hostname}\""
-	    ssh -N -R "${rev_spec}" "${rev_hostname}"
-	fi
-	mdebug "Setting up reverse SSH tunnel ... done"
+        if $dryrun; then
+            echo "DRYRUN: ssh -N -R \"${rev_spec}\" \"${rev_hostname}\""
+            sleep 60
+        else
+            mdebug "ssh -N -R \"${rev_spec}\" \"${rev_hostname}\""
+            ssh -N -R "${rev_spec}" "${rev_hostname}"
+        fi
+        mdebug "Setting up reverse SSH tunnel ... done"
     else
         if on_local_machine; then
             message "${USER}, your personal RStudio Server is available on <http://127.0.0.1:${port}> from this machine ($(rserver_hostname))."
