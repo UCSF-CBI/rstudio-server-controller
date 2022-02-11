@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 ## Usage:
-## echo "<password>" | auth-via-su "<username>"
+## echo <password> | auth-via-su <username>
 ##
 ## Description:
 ## Validates the password on standard input for the user
@@ -13,10 +13,8 @@
 ## Author: Henrik Bengtsson (2021)
 set -o nounset
 
-RSC_AUTH_LOGFILE=${RSC_AUTH_LOGFILE:-${2}}
-
 function debug() {
-    if [[ -z ${RSC_AUTH_LOGFILE} ]]; then
+    if [[ -z ${RSC_AUTH_LOGFILE:-} ]]; then
 	echo "$@"
     else
 	echo "$@" >> "${RSC_AUTH_LOGFILE}"

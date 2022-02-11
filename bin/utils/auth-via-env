@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 ## Usage:
-## echo "<password>" | RSC_PASSWORD=<the-password> auth-via-env "<username>"
+## echo <password> | RSC_PASSWORD=<true-pwd> auth-via-env <username>
+## echo <password> | auth-via-env <username> <true-pwd> 
 ##
 ## Description:
 ## Validates the password on standard input for the user
@@ -12,10 +13,8 @@
 ##
 ## Author: Henrik Bengtsson (2021)
 
-RSC_AUTH_LOGFILE=${RSC_AUTH_LOGFILE:-${2}}
-
 function debug() {
-    if [[ -z ${RSC_AUTH_LOGFILE} ]]; then
+    if [[ -z ${RSC_AUTH_LOGFILE:-} ]]; then
 	echo "$@"
     else
 	echo "$@" >> "${RSC_AUTH_LOGFILE}"
@@ -30,9 +29,10 @@ if [[ $# -lt 1 ]]; then
 fi
 RSC_USERNAME="${1}"
 
+RSC_PASSWORD="${RSC_PASSWORD:-${2}}"
 # Confirm password environment variable exists
 if [[ -z ${RSC_PASSWORD} ]]; then
-    debug "The environment variable RSC_PASSWORD is not set"
+    debug "Environment variable RSC_PASSWORD is not set"
     exit 1
 fi
 
