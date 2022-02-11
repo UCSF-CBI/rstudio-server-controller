@@ -882,24 +882,16 @@ while [[ $# -gt 0 ]]; do
             port=${value}
         elif [[ "${key}" == "port-seed" ]]; then
             port_seed=${value}
-            assert_integer "${port_seed}"
-        elif [[ "${key}" == "env" ]]; then
-            rsession_inherit_env_pattern="^$"
-            if [[ ${value} == "all" ]]; then
-                rsession_inherit_env_pattern="^[[:alnum:]]+$"
-            elif [[ ${value} == "none" ]]; then
-                rsession_inherit_env_pattern="^$"
-            fi
         elif [[ "${key}" == "env-pattern" ]]; then
-            rsession_inherit_env_pattern="${value}"
+            rsession_inherit_env_pattern=${value}
         elif [[ "${key}" == "field" ]]; then
-            field="${value}"
+            field=${value}
         elif [[ "${key}" == "auth" ]]; then
-            [[ -z "${value}" ]] && error "Option '--auth' must not be empty"
-            auth="${value}"
+            [[ -z "${auth}" ]] && error "Option '--auth' must not be empty"
+            auth=${value}
         elif [[ "${key}" == "revtunnel" ]]; then
             [[ -z "${value}" ]] && error "Option '--revtunnel' must not be empty"
-	    mapfile -t revtunnel < <(parse_revtunnel "${value}")
+            mapfile -t revtunnel < <(parse_revtunnel "${value}")
         else
             merror "Unknown option: $1"
         fi
@@ -927,7 +919,7 @@ fi
 # -------------------------------------------------------------------------
 # Validate options
 # -------------------------------------------------------------------------
-## Validate 'port'
+## Validate 'port':
 if [[ "${port}" == "uid" ]]; then
     port_seed=$(id -u)
     assert_integer "${port_seed}"
@@ -935,6 +927,11 @@ if [[ "${port}" == "uid" ]]; then
 elif [[ "${port}" != "random" ]]; then
     assert_port "${port}"
 fi
+
+## Validate 'port_seed':
+if [[ -n ${port_seed} ]]; then
+    assert_integer "${port_seed}"
+fi    
 
 
 # -------------------------------------------------------------------------
