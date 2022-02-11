@@ -23,7 +23,7 @@ local web browser, either locally, or remotely via SSH tunneling.
   via reverse SSH tunneling,
   e.g. `--revtunnel=<user>@<remote-hostname>:<remote-port>`
 
-* It provides convenient alternative for setting the port where
+* It provides convenient alternatives for setting the port where
   RStudio Server is hosted, e.g. `--port=<fix-port>`, `--port=uid`
   (default), and `--port=random --port-seed="$(id -u)"`
 
