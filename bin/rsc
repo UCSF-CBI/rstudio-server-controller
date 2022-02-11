@@ -43,10 +43,11 @@
 ###  rsc --help
 ###  rsc --version
 ###
+###  rsc start
 ###  rsc start --port=8787
 ###  rsc start --port=random
-###  rsc start --port-seed="$(id -u)" --port=random
-###  rsc start --port=uid  ## same as --port-seed="$(id -u)" --port=random
+###  rsc start --port=uid (default)
+###  rsc start --port-seed="$(id -u)" --port=random  ## same as --port=uid
 ###
 ###  rsc status
 ###
