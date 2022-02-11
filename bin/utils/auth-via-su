@@ -21,7 +21,6 @@ function debug() {
     fi
 }
 
-
 # Confirm username is supplied
 if [[ $# -lt 1 ]]; then
     debug "Usage: $(basename "$0") <username>"

@@ -15,12 +15,6 @@
 ## Author: Henrik Bengtsson (2021)
 set -o nounset
 
-if ! command -v expect &> /dev/null; then
-    debug "ERROR: $0 requires 'expect'"
-    echo >&2 "ERROR: $0 requires 'expect'"
-    exit 2
-fi    
-
 function debug() {
     if [[ -z ${RSC_AUTH_LOGFILE:-} ]]; then
 	echo "$@"
@@ -29,13 +23,10 @@ function debug() {
     fi
 }
 
-
-# Confirm username is supplied
-if [[ $# -lt 1 ]]; then
-    debug "Usage: $(basename "$0") <username>"
-    exit 1
-fi
-RSC_USERNAME=${1}
+if ! command -v expect &> /dev/null; then
+    debug "ERROR: $0 requires 'expect'"
+    exit 2
+fi    
 
 # Confirm SSH host is supplied
 RSC_AUTH_SSH_HOST=${RSC_AUTH_SSH_HOST:-${RSC_AUTH_ARG_2:-${2:-}}}
@@ -43,6 +34,13 @@ if [[ -z ${RSC_AUTH_SSH_HOST} ]]; then
     debug "ERROR: $0 requires RSC_AUTH_SSH_HOST"
     exit 2
 fi
+
+# Confirm username is supplied
+if [[ $# -lt 1 ]]; then
+    debug "Usage: $(basename "$0") <username>"
+    exit 1
+fi
+RSC_USERNAME=${1}
 
 if [[ "${RSC_USERNAME}" != "${USER}" ]]; then
     debug "Invalid authentication (incorrect username)"

@@ -26,6 +26,12 @@ function debug() {
     fi
 }
 
+RSC_PASSWORD=${RSC_PASSWORD:-${2:-}}
+# Confirm password environment variable exists
+if [[ -z ${RSC_PASSWORD} ]]; then
+    debug "Environment variable RSC_PASSWORD is not set"
+    exit 2
+fi
 
 # Confirm username is supplied
 if [[ $# -lt 1 ]]; then
@@ -33,13 +39,6 @@ if [[ $# -lt 1 ]]; then
     exit 1
 fi
 RSC_USERNAME=${1}
-
-RSC_PASSWORD=${RSC_PASSWORD:-${2:-}}
-# Confirm password environment variable exists
-if [[ -z ${RSC_PASSWORD} ]]; then
-    debug "Environment variable RSC_PASSWORD is not set"
-    exit 1
-fi
 
 if [[ "${RSC_USERNAME}" != "${USER}" ]]; then
     debug "Invalid authentication (incorrect username)"
