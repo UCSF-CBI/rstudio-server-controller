@@ -13,28 +13,28 @@ function debug() {
 
 # Confirm username is supplied
 if [[ $# -lt 1 ]]; then
-  debug "Usage: $(basename "$0") <username>"
-  exit 1
+    debug "Usage: $(basename "$0") <username>"
+    exit 1
 fi
 RSC_USERNAME="${1}"
 
 # Confirm password environment variable exists
 if [[ -z ${RSC_PASSWORD} ]]; then
-  debug "The environment variable RSC_PASSWORD is not set"
-  exit 1
+    debug "The environment variable RSC_PASSWORD is not set"
+    exit 1
 fi
 
 if [[ "${RSC_USERNAME}" != "${USER}" ]]; then
-  debug "Invalid authentication (incorrect username)"
-  exit 1
+    debug "Invalid authentication (incorrect username)"
+    exit 1
 fi
 
 # Read in the password from user
 read -r -s -p "Password: " password
 
 if [[ "${RSC_PASSWORD}" != "${password}" ]]; then
-  debug "Invalid authentication (incorrect password)"
-  exit 1
+    debug "Invalid authentication (incorrect password)"
+    exit 1
 fi
 
 debug "Successful authentication"
