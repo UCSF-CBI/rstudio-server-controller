@@ -28,7 +28,7 @@ function error {
         reset=$(tput sgr0)
     fi
 
-    echo -e "${red}${bold}ERROR:${reset} ${bold}$*${reset}"
+    echo -e "${reset}${red}${bold}ERROR:${reset} ${bold}$*${reset}"
 
     if ${TRACEBACK_ON_ERROR}; then
        echo -e "${gray}Traceback:"
@@ -65,7 +65,7 @@ function warn {
         reset=$(tput sgr0)
     fi
     
-    echo -e "${yellow}${bold}WARNING${reset}: $*"
+    echo -e "${reset}${yellow}${bold}WARNING${reset}: $*"
     
     if ${TRACEBACK_ON_WARN}; then
        echo -e "${gray}Traceback:"
@@ -90,7 +90,7 @@ function message {
         reset=$(tput sgr0)
     fi
     
-    echo -e "${white}${bold}$*${reset}"
+    echo -e "${reset}${bold}$*${reset}"
     
     printf "%s" "${reset}"
 }
