@@ -1135,10 +1135,11 @@ elif [[ "${action}" == "start" ]]; then
 	rev_spec=${rev_port}:localhost:${port}
 	mdebug " - rev spec: ${rev_spec}"
 	if $dryrun; then
-	    echo "DRYRUN: ssh -N -R \"${rev_spec}\" \"${rev_hostname}\" &"
+	    echo "DRYRUN: ssh -N -R \"${rev_spec}\" \"${rev_hostname}\""
+	    sleep 60
 	else
 	    mdebug "ssh -N -R \"${rev_spec}\" \"${rev_hostname}\""
-	    ssh -4 -N -R "${rev_spec}" "${rev_hostname}"
+	    ssh -N -R "${rev_spec}" "${rev_hostname}"
 	fi
 	mdebug "Setting up reverse SSH tunnel ... done"
     fi	    
