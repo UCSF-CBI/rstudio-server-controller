@@ -5,45 +5,51 @@
 ###  rsc <command> [options]
 ### 
 ### Commands:
-###  start              Start the RStudio Server
-###  wait               Wait for RStudio Server instance to be available
-###  stop               Stop the RStudio Server and any R session
-###  status             Check whether the RStudio Server is running or not
-###  config             Output configuration details
-###  reset              Wipe all configuration
-###  log                Output rsession log
-### 
-### Options: 
-###  --help             Display the full help page with examples
-###  --version          Output version of this software
-###  --debug            Output detailed debug information
-###  --verbose          Output informative message
-###  --auth=<file>      Path to authentication executable, or name of one of
-###                     the built-in ones: 'auto-via-su' authenticates via
-###                     'su', 'auth-via-env' authenticates toward password in
-###                     environment variable 'RSC_PASSWORD'
-###                     (Default: auth-via-su)
-###  --force            Force an action
-###  --full             Output more information
-### 
-###  --env-pattern=<re> Regular expression matching environment variables to be
-###                     exported. To export all, use "^.+$". To export none,
-###                     use "^$". (Default: "^.+$")
-###  --port=<int>       A port in [1,65535]. If 'random', a free random port
-###                     in [1024,65535] is used. If 'uid', similar to 'random'
-###                     but is likely to be unique and deterministic for each
-###                     user (Default: 8787)
-###  --port-seed=<int>  Random seed used to draw a random port (Default: none)
+###  start               Start the RStudio Server
+###  wait                Wait for RStudio Server instance to be available
+###  stop                Stop the RStudio Server and any R session
+###  status              Check whether the RStudio Server is running or not
+###  config              Output configuration details
+###  reset               Wipe all configuration
+###  log                 Output rsession log
+###  
+### Options:  
+###  --help              Display the full help page with examples
+###  --version           Output version of this software
+###  --debug             Output detailed debug information
+###  --verbose           Output informative message
+###  --quiet             Silence all output
+###  --auth=<file>:<ext> Path to authentication executable, or name of one of
+###                      the built-in ones: 'auto-via-su' authenticates via
+###                      'su', 'auth-via-ssh' authenticates via 'ssh' toward
+###                      host <ext>, and 'auth-via-env' authenticates toward
+###                      password in environment variable 'RSC_PASSWORD'
+###                      (Default: auth-via-su)
+###  --revtunnel=<spec>  Hostname and port where the RStudio Server instance
+###                      should be exposed. (Default: local host and --port)
+###  --random-password   Generate a random password assigned to 'RSC_PASSWORD'
+###  --force             Force an action
+###  --full              Output more information
+###  
+###  --env-pattern=<re>  Regular expression matching environment variables to be
+###                      exported. To export all, use "^.+$". To export none,
+###                      use "^$". (Default: "^.+$")
+###  --port=<int>        A port in [1,65535]. If 'random', a free random port
+###                      in [1024,65535] is used. If 'uid', similar to 'random'
+###                      but is likely to be unique and deterministic for each
+###                      user (Default: uid)
+###  --port-seed=<int>   Random seed used to draw a random port (Default: none)
 ### ---
 ###
 ### Example:
 ###  rsc --help
 ###  rsc --version
 ###
+###  rsc start
 ###  rsc start --port=8787
 ###  rsc start --port=random
-###  rsc start --port-seed="$(id -u)" --port=random
-###  rsc start --port=uid  ## same as --port-seed="$(id -u)" --port=random
+###  rsc start --port=uid (default)
+###  rsc start --port-seed="$(id -u)" --port=random  ## same as --port=uid
 ###
 ###  rsc status
 ###
@@ -53,7 +59,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.4.0
+### Version: 0.5.0
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -87,6 +93,9 @@ function auth_tool {
 
     mdebug "auth_tool() ..."
     mdebug " - auth: ${auth}"
+    [[ -z ${auth} ]] && error "[INTERNAL] No authentication tool specified"
+    
+    mdebug " - PATH: ${utils}:\${PATH}"
     
     ## Look up authentication executable
     file=$(PATH=${utils}:${PATH} command -v "${auth}")
@@ -103,19 +112,28 @@ function auth_tool {
 }
 
 function validate_auth {
-    local auth
-    auth=$(auth_tool)
+    local bin
+    local res
+    bin=$(auth_tool)
+    
     ## Validate correctness of auth-via-su executable (should return false)
-    echo "" | AUTH_LOGFILE="" "${auth}" "${USER}" &> /dev/null && error "Validation of '$(basename "${auth}")' failed: ${auth}"
-    [[ -n ${AUTH_LOGFILE} ]] && warn_auth_logfile
+    echo "" | RSC_AUTH_LOGFILE="" "${bin}" "${USER}" &> /dev/null
+    res=$?
+    mdebug "res=${res}"
+    
+    ## Something missing?
+    if [[ "${res}" -eq 2 ]]; then
+        error "Authenatication tool '$(basename "${bin}")' could not test credentials: $(echo "" | RSC_AUTH_LOGFILE="" "${bin}" "${USER}")"
+    elif [[ "${res}" -eq 0 ]]; then  ## we expect failure
+        error "Validation of '$(basename "${bin}")' failed: ${bin}"
+    fi         
+    [[ -n ${RSC_AUTH_LOGFILE} ]] && warn_auth_logfile
 }
 
 function warn_auth_logfile {
   warn "*************************************************************"
-  warn "* Environment variable 'AUTH_LOGFILE' is set.  All usernames"
-  warn "* and passwords entered at the RStudio Server login prompt"
-  warn "* will be recorded to the file:"
-  warn "* ${AUTH_LOGFILE}"
+  warn "* Environment variable 'RSC_AUTH_LOGFILE' is set:"
+  warn "* ${RSC_AUTH_LOGFILE}"
   warn "*************************************************************"
   echo
 }
@@ -312,6 +330,43 @@ function make_rserver_conf {
 # -------------------------------------------------------------------------
 # Misc. utilities
 # -------------------------------------------------------------------------
+function parse_revtunnel {
+    local spec
+    local hostname
+    local port
+    spec=${1:?}
+    
+    if echo "${spec}" | grep -q -E "^([^:]+)$"; then
+        hostname=${spec}
+    elif echo "${spec}" | grep -q -E "^([^:]+):([[:digit:]]+)$"; then
+        hostname=${spec/:*/}
+        port=${spec/$hostname:/}
+        assert_port "${port}"
+    else
+        error "Invalid --revtunnel=<spec> specification: ${spec}"
+    fi
+    echo "${hostname}"
+    echo "${port}"
+}
+
+function parse_auth {
+    local spec
+    local file
+    local ext
+    spec=${1:?}
+    
+    if echo "${spec}" | grep -q -E "^([^:]+)$"; then
+        file=${spec}
+    elif echo "${spec}" | grep -q -E "^([^:]+):([^:]+)$"; then
+        file=${spec/:*/}
+        ext=${spec/$file:/}
+    else
+        error "Invalid --auth=<spec> specification: ${spec}"
+    fi
+    echo "${file}"
+    echo "${ext}"
+}
+
 function wait_for_file {
     local file
     local maxseconds
@@ -501,7 +556,7 @@ function rs_process_status {
 function rsession_timeout {
     local timeout
     local bfr
-    timeout=${RSTUDIO_RSESSION_TIMEOUT}
+    timeout=${RSC_RSESSION_TIMEOUT}
 
     ## Running as a Slurm job?
     if [[ -n "${SLURM_JOB_ID}" ]]; then
@@ -522,7 +577,7 @@ function rsession_timeout {
     
     mdebug "rsession timeout: ${timeout} minutes"
     assert_integer "${timeout}"
-    export RSTUDIO_RSESSION_TIMEOUT="${timeout}"
+    export RSC_RSESSION_TIMEOUT="${timeout}"
     echo "${timeout}"
 }
 
@@ -660,6 +715,16 @@ function rsession_status {
 # -------------------------------------------------------------------------
 # rserver utilities
 # -------------------------------------------------------------------------
+function wait_for_rserver {
+    workdir=$(config_dir)
+    [[ ! -d "${workdir}" ]] && error "There appear to be no RStudio Server instance started"
+
+    ## Wait for PID, hostname, and port file to appear (for up to 5 minutes)
+    wait_for_file "${workdir}/rserver.pid"
+    wait_for_file "${workdir}/rserver.hostname"
+    wait_for_file "${workdir}/rserver.port"
+}    
+
 function rserver_pid_file {
     local workdir
     workdir=$(config_dir)
@@ -748,7 +813,7 @@ function rserver_status {
 # Signal trap functions
 # -------------------------------------------------------------------------
 function shutdown {
-    mdebug "shutdown() ..."
+    message "Shutting down RStudio Server ..."
     terminate_rsession
     terminate_rserver
     remove_lock_file
@@ -757,21 +822,27 @@ function shutdown {
         remove_stray_pid_file rsession
         remove_stray_pid_file rserver
     } > /dev/null
-    mdebug "shutdown() ... done"
+    message "Shutting down RStudio Server ... done"
 }
 
 function on_sigterm {
-    mdebug "on_sigterm() ..."
-    shutdown
+    message "Received a SIGTERM signal"
     exit 0
-    mdebug "on_sigterm() ... done"
 }
 
 function on_sigcont {
-    mdebug "on_sigcont() ..."
-    shutdown
+    message "Received a SIGCONT signal"
     exit 0
-    mdebug "on_sigcont() ... done"
+}
+
+function on_sigusr2 {
+    message "Received a SIGUSR2 signal"
+    exit 0
+}
+
+function on_sigint {
+    message "Received a SIGINT signal"
+    exit 0
 }
 
 # -------------------------------------------------------------------------
@@ -782,13 +853,15 @@ action=
 dryrun=false
 force=false
 verbose=false
+quiet=false
 args=()
 full=false
-port=${RSTUDIO_PORT:-8787}
-port_seed=${RSTUDIO_PORT_SEED:-}
+port=${RSC_PORT:-uid}
+port_seed=${RSC_PORT_SEED:-}
 [[ -n ${port_seed} ]] && assert_integer "${port_seed}"
 field=
 auth="auth-via-su"
+revtunnel=()
 
 ## Should 'rsession' inherit exported environment variables from the
 ## 'rsc' process?  If 'false', then the default behavior of 'rserver'
@@ -828,10 +901,16 @@ while [[ $# -gt 0 ]]; do
         dryrun=true
     elif [[ "$1" == "--verbose" ]]; then
         verbose=true
+    elif [[ "$1" == "--quiet" ]]; then
+        quiet=true
     elif [[ "$1" == "--force" ]]; then
         force=true
     elif [[ "$1" == "--full" ]]; then
         full=true
+    elif [[ "$1" == "--random-password" ]]; then
+        RSC_PASSWORD=$(openssl rand -base64 15)
+        export RSC_PASSWORD
+        message "One-time random password: ${RSC_PASSWORD}"
         
     ## Options (--key=value):
     elif [[ "$1" =~ ^--.*=.*$ ]]; then
@@ -844,31 +923,22 @@ while [[ $# -gt 0 ]]; do
         fi
         if [[ "${key}" == "port" ]]; then
             port=${value}
-            if [[ "${port}" == "uid" ]]; then
-                port_seed=$(id -u)
-                assert_integer "${port_seed}"
-                port="random"
-            fi
-            if [[ "${port}" != "random" ]]; then
-                assert_port "${port}"
-            fi
         elif [[ "${key}" == "port-seed" ]]; then
             port_seed=${value}
-            assert_integer "${port_seed}"
-        elif [[ "${key}" == "env" ]]; then
-            rsession_inherit_env_pattern="^$"
-            if [[ ${value} == "all" ]]; then
-                rsession_inherit_env_pattern="^[[:alnum:]]+$"
-            elif [[ ${value} == "none" ]]; then
-                rsession_inherit_env_pattern="^$"
-            fi
         elif [[ "${key}" == "env-pattern" ]]; then
-            rsession_inherit_env_pattern="${value}"
+            rsession_inherit_env_pattern=${value}
         elif [[ "${key}" == "field" ]]; then
-            field="${value}"
+            field=${value}
         elif [[ "${key}" == "auth" ]]; then
-            [[ -z "${value}" ]] && error "Option '--auth' must not be empty"
-            auth="${value}"
+            [[ -z "${auth}" ]] && error "Option '--auth' must not be empty"
+            mapfile -t tmp < <(parse_auth "${value}")
+            auth=${tmp[0]}
+            [[ -z "${auth}" ]] && error "Option '--auth=${value}' mispecified"
+            RSC_AUTH_ARG_2=${tmp[1]}
+            export RSC_AUTH_ARG_2
+        elif [[ "${key}" == "revtunnel" ]]; then
+            [[ -z "${value}" ]] && error "Option '--revtunnel' must not be empty"
+            mapfile -t revtunnel < <(parse_revtunnel "${value}")
         else
             merror "Unknown option: $1"
         fi
@@ -896,6 +966,19 @@ fi
 # -------------------------------------------------------------------------
 # Validate options
 # -------------------------------------------------------------------------
+## Validate 'port':
+if [[ "${port}" == "uid" ]]; then
+    port_seed=$(id -u)
+    assert_integer "${port_seed}"
+    port="random"
+elif [[ "${port}" != "random" ]]; then
+    assert_port "${port}"
+fi
+
+## Validate 'port_seed':
+if [[ -n ${port_seed} ]]; then
+    assert_integer "${port_seed}"
+fi    
 
 
 # -------------------------------------------------------------------------
@@ -910,6 +993,9 @@ mdebug "port: ${port}"
 mdebug "port_seed: ${port_seed}"
 mdebug "rsession_inherit_env_pattern: ${rsession_inherit_env_pattern}"
 mdebug "field: ${field}"
+mdebug "auth: ${auth}"
+mdebug "RSC_AUTH_ARG_2: ${RSC_AUTH_ARG_2}"
+mdebug "revtunnel: [n=${#revtunnel[@]}] ${revtunnel[*]}"
 mdebug "args: [n=${#args[@]}] ${args[*]}"
 
 
@@ -1015,7 +1101,9 @@ elif [[ "${action}" == "stop" ]]; then
     [[ -n "${pid}" ]] && kill -TERM "${pid}"
 
     ## Remove lock file
-    remove_lock_file    
+    remove_lock_file
+    
+    message "RStudio Server stopped"
 elif [[ "${action}" == "reset" ]]; then
     workdir=$(config_dir)
     if [[ -d "${workdir}" ]]; then
@@ -1027,13 +1115,7 @@ elif [[ "${action}" == "reset" ]]; then
         rm -rf "${workdir}"
     fi
 elif [[ "${action}" == "wait" ]]; then
-    workdir=$(config_dir)
-    [[ ! -d "${workdir}" ]] && error "There appear to be no RStudio Server instance started"
-
-    ## Wait for PID, hostname, and port file to appear (for up to 5 minutes)
-    wait_for_file "${workdir}/rserver.pid"
-    wait_for_file "${workdir}/rserver.hostname"
-    wait_for_file "${workdir}/rserver.port"
+    wait_for_rserver    
     rserver_hostname
     rserver_port
 elif [[ "${action}" == "start" ]]; then    
@@ -1044,9 +1126,9 @@ elif [[ "${action}" == "start" ]]; then
     if [[ "${port}" != "random" ]]; then
         assert_port_free "${port}"
     fi
-    
+
     validate_auth
-  
+
     make_config_dir
     acquire_lock_file
     
@@ -1067,27 +1149,60 @@ elif [[ "${action}" == "start" ]]; then
     mdebug "Registering 'trap shutdown EXIT', which perform cleanups"
     trap shutdown EXIT
 
-    mdebug "Registering 'trap on_sigterm SIGTERM', which triggers the EXIT trap"
+    mdebug "Registering 'trap on_sigterm SIGTERM'"
     trap on_sigterm SIGTERM
 
-    mdebug "Registering 'trap on_sigterm SIGCONT', which triggers the EXIT trap"
+    mdebug "Registering 'trap on_sigterm SIGCONT'"
     trap on_sigcont SIGCONT
 
+    mdebug "Registering 'trap on_sigterm SIGUSR2'"
+    trap on_sigusr2 SIGUSR2
+
+    mdebug "Registering 'trap on_sigint SIGINT'"
+    trap on_sigint SIGINT
+
     launch_rserver
+
+    wait_for_rserver    
     
-    if on_local_machine; then
-        msg="${USER}, your personal RStudio Server is available on <http://127.0.0.1:$(rserver_port)> from this machine ($(rserver_hostname))."
+    ## Update 'port', in case it was 'uid' or 'random'
+    port=$(rserver_port)
+    mdebug "RStudio Server port: ${port}"
+    
+    ## Reverse SSH tunnel?
+    if [[ ${#revtunnel[@]} -gt 0 ]]; then
+        mdebug "Setting up reverse SSH tunnel ..."
+        rev_hostname=${revtunnel[0]}
+        rev_port=${revtunnel[1]}
+        mdebug " - hostname: ${rev_hostname}"
+        mdebug " - rev port: ${rev_port}"
+        [[ -z ${rev_port} ]] && rev_port=${port}
+        rev_spec=${rev_port}:localhost:${port}
+        mdebug " - rev spec: ${rev_spec}"
+
+        message "${USER}, your personal RStudio Server is available on <http://${rev_hostname}:${rev_port}>."
+        
+        if $dryrun; then
+            echo "DRYRUN: ssh -N -R \"${rev_spec}\" \"${rev_hostname}\""
+            sleep 60
+        else
+            mdebug "ssh -N -R \"${rev_spec}\" \"${rev_hostname}\""
+            ssh -N -R "${rev_spec}" "${rev_hostname}"
+        fi
+        mdebug "Setting up reverse SSH tunnel ... done"
     else
-        LOCALPORT=${LOCALPORT:-8787}
-        msg="${USER}, your personal RStudio Server is available on <http://$(rserver_hostname):$(rserver_port)>. If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:${LOCALPORT}> by running 'ssh -L ${LOCALPORT}:$(rserver_hostname):$(rserver_port) ${USER}@$(find_login_host)' in a second terminal."
-    fi
-    msg="${msg} Any R session started times out after being idle for $(rsession_timeout) minutes."
-
+        if on_local_machine; then
+            message "${USER}, your personal RStudio Server is available on <http://127.0.0.1:${port}> from this machine ($(rserver_hostname))."
+        else
+            LOCALPORT=${LOCALPORT:-8787}
+            message "${USER}, your personal RStudio Server is available on <http://$(rserver_hostname):${port}>. If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:${LOCALPORT}> by running 'ssh -L ${LOCALPORT}:$(rserver_hostname):${port} ${USER}@$(find_login_host)' in a second terminal."
+        fi
+        
+        message "Any R session started times out after being idle for $(rsession_timeout) minutes."
     
-    rs_pid="$(rserver_pid)"
-    [[ -z "${rs_pid}" ]] && error "RStudio Server failed to start for unknown reasons. One reason for this might that the port (${port}) is already occupied."
-
-    echo "${msg}"
+        rs_pid="$(rserver_pid)"
+        [[ -z "${rs_pid}" ]] && error "RStudio Server failed to start for unknown reasons. One reason for this might that the port (${port}) is already occupied"
+    fi    
     
     mdebug "Waiting for 'rserver' (pid ${rs_pid}) to finish ..."
     wait "${rs_pid}"

@@ -1,11 +1,40 @@
 # rstudio-server-launcher
 
+## Version 0.5.0
+
+Significant changes:
+
+* `--port=uid` is the new default.
+
+New features:
+
+* Add option `--quiet` to silence the instructions.
+
+* Now `rsc start` outputs a message when it shuts down the RStudio Server.
+
+* Now `rsc start` shuts down nicely when it receives a SIGCONT, SIGTERM,
+  SIGUSR2, or SIGINT (e.g. Ctrl-C) signal.
+
+* Add built-in 'auth-via-ssh' authenatication tool that use SSH toward a
+  hostname to validate the password, e.g. `--auth=auth-via-ssh:log2`.
+
+* Now `rsc start --auth=<spec>` gives an informative error message if
+  the `<spec>` is incomplete, e.g. when the 'expect' tool is missing.
+
+* Add `--random-password`, which sets `RSC_PASSWORD` randomly and echoes it.
+  This can be used in combination with `--auth=auth-via-env`.
+
+Alpha testing:
+
+* Add `rsc start --revtunnel=<spec>`.
+
+
 ## Version 0.4.0
 
 New features:
 
 * Add support to specify an alternative authentication method for the
-  RStudio Server login, e.g. `rsc start --auth=<file>`, where `<file> can
+  RStudio Server login, e.g. `rsc start --auth=<file>`, where `<file>` can
   be the path to an executable, or one of the built-in ones, which are
   'auth-via-su' (default) and 'auto-via-env'.
 

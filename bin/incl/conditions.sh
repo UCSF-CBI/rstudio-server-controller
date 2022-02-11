@@ -28,7 +28,7 @@ function error {
         reset=$(tput sgr0)
     fi
 
-    echo -e "${red}${bold}ERROR:${reset} ${bold}$*${reset}"
+    echo -e "${reset}${red}${bold}ERROR:${reset} ${bold}$*${reset}"
 
     if ${TRACEBACK_ON_ERROR}; then
        echo -e "${gray}Traceback:"
@@ -53,6 +53,7 @@ function error {
 }
 
 function warn {
+    local bold
     local yellow
     local reset
     
@@ -64,7 +65,7 @@ function warn {
         reset=$(tput sgr0)
     fi
     
-    echo -e "${yellow}${bold}WARNING${reset}: $*"
+    echo -e "${reset}${yellow}${bold}WARNING${reset}: $*"
     
     if ${TRACEBACK_ON_WARN}; then
        echo -e "${gray}Traceback:"
@@ -72,6 +73,24 @@ function warn {
            printf "%d: %s() on line #%s in %s\\n" "$ii" "${FUNCNAME[$ii]}" "${BASH_LINENO[$((ii-1))]}" "${BASH_SOURCE[$ii]}"
        done
     fi
+    
+    printf "%s" "${reset}"
+}
+
+
+function message {
+    local bold
+    local reset
+
+    ## Nothing to do?
+    ${quiet:-false} && return 0;
+       
+    if [[ -t 1 ]]; then
+        bold=$(tput bold)
+        reset=$(tput sgr0)
+    fi
+    
+    echo -e "${reset}${bold}$*${reset}"
     
     printf "%s" "${reset}"
 }

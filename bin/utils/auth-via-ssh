@@ -1,11 +1,13 @@
 #! /usr/bin/env bash
 ## Usage:
-## echo <password> | auth-via-su <username>
+## echo <password> | RSC_AUTH_SSH_HOST=<hostname> auth-via-ssh <username>
+## echo <password> | RSC_AUTH_ARG_2=<hostname> auth-via-ssh <username>
+## echo <password> | auth-via-ssh <username> <hostname>
 ##
 ## Description:
 ## Validates the password on standard input for the user
 ## specified as the first argument
-## 
+##
 ## Requires:
 ## * expect (https://www.nist.gov/services-resources/software/expect)
 ## * ssh
@@ -21,6 +23,18 @@ function debug() {
     fi
 }
 
+if ! command -v expect &> /dev/null; then
+    debug "ERROR: $0 requires 'expect'"
+    exit 2
+fi    
+
+# Confirm SSH host is supplied
+RSC_AUTH_SSH_HOST=${RSC_AUTH_SSH_HOST:-${RSC_AUTH_ARG_2:-${2:-}}}
+if [[ -z ${RSC_AUTH_SSH_HOST} ]]; then
+    debug "ERROR: $0 requires RSC_AUTH_SSH_HOST"
+    exit 2
+fi
+
 # Confirm username is supplied
 if [[ $# -lt 1 ]]; then
     debug "Usage: $(basename "$0") <username>"
@@ -33,20 +47,12 @@ if [[ "${RSC_USERNAME}" != "${USER}" ]]; then
     exit 1
 fi
 
-if command -v expect &> /dev/null; then
-    debug "  Using 'expect' to validate password:"
-    debug "  Reading password from standard input"
+## Read password from standard input
+IFS='' read -r password
 
-    ## Read password from standard input
-    IFS='' read -r password
-
-    ## WORKAROUND: Not all 'su' versions support being called
-    ## from within a script. Because of this, we use expect'
-    ## to trick it, it's doing so.  This workaround was adopted
-    ## from https://stackoverflow.com/a/1503831/1072091
-    command expect <<EOF
-eval spawn su "$USER" -c exit
-expect "Password"
+command expect <<EOF
+eval spawn ssh -o PreferredAuthentications=password -o NumberOfPasswordPrompts=1 -l "$USER" "${RSC_AUTH_SSH_HOST}" "echo true"
+expect "password"
 send "${password}\n"
 set wait_result  [wait]
 ## check if it is an OS error or a return code from our command
@@ -58,12 +64,7 @@ else {
     exit 1 
 }
 EOF
-    valid=$?
-else
-    debug "Using 'su' to validate password"
-    su "$USER" -c exit
-    valid=$?
-fi
+valid=$?
 
 if [[ ! "${valid}" -eq 0 ]]; then
     debug "Invalid authentication (incorrect password)"
