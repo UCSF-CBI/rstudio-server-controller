@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 
-logfile=${2}
+RSC_AUTH_LOGFILE=${RSC_AUTH_LOGFILE:-${2}}
 
 function debug() {
-    if [[ -z ${logfile} ]]; then
+    if [[ -z ${RSC_AUTH_LOGFILE} ]]; then
 	echo "$@"
     else
-	echo "$@" >> "${logfile}"
+	echo "$@" >> "${RSC_AUTH_LOGFILE}"
     fi
 }
 
@@ -16,7 +16,7 @@ if [[ $# -lt 1 ]]; then
   debug "Usage: $(basename "$0") <username>"
   exit 1
 fi
-USERNAME="${1}"
+RSC_USERNAME="${1}"
 
 # Confirm password environment variable exists
 if [[ -z ${RSC_PASSWORD} ]]; then
@@ -24,7 +24,7 @@ if [[ -z ${RSC_PASSWORD} ]]; then
   exit 1
 fi
 
-if [[ "${USERNAME}" != "${USER}" ]]; then
+if [[ "${RSC_USERNAME}" != "${USER}" ]]; then
   debug "Invalid authentication (incorrect username)"
   exit 1
 fi
@@ -32,7 +32,7 @@ fi
 # Read in the password from user
 read -r -s -p "Password: " password
 
-if [[ "${password}" != "${RSC_PASSWORD}" ]]; then
+if [[ "${RSC_PASSWORD}" != "${password}" ]]; then
   debug "Invalid authentication (incorrect password)"
   exit 1
 fi
