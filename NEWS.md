@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.4.0-9006
+## Version 0.4.0-9007
 
 Significant changes:
 
@@ -15,8 +15,8 @@ New features:
 * Now `rsc start` shuts down nicely when it receives a SIGCONT, SIGTERM,
   SIGUSR2, or SIGINT (e.g. Ctrl-C) signal.
 
-* Add built-in 'auth-via-ssh' authenatication tool that use SSH toward
-  a select hostname to validate the password.
+* Add built-in 'auth-via-ssh' authenatication tool that use SSH toward a
+  hostname to validate the password, e.g. `--auth=auth-via-ssh:log2`.
   
 Alpha testing:
 
