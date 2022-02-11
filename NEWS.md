@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.4.0-9004
+## Version 0.4.0-9005
 
 Significant changes:
 
@@ -9,6 +9,11 @@ Significant changes:
 New features:
 
 * Add option `--quiet` to silence the instructions.
+
+* Now `rsc start` outputs a message when it shuts down the RStudio Server.
+
+* Now `rsc start` shuts down nicely when it receives a SIGCONT, SIGTERM,
+  SIGUSR2, or SIGINT (e.g. Ctrl-C) signal.
 
 Alpha testing:
 

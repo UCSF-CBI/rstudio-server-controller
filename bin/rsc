@@ -57,7 +57,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.4.0-9004
+### Version: 0.4.0-9005
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -781,7 +781,7 @@ function rserver_status {
 # Signal trap functions
 # -------------------------------------------------------------------------
 function shutdown {
-    mdebug "shutdown() ..."
+    message "Shutting down RStudio Server ..."
     terminate_rsession
     terminate_rserver
     remove_lock_file
@@ -790,21 +790,27 @@ function shutdown {
         remove_stray_pid_file rsession
         remove_stray_pid_file rserver
     } > /dev/null
-    mdebug "shutdown() ... done"
+    message "Shutting down RStudio Server ... done"
 }
 
 function on_sigterm {
-    mdebug "on_sigterm() ..."
-    shutdown
+    message "Received a SIGTERM signal"
     exit 0
-    mdebug "on_sigterm() ... done"
 }
 
 function on_sigcont {
-    mdebug "on_sigcont() ..."
-    shutdown
+    message "Received a SIGCONT signal"
     exit 0
-    mdebug "on_sigcont() ... done"
+}
+
+function on_sigusr2 {
+    message "Received a SIGUSR2 signal"
+    exit 0
+}
+
+function on_sigint {
+    message "Received a SIGINT signal"
+    exit 0
 }
 
 # -------------------------------------------------------------------------
@@ -1102,11 +1108,17 @@ elif [[ "${action}" == "start" ]]; then
     mdebug "Registering 'trap shutdown EXIT', which perform cleanups"
     trap shutdown EXIT
 
-    mdebug "Registering 'trap on_sigterm SIGTERM', which triggers the EXIT trap"
+    mdebug "Registering 'trap on_sigterm SIGTERM'"
     trap on_sigterm SIGTERM
 
-    mdebug "Registering 'trap on_sigterm SIGCONT', which triggers the EXIT trap"
+    mdebug "Registering 'trap on_sigterm SIGCONT'"
     trap on_sigcont SIGCONT
+
+    mdebug "Registering 'trap on_sigterm SIGUSR2'"
+    trap on_sigusr2 SIGUSR2
+
+    mdebug "Registering 'trap on_sigint SIGINT'"
+    trap on_sigint SIGINT
 
     launch_rserver
 
