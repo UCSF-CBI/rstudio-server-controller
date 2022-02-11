@@ -9,69 +9,65 @@
 ## Author: Henrik Bengtsson (2021)
 set -o nounset
 
-if [[ -n "${AUTH_LOGFILE:-}" ]]; then
-  {
-    echo
-    echo "$0:"
-    echo "  time=$(date)"
-    echo "  PPID=${PPID}"
-    echo "  USER='${USER}'"
-    echo "  \${1}='${1}'"
-    echo "  \${USER} = \${1}: $(if [[ "${USER}" = "${1}" ]]; then echo "true"; else echo "false"; fi)"
-  } &>> "${AUTH_LOGFILE}"
-fi
+RSC_AUTH_LOGFILE=${RSC_AUTH_LOGFILE:-${2}}
 
-## Exit already here?
-if [[ "${USER}" != "${1}" ]]; then
+function debug() {
+    if [[ -z ${RSC_AUTH_LOGFILE} ]]; then
+	echo "$@"
+    else
+	echo "$@" >> "${RSC_AUTH_LOGFILE}"
+    fi
+}
+
+
+# Confirm username is supplied
+if [[ $# -lt 1 ]]; then
+    debug "Usage: $(basename "$0") <username>"
+    exit 1
+fi
+RSC_USERNAME="${1}"
+
+if [[ "${RSC_USERNAME}" != "${USER}" ]]; then
+    debug "Invalid authentication (incorrect username)"
     exit 1
 fi
 
 if command -v expect &> /dev/null; then
-  if [[ -n "${AUTH_LOGFILE:-}" ]]; then
-      echo "  Using 'expect' to validate password:" >> "${AUTH_LOGFILE}"
-      echo "  Reading password from standard input" >> "${AUTH_LOGFILE}"
-  fi
+    debug "  Using 'expect' to validate password:"
+    debug "  Reading password from standard input"
 
-  ## Read password from standard input
-  IFS='' read -r password
+    ## Read password from standard input
+    IFS='' read -r password
 
-  if [[ -n "${AUTH_LOGFILE:-}" ]]; then
-      echo "  password='${password}'" >> "${AUTH_LOGFILE}"
-  fi      
-
-  ## WORKAROUND: Not all 'su' versions support being called
-  ## from within a script. Because of this, we use expect'
-  ## to trick it, it's doing so.  This workaround was adopted
-  ## from https://stackoverflow.com/a/1503831/1072091
-  command expect <<EOF
-  eval spawn su "$USER" -c exit
-  expect "Password"
-  send "${password}\n"
-  set wait_result  [wait]
-  ## check if it is an OS error or a return code from our command
-  ## index 2 should be -1 for OS error, 0 for command return code
-  if {[lindex \$wait_result 2] == 0} {
-          exit [lindex \$wait_result 3]
-  } 
-  else {
-          exit 1 
-  }
+    ## WORKAROUND: Not all 'su' versions support being called
+    ## from within a script. Because of this, we use expect'
+    ## to trick it, it's doing so.  This workaround was adopted
+    ## from https://stackoverflow.com/a/1503831/1072091
+    command expect <<EOF
+eval spawn su "$USER" -c exit
+expect "Password"
+send "${password}\n"
+set wait_result  [wait]
+## check if it is an OS error or a return code from our command
+## index 2 should be -1 for OS error, 0 for command return code
+if {[lindex \$wait_result 2] == 0} {
+    exit [lindex \$wait_result 3]
+} 
+else {
+    exit 1 
+}
 EOF
-  valid=$?
+    valid=$?
 else
-  if [[ -n "${AUTH_LOGFILE:-}" ]]; then
-      echo "Using 'su' to validate password" >> "${AUTH_LOGFILE}"
-  fi
-  su "$USER" -c exit
-  valid=$?
+    debug "Using 'su' to validate password"
+    su "$USER" -c exit
+    valid=$?
 fi
 
-if [[ -n "${AUTH_LOGFILE:-}" ]]; then
-  {
-    echo "  Validation exit code: ${valid}"
-    echo "  Valid password: $(if [[ "${valid}" -eq 0 ]]; then echo true; else echo false; fi)"
-    echo
-  } &>> "${AUTH_LOGFILE}"
+if [[ ! "${valid}" -eq 0 ]]; then
+    debug "Invalid authentication (incorrect password)"
+    exit 1
 fi
 
-exit "${valid}"
+debug "Successful authentication"
+exit 0
