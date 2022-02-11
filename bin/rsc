@@ -1122,7 +1122,7 @@ elif [[ "${action}" == "start" ]]; then
     rs_pid="$(rserver_pid)"
     [[ -z "${rs_pid}" ]] && error "RStudio Server failed to start for unknown reasons. One reason for this might that the port (${port}) is already occupied."
 
-    ${quiet} || echo "${msg}"
+    message "${msg}"
     
     ## Reverse SSH tunnel?
     if [[ ${#revtunnel[@]} -gt 0 ]]; then

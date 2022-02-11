@@ -53,6 +53,7 @@ function error {
 }
 
 function warn {
+    local bold
     local yellow
     local reset
     
@@ -72,6 +73,24 @@ function warn {
            printf "%d: %s() on line #%s in %s\\n" "$ii" "${FUNCNAME[$ii]}" "${BASH_LINENO[$((ii-1))]}" "${BASH_SOURCE[$ii]}"
        done
     fi
+    
+    printf "%s" "${reset}"
+}
+
+
+function message {
+    local bold
+    local reset
+
+    ## Nothing to do?
+    ${quiet:-false} && return 0;
+       
+    if [[ -t 1 ]]; then
+        bold=$(tput bold)
+        reset=$(tput sgr0)
+    fi
+    
+    echo -e "${white}${bold}$*${reset}"
     
     printf "%s" "${reset}"
 }
