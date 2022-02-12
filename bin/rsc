@@ -836,25 +836,6 @@ function exit_on_signals {
     done
 }
 
-function on_sigterm {
-    message "Received a SIGTERM signal"
-    exit 0
-}
-
-function on_sigcont {
-    message "Received a SIGCONT signal"
-    exit 0
-}
-
-function on_sigusr2 {
-    message "Received a SIGUSR2 signal"
-    exit 0
-}
-
-function on_sigint {
-    message "Received a SIGINT signal"
-    exit 0
-}
 
 # =========================================================================
 # MAIN
