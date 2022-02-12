@@ -79,6 +79,8 @@ source "${incl}/files.sh"
 source "${incl}/output.sh"
 # shellcheck source=incl/ports.sh
 source "${incl}/ports.sh"
+# shellcheck source=incl/system.sh
+source "${incl}/system.sh"
 
 
 # =========================================================================
@@ -381,15 +383,6 @@ function wait_for_file {
     done
     [[ ! -f "${file}" ]] && error "Waited for file ${file}, but gave up after ${maxseconds} seconds"
     mdebug "Waiting for file ${file} ... done"
-}
-
-## A version of 'hostname' that will use either $HOSTNAME or hostname
-function hostname {
-    local res
-    res=${HOSTNAME}
-    [[ -z ${res} ]] && res=$(command hostname)
-    [[ -z ${res} ]] && error "Failed to infer hostname"
-    echo "${res}"
 }
 
 function check_pid {
