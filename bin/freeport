@@ -44,8 +44,11 @@
 ###  # ports for different applications running at the same time.
 ###  freeport --seed="$(id --user)" --skip=1
 ###
-###  # Find a random port in [11000, 11999]
+###  # Find the first free random port in {11000, 11001, ..., 11999}
 ###  freeport --min=11000 --max=11999
+###
+###  # Find the fourth free random port in {11000, 11001, ..., 11999}
+###  freeport --min=11000 --max=11999 --skip=3
 ###
 ###  # Find the first free port in {11000, 11001, ..., 11999}
 ###  freeport --method=increasing --min=11000 --max=11999
@@ -53,12 +56,12 @@
 ###  # Find the first free port in {11999, 11998, ..., 11000}
 ###  freeport --method=decreasing --min=11000 --max=11999
 ###
+###  # Find the first free port in {11000, 11001, ..., 11999}, but
+###  # skip {11000, ..., 11003}
+###  freeport --method=increasing --min=11000 --max=11999 --skip=4
+###
 ###  # Test if port 4321 is free
 ###  freeport --min=4321 --max=4321 > /dev/null
-###  is_free=$?
-###
-###  # Alternative for the above
-###  freeport --test=4321
 ###  is_free=$?
 ###
 ### Requirements:
