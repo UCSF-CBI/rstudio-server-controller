@@ -71,8 +71,11 @@
 ### Copyright: Henrik Bengtsson (2021)
 ### License: MIT
 
+this="${BASH_SOURCE%/}"
+[[ -L "${this}" ]] && this=$(readlink "${this}")
+
 ## Import bash utility functions
-incl="${BASH_SOURCE%/*}/incl"
+incl="$(dirname "${this}")/incl"
 
 # shellcheck source=incl/asserts.sh
 source "${incl}/asserts.sh"
