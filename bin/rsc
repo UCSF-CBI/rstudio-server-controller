@@ -140,6 +140,25 @@ function warn_auth_logfile {
   echo
 }
 
+## Parse --auth=<spec> specification
+function parse_auth {
+    local spec
+    local file
+    local ext
+    spec=${1:?}
+    
+    if echo "${spec}" | grep -q -E "^([^:]+)$"; then
+        file=${spec}
+    elif echo "${spec}" | grep -q -E "^([^:]+):([^:]+)$"; then
+        file=${spec/:*/}
+        ext=${spec/$file:/}
+    else
+        error "Invalid --auth=<spec> specification: ${spec}"
+    fi
+    echo "${file}"
+    echo "${ext}"
+}
+
 
 # -------------------------------------------------------------------------
 # Configuration utilities
@@ -351,35 +370,19 @@ function parse_revtunnel {
     echo "${port}"
 }
 
-function parse_auth {
-    local spec
-    local file
-    local ext
-    spec=${1:?}
-    
-    if echo "${spec}" | grep -q -E "^([^:]+)$"; then
-        file=${spec}
-    elif echo "${spec}" | grep -q -E "^([^:]+):([^:]+)$"; then
-        file=${spec/:*/}
-        ext=${spec/$file:/}
-    else
-        error "Invalid --auth=<spec> specification: ${spec}"
-    fi
-    echo "${file}"
-    echo "${ext}"
-}
-
 function wait_for_file {
     local file
     local maxseconds
+    local delay
     
     file=${1:?}
     maxseconds=${2:-300}
+    delay=${3:-1.0}
     
     t0=${SECONDS}
     mdebug "Waiting for file ${file} ..."
     until [[ -f "${file}" && $((SECONDS - t0)) -lt "${maxseconds}" ]]; do
-        sleep 1.0
+        sleep "${delay}"
     done
     [[ ! -f "${file}" ]] && error "Waited for file ${file}, but gave up after ${maxseconds} seconds"
     mdebug "Waiting for file ${file} ... done"
