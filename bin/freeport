@@ -60,8 +60,8 @@
 ###  # skip {11000, ..., 11003}
 ###  freeport --method=increasing --min=11000 --max=11999 --skip=4
 ###
-###  # Test if port 4321 is free
-###  freeport --min=4321 --max=4321 > /dev/null
+###  # Test if port 4321 is free (outputs -1 if not)
+###  freeport --min=4321 --max=4321
 ###  is_free=$?
 ###
 ### Requirements:
@@ -176,9 +176,7 @@ if [[ "${max}" == "min" ]]; then
 fi
 assert_port "${max}"
 
-if port=$(free_random_port "${seed}" "${method}" "${skip}" "${min}" "${max}"); then
-    echo "${port}"
-else
-    error "Failed to find a free port"
-fi
-
+port=$(free_random_port "${seed}" "${method}" "${skip}" "${min}" "${max}")
+res=$?
+echo "${port}"
+exit "${res}"
