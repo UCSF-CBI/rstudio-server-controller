@@ -102,7 +102,9 @@ $ rsc stop
 RStudio Server stopped
 ```
 
-from the same machine, which sends a `SIGTERM` signal to shut it down nicely.
+which sends a `SIGTERM` signal to shut it down nicely.  If this command is
+not called from the same machine as from where `rsc start` was called, then
+it will attempt to SSH to that machine to terminate the RStudio Server.
 
 A user can only launch one instance.  Attempts to start more, will
 produce an informative error message, e.g.
