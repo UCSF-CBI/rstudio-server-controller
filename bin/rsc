@@ -59,13 +59,16 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.5.0-9000
+### Version: 0.5.0-9001
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
+this="${BASH_SOURCE%/}"
+[[ -L "${this}" ]] && this=$(readlink "${this}")
+
 ## Import bash utility functions
-incl="${BASH_SOURCE%/*}/incl"
-utils="${BASH_SOURCE%/*}/utils"
+incl="$(dirname "${this}")/incl"
+utils="$(dirname "${this}")/utils"
 
 # shellcheck source=incl/asserts.sh
 source "${incl}/asserts.sh"
