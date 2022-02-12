@@ -11,10 +11,10 @@ pwd=${BASH_SOURCE%/*}
 source "${pwd}"/asserts.sh
 
 ## Usage:
-## free_random_port <seed>
+## find_free_port <seed> <algorithm> <skip> <min> <max>
 ## If 'seed' is not set, then no random seed is set.
 ## Outputs a free port in [1024,65535].
-function free_random_port {
+function find_free_port {
     local port
     local seed
     local skip
@@ -27,7 +27,7 @@ function free_random_port {
     min=${4:-1024}
     max=${5:-65535}
 
-    mdebug "free_random_port(seed=${seed}, algorithm='${algorithm}', skip=${skip}, min=${min}, max=${max}) ..."
+    mdebug "find_free_port(seed=${seed}, algorithm='${algorithm}', skip=${skip}, min=${min}, max=${max}) ..."
     
     [[ -n "${seed}" ]] && assert_integer "${seed}"
     assert_port "${min}"
@@ -83,7 +83,7 @@ function free_random_port {
         res=0
     fi
 
-    mdebug "free_random_port(seed=${seed}, algorithm=${algorithm}, skip=${skip}, min=${min}, max=${max}) ... done"
+    mdebug "find_free_port(seed=${seed}, algorithm=${algorithm}, skip=${skip}, min=${min}, max=${max}) ... done"
     
     return "${res}"
 }    

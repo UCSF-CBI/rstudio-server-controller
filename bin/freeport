@@ -176,7 +176,7 @@ if [[ "${max}" == "min" ]]; then
 fi
 assert_port "${max}"
 
-port=$(free_random_port "${seed}" "${method}" "${skip}" "${min}" "${max}")
+port=$(find_free_port "${seed}" "${method}" "${skip}" "${min}" "${max}")
 res=$?
 echo "${port}"
 exit "${res}"

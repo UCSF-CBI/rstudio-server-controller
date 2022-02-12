@@ -300,7 +300,7 @@ function make_rserver_conf {
     port=${1:?}
 
     if [[ "${port}" == "random" ]]; then
-        port=$(free_random_port "${port_seed}")
+        port=$(find_free_port "${port_seed}")
     fi
     assert_port_free "${port}"
 
