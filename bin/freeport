@@ -61,7 +61,7 @@
 ###  freeport --method=increasing --min=11000 --max=11999 --skip=4
 ###
 ###  # Test if port 4321 is free (outputs -1 if not)
-###  freeport --min=4321 --max=4321
+###  freeport --min=4321 --max=min
 ###  is_free=$?
 ###
 ### Requirements:
