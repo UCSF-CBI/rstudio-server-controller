@@ -820,6 +820,21 @@ function shutdown {
     } > /dev/null
     message "Shutting down RStudio Server ... done"
 }
+function exit_on_signals {
+    local exit_code
+    local signal
+    local cmd
+    exit_code=${1:?}
+    assert_integer "${exit_code}"
+    shift
+    for signal in "$@"; do
+        mdebug "Registering trap: ${signal} => exit ${exit_code}"
+        cmd="message 'Received a ${signal} signal => exit ${exit_code}'; exit ${exit_code}"
+        mdebug "- trap \"${cmd}\" \"${signal}\""
+        #shellcheck disable=SC2064
+        trap "${cmd}" "${signal}"
+    done
+}
 
 function on_sigterm {
     message "Received a SIGTERM signal"
@@ -1145,18 +1160,8 @@ elif [[ "${action}" == "start" ]]; then
     mdebug "Registering 'trap shutdown EXIT', which perform cleanups"
     trap shutdown EXIT
 
-    mdebug "Registering 'trap on_sigterm SIGTERM'"
-    trap on_sigterm SIGTERM
-
-    mdebug "Registering 'trap on_sigterm SIGCONT'"
-    trap on_sigcont SIGCONT
-
-    mdebug "Registering 'trap on_sigterm SIGUSR2'"
-    trap on_sigusr2 SIGUSR2
-
-    mdebug "Registering 'trap on_sigint SIGINT'"
-    trap on_sigint SIGINT
-
+    exit_on_signals 0 SIGCONT SIGINT SIGTERM SIGUSR2
+    
     launch_rserver
 
     wait_for_rserver    
