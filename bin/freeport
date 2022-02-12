@@ -171,7 +171,14 @@ fi
 
 assert_integer "${skip}"
 assert_port "${min}"
+if [[ "${max}" == "min" ]]; then
+    max=${min}
+fi
 assert_port "${max}"
 
-free_random_port "${seed}" "${method}" "${skip}" "${min}" "${max}"
+if port=$(free_random_port "${seed}" "${method}" "${skip}" "${min}" "${max}"); then
+    echo "${port}"
+else
+    error "Failed to find a free port"
+fi
 

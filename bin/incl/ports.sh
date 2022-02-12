@@ -34,7 +34,11 @@ function free_random_port {
     assert_port "${max}"
     assert_executable python
 
-    if [[ "${algorithm}" == "random" ]]; then
+    ## Check a single port?
+    if [[ ${max} -eq ${min} ]]; then
+        mdebug "- Check a single port ${min}:"
+        code="import socket\ns=socket.socket(socket.AF_INET, socket.SOCK_STREAM)\nif (s.connect_ex(('', ${min})) != 0):\n  print(${min})\nelse:\n  print(False)\ns.close()"
+    elif [[ "${algorithm}" == "random" ]]; then
         mdebug "- Algorithm '${algorithm}':"
         if [[ -z ${seed} && ${min} -eq 1024 && ${max} -eq 65535 ]]; then
             mdebug "- Ask system for a random port by binding to port 0"
@@ -42,8 +46,10 @@ function free_random_port {
             # tiny race condition between the Python and launching the rserver
             code="import socket; s=socket.socket(); s.bind(('', 0)); print(s.getsockname()[1]); s.close()"
         elif [[ -z ${seed} ]]; then
-            code="import random\nimport socket\ns=socket.socket(socket.AF_INET, socket.SOCK_STREAM)\nfor ii in range(0,1000):\n  port=random.randrange(${min},${max})\n  if s.connect_ex((\"\", port)) != 0: break\nprint(port)"
+            mdebug "- Random port in {${min}, ..., ${max}} without a seed"
+            code="import random\nimport socket\ns=socket.socket(socket.AF_INET, socket.SOCK_STREAM)\nfor ii in range(0,1000):\n  port=random.randrange(${min},${max})\n  if s.connect_ex(('', port)) != 0: break\nprint(port)"
         else
+            mdebug "- Random port in {${min}, ..., ${max}} with seed=${seed}"
             code="import random\nimport socket\ns=socket.socket(socket.AF_INET, socket.SOCK_STREAM)\nrandom.seed(${seed})\nfor ii in range(0,1000):\n  port=random.randrange(${min},${max})\n  if ii >= ${skip} and s.connect_ex(('', port)) != 0: break\nprint(port)"
         fi
     elif [[ "${algorithm}" == "increasing" || "${algorithm}" == "decreasing" ]]; then
@@ -54,20 +60,32 @@ function free_random_port {
         fi
         mdebug "${range}"
         code="import socket\ns=socket.socket(socket.AF_INET, socket.SOCK_STREAM)\nfor port in range(${range}):\n  if s.connect_ex(('', port)) != 0: break\nprint(port)\n"
-        mdebug "${code}"
     else
         error "Unknown value on --algorithm=\"${algorithm}\""
     fi
 
+    mdebug "${code}"
     [[ -z ${code} ]] && error "[INTERNAL]: No Python code"
     
     #shellcheck disable=SC2059
     port=$(printf "${code}" | python -)
-    assert_port "${port}"
+    mdebug "port=${port}"
+
+    ## Failed to find a free port?
+    if [[ "${port}" == "False" ]]; then
+        mdebug "Failed to find a free port in {${min}, ..., ${max}}"
+        echo "-1"
+        res=1
+    else
+        assert_port "${port}"
+        is_port_free "${port}" || error "[INTERNAL]: Identified port is not free: ${port}"
+        echo "${port}"
+        res=0
+    fi
 
     mdebug "free_random_port(seed=${seed}, algorithm=${algorithm}, skip=${skip}, min=${min}, max=${max}) ... done"
     
-    echo "${port}"
+    return "${res}"
 }    
 
 ## Usage: is_port_free <port>
@@ -77,7 +95,7 @@ function is_port_free {
     port=${1:?}
     assert_integer "${port}"
     assert_executable python
-    res=$(python -c "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_STREAM); print(s.connect_ex((\"\", ${port})) != 0); s.close()")
+    res=$(python -c "import socket; s=socket.socket(socket.AF_INET, socket.SOCK_STREAM); print(s.connect_ex(('', ${port})) != 0); s.close()")
     [[ "${res}" == "True" ]]
 }
 
