@@ -1,8 +1,10 @@
 # rstudio-server-launcher
 
-## Version 0.5.0-9000
+## Version 0.5.0-9001
 
-* ...
+Prototype:
+
+* Add `freeport`.
 
 
 ## Version 0.5.0
