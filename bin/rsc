@@ -1132,15 +1132,9 @@ elif [[ "${action}" == "start" ]]; then
 
     mdebug "PID for rsc (this process): $$"
 
-    ## For troubleshooting/debugging Slurm termination /HB 2022-01-27
-##    for kk in {0..64}; do
-##        trap "echo '$0: Caught signal ${kk}'" "${kk}"
-##    done
-    
-    ## Make sure to stop the RStudio Server and any R sessions on exit
+    ## Shutdown nicely
     mdebug "Registering 'trap shutdown EXIT', which perform cleanups"
     trap shutdown EXIT
-
     exit_on_signals 0 SIGCONT SIGINT SIGTERM SIGUSR2
     
     launch_rserver
