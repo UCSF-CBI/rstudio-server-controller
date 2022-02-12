@@ -23,7 +23,7 @@ local web browser, either locally, or remotely via SSH tunneling.
   via reverse SSH tunneling,
   e.g. `--revtunnel=<user>@<remote-hostname>:<remote-port>`
 
-* It provides convenient alternative for setting the port where
+* It provides convenient alternatives for setting the port where
   RStudio Server is hosted, e.g. `--port=<fix-port>`, `--port=uid`
   (default), and `--port=random --port-seed="$(id -u)"`
 
@@ -40,7 +40,7 @@ local web browser, either locally, or remotely via SSH tunneling.
   relies on `su` to authenticate using the system's authentication
   method. An alternative to this, is
   [`--auth=auth-via-ssh:<hostname>`](https://github.com/UCSF-CBI/rstudio-server-controller/blob/main/bin/utils/auth-via-ssh),
-  which authenticates using SSH towards host <hostname>. If neither
+  which authenticates using SSH towards host `<hostname>`. If neither
   are an option, [`--auth=auth-via-env
   --random-password`](https://github.com/UCSF-CBI/rstudio-server-controller/blob/main/bin/utils/auth-via-env)
   can be used to authenticate with a one-time, temporary password
@@ -64,7 +64,7 @@ local web browser, either locally, or remotely via SSH tunneling.
   signal by a job scheduler
 
 
-## Instruction
+## Running RStudio Server locally
 
 To launch your personal RStudio Server instance, call:
 
@@ -129,6 +129,100 @@ listening on port 51172
 rsession: not running
 lock file: exists (/home/alice/.config/rsc/pid.lock)
 ```
+
+
+## Running RStudio Server remotely
+
+### Scenario 1: Direct access to remote machine
+
+Assume you have a remote server that you connect to via SSH as:
+
+```sh
+[ab@local ~]$ ssh -l alice server.myuniv.org
+[alice@server ~]$
+```
+
+If we launch `rsc` on the remote server, we will get:
+
+```sh
+[alice@server ~]$ rsc start
+alice, your personal RStudio Server is available on <http://server.myuniv.org:51172>.
+If you are running from a remote machine without direct access to server.myuniv.org, you
+can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by
+running 'ssh -L 8787:server.myuniv.org:51172 alice@server.myuniv.org' in a second terminal.
+Any R session started times out after being idle for 120 minutes.
+```
+
+If we follow these instructions set up a _second_, _concurrent_ SSH connection to the remote server:
+
+```sh
+[ab@local ~]$ ssh -L 8787:server.myuniv.org:51172 alice@server.myuniv.org
+[alice@server ~]$
+```
+
+we will be able to access the RStudio Server at <http://127.0.0.1:8787> on our local machine.  This works because port 8787 on our local machine is forwarded to port 51172 on the remote server, which is where the RStudio Server is served.
+
+
+### Scenario 2: Indirect access to remote machine via a login host
+
+Assume you can only access the remote server via a dedicated login host:
+
+```sh
+[ab@local ~]$ ssh -l alice login.myuniv.org
+[alice@login ~]$ ssh -l alice server.myuniv.org
+[alice@server ~]$
+```
+
+If we launch `rsc` on the remote server, we will get very similar instructions:
+
+```sh
+[alice@server ~]$ rsc start
+alice, your personal RStudio Server is available on <http://server.myuniv.org:51172>.
+If you are running from a remote machine without direct access to server.myuniv.org, you
+can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by
+running 'ssh -L 8787:server.myuniv.org:51172 alice@login.myuniv.org' in a second terminal.
+Any R session started times out after being idle for 120 minutes.
+```
+
+In this case, we do:
+
+```sh
+[ab@local ~]$ ssh -L 8787:server.myuniv.org:51172 alice@login.myuniv.org
+[alice@login ~]$
+```
+
+After this, the RStudio Server is available at <http://127.0.0.1:8787> on our local machine.  This works because port 8787 on our local machine is forwarded to port 51172 on the remote server, which is where the RStudio Server is served, via the login host.
+
+
+### Can we achieve the same with a single SSH connection?
+
+Note that, the reason why we have to use two concurrent SSH connections, is that we cannot know what ports are available when we connect the first time to launch the RStudio Server.  If we could know that, or if we would take a chance that it's available to use, we could do everything with one connections.  For example, we have used port 51172 several times before, so we will try that this time too:
+
+```sh
+[ab@local ~]$ ssh -L 8787:server.myuniv.org:51172 alice@login.myuniv.org
+[alice@login ~]$ ssh -l alice server.myuniv.org
+[alice@server ~]$ rsc start --port=51172
+alice, your personal RStudio Server is available on <http://server.myuniv.org:51172>.
+If you are running from a remote machine without direct access to server.myuniv.org, you
+can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by
+running 'ssh -L 8787:server.myuniv.org:51172 alice@login.myuniv.org' in a second terminal.
+Any R session started times out after being idle for 120 minutes.
+```
+
+As before, the RStudio Server is available at <http://127.0.0.1:8787>.
+
+
+### Scenario 3: Remote machine with direct access to our local machine
+
+Assume you can SSH to the remote server, directly or via a login host, and that the remote server can access your local machine directly via SSH.  This is an unusual setup, but it might be the case when your local machine is connected to the same network as the server, e.g. a desktop and compute cluster at work.  In this case, we can ask `rsc` to set up a _reverse_ SSH tunnel to our local machine at the same time it launches the RStudio Server;
+
+```sh
+[ab@local ~]$ ssh -l alice server.myuniv.org
+[alice@server ~]$ rsc start --revtunnel=ab@local.myuniv.org:8787
+alice, your personal RStudio Server is available on <http://local.myuniv.org:8787>.
+```
+
+As before, the RStudio Server is available at <http://127.0.0.1:8787>.
 
 
 ## Requirements
