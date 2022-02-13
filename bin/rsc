@@ -832,8 +832,8 @@ function rserver_status {
 # -------------------------------------------------------------------------
 function shutdown {
     message "Shutting down RStudio Server ..."
-    terminate_rserver
     terminate_rsession
+    terminate_rserver
     remove_lock_file
     {
         remove_stray_lockfile
