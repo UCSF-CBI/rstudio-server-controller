@@ -201,9 +201,12 @@ function acquire_lock_file {
 function remove_lock_file {
     local workdir
     local lockfile
+    mdebug "remove_lock_file() ..."
     workdir=$(config_dir)
     lockfile=${workdir}/pid.lock
+    mdebug " - lock file: ${lockfile}"
     [[ -f "${lockfile}" ]] && rm "${lockfile}" && mdebug "Lock file removed: ${lockfile}"
+    mdebug "remove_lock_file() ... done"
 }    
 
 
@@ -558,7 +561,8 @@ function rsession_timeout {
     
     mdebug "rsession timeout: ${timeout} minutes"
     assert_integer "${timeout}"
-    export RSC_RSESSION_TIMEOUT="${timeout}"
+    RSC_RSESSION_TIMEOUT="${timeout}"
+    export RSC_RSESSION_TIMEOUT
     echo "${timeout}"
 }
 
@@ -684,8 +688,11 @@ function rsession_pid {
 
 function terminate_rsession {
     local pid
+    mdebug "terminate_rsession() ..."
     pid=$(rsession_pid)
+    mdebug " - pid: '${pid}'"
     [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rsession (PID ${pid}) terminated"
+    mdebug "terminate_rsession() ... done"
 }
 
 function rsession_status {
@@ -704,6 +711,14 @@ function wait_for_rserver {
     wait_for_file "${workdir}/rserver.pid"
     wait_for_file "${workdir}/rserver.hostname"
     wait_for_file "${workdir}/rserver.port"
+
+    ## Memoize rserver information (needs to be done in parent process)
+    _RSC_RSERVER_PID_=$(rserver_pid)
+    _RSC_RSERVER_HOSTNAME_=$(rserver_hostname)
+    _RSC_RSERVER_PORT_=$(rserver_port)
+    export _RSC_RSERVER_PID_
+    export _RSC_RSERVER_HOSTNAME_
+    export _RSC_RSERVER_PORT_
 }    
 
 function rserver_pid_file {
@@ -714,32 +729,51 @@ function rserver_pid_file {
     echo "${workdir}/rserver.pid"
 }
 
+_RSC_RSERVER_PID_=
 function rserver_pid {
-    read_pid "${1:-false}" "$(rserver_pid_file)"
+    ## Already known?
+    if [[ -z "${_RSC_RSERVER_PID_}" ]]; then
+         _RSC_RSERVER_PID_=$(read_pid "${1:-false}" "$(rserver_pid_file)")
+         export _RSC_RSERVER_PID_ ## NOTE: assigned in the current process
+    fi
+    echo "${_RSC_RSERVER_PID_}"   
 }
 
+_RSC_RSERVER_HOSTNAME_=
 function rserver_hostname {
     local workdir
     local file
-    workdir=$(config_dir)
-    assert_dir_exists "${workdir}"
-    file="${workdir}/rserver.hostname"
-    assert_file_exists "${file}"
-    res=$(cat "${file}")
-    [[ -z "${res}" ]] && error "File is empty: ${file}"
-    echo "${res}"
+    ## Already known?
+    if [[ -z "${_RSC_RSERVER_HOSTNAME_}" ]]; then
+        workdir=$(config_dir)
+        assert_dir_exists "${workdir}"
+        file="${workdir}/rserver.hostname"
+        assert_file_exists "${file}"
+        res=$(cat "${file}")
+        [[ -z "${res}" ]] && error "File is empty: ${file}"
+         _RSC_RSERVER_HOSTNAME_=${res}
+         export _RSC_RSERVER_HOSTNAME_ ## NOTE: assigned in the current process
+    fi
+    echo "${_RSC_RSERVER_HOSTNAME_}"
 }
 
+_RSC_RSERVER_PORT_=
 function rserver_port {
     local workdir
     local file
-    workdir=$(config_dir)
-    assert_dir_exists "${workdir}"
-    file="${workdir}/rserver.port"
-    assert_file_exists "${file}"
-    res=$(cat "${file}")
-    [[ -z "${res}" ]] && error "File is empty: ${file}"
-    echo "${res}"
+    ## Already known?
+    mdebug "_RSC_RSERVER_PORT_='${_RSC_RSERVER_PORT_}'"
+    if [[ -z "${_RSC_RSERVER_PORT_}" ]]; then
+        workdir=$(config_dir)
+        assert_dir_exists "${workdir}"
+        file="${workdir}/rserver.port"
+        assert_file_exists "${file}"
+        res=$(cat "${file}")
+        [[ -z "${res}" ]] && error "File is empty: ${file}"
+         _RSC_RSERVER_PORT_=${res}
+         export _RSC_RSERVER_PORT_ ## NOTE: assigned in the current process
+    fi
+    echo "${_RSC_RSERVER_PORT_}"
 }
 
 function rserver_url {
@@ -748,8 +782,11 @@ function rserver_url {
 
 function terminate_rserver {
     local pid
+    mdebug "terminate_rserver() ..."
     pid=$(rserver_pid)
+    mdebug " - pid: ${pid}"
     [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rserver (PID ${pid}) terminated"
+    mdebug "terminate_rserver() ... done"
 }
 
 function launch_rserver {
@@ -795,8 +832,8 @@ function rserver_status {
 # -------------------------------------------------------------------------
 function shutdown {
     message "Shutting down RStudio Server ..."
-    terminate_rsession
     terminate_rserver
+    terminate_rsession
     remove_lock_file
     {
         remove_stray_lockfile
@@ -1123,12 +1160,10 @@ elif [[ "${action}" == "start" ]]; then
     exit_on_signals 0 SIGCONT SIGINT SIGTERM SIGUSR2
     
     launch_rserver
-
     wait_for_rserver    
-    
+
     ## Update 'port', in case it was 'uid' or 'random'
     port=$(rserver_port)
-    mdebug "RStudio Server port: ${port}"
     
     ## Reverse SSH tunnel?
     if [[ ${#revtunnel[@]} -gt 0 ]]; then
