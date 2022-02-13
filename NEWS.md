@@ -1,6 +1,11 @@
 # rstudio-server-launcher
 
-## Version 0.5.0-9001
+## Version 0.5.0-9002
+
+New features:
+
+* Now `rsc reset --force` warns if critical rsc-related files exists, and
+  which they are, otherwise the cleanup is silent.
 
 Prototype:
 

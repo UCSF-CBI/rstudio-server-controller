@@ -59,7 +59,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.5.0-9001
+### Version: 0.5.0-9002
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -1121,8 +1121,16 @@ elif [[ "${action}" == "stop" ]]; then
 elif [[ "${action}" == "reset" ]]; then
     workdir=$(config_dir)
     if [[ -d "${workdir}" ]]; then
+        files=("$(rsession_pid_file)" "${workdir}/rserver.pid" "${workdir}/rserver.hostname" "${workdir}/rserver.port" "${workdir}/pid.lock")
         if $force; then
-            warn "Deleting rsc folder without checking if there is an active RStudio Server instance: ${workdir}"
+            existing=()
+            for file in "${files[@]}"; do
+                [[ -f "${file}" ]] && existing+=("${file}")
+            done
+            mdebug "Files that will be deleted: ${existing[*]}"
+            if [[ ${#existing[@]} -gt 0 ]]; then
+                warn "Deleting rsc folder and files (${existing[*]}) without checking if there is an active RStudio Server instance: ${workdir}"
+            fi
         else
             acquire_lock_file
         fi
