@@ -10,7 +10,7 @@
 Security fix:
 
 * The `$HOME/.config/rsc/var/run/rstudio-server/` folder and its subfolder
-  `rstudio-rsession` folder was writable by anyone on the system (777 in
+  `rstudio-rsession` folder were writable by anyone on the system (777 in
   Unix terms). The `rserver` process sets these file permissions by design,
   because these folders are meant to be used by different users on the
   system. This would not have been a problem if the `$HOME/.config/rsc/`
