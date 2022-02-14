@@ -911,7 +911,7 @@ port=${RSC_PORT:-uid}
 port_seed=${RSC_PORT_SEED:-}
 [[ -n ${port_seed} ]] && assert_integer "${port_seed}"
 field=
-auth="auth-via-su"
+auth=${RSC_AUTH:-auth-via-su}
 revtunnel=()
 ssh=${RSC_SSH:-true}
 
@@ -920,7 +920,7 @@ ssh=${RSC_SSH:-true}
 ## is to use a a clean set of environment variables.  That default
 ## behavior prevents R from seeing, for instance, environment variables
 ## set by a job scheduler.
-rsession_inherit_env_pattern="^.+$"
+rsession_inherit_env_pattern=${RSC_ENV_PATTERN:-"^.+$"}
     
 
 # Parse command-line options
