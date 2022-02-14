@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.5.0-9003
+## Version 0.5.0-9004
 
 Security fix:
 
@@ -17,6 +17,9 @@ Security fix:
   we recursively set all of its files and folders private too (700).
 
 New features:
+
+* Using `rsc status --no-ssh` will skip attempts to SSH into another
+  machine to check if the rserver is running there.
 
 * Now `rsc reset --force` warns if critical rsc-related files exists, and
   which they are, otherwise the cleanup is silent.

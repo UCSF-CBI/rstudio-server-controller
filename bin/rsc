@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /usr/bin/env bash
 ### rsc: An RStudio Server Controller
 ### 
 ### Usage:
@@ -30,6 +30,7 @@
 ###  --random-password   Generate a random password assigned to 'RSC_PASSWORD'
 ###  --force             Force an action
 ###  --full              Output more information
+###  --no-ssh            Skip anything involving SSH
 ###  
 ###  --env-pattern=<re>  Regular expression matching environment variables to be
 ###                      exported. To export all, use "^.+$". To export none,
@@ -59,7 +60,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.5.0-9003
+### Version: 0.5.0-9004
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -397,6 +398,7 @@ function check_pid {
     local pid
     local hostname
     local pid_exists
+    local asterisk
 
     pid=${1:?}
     hostname=${2:-$(hostname)}
@@ -405,22 +407,32 @@ function check_pid {
     mdebug "check_pid(pid=${pid}, hostname=${hostname}) ..."
 
     pid_exists=false
+    asterisk=false
     if [[ -n "${pid}" ]]; then
         ## Check PID on local machine or another machine?
         if [[ "${hostname}" == "$(hostname)" ]]; then
             mdebug "- Checking /proc/${pid} on current machine (${hostname})"
             [[ -d "/proc/${pid}" ]] && pid_exists=true
-        else
+        elif ${ssh}; then
             mdebug "- Checking /proc/${pid} on ${hostname} over SSH"
             #shellcheck disable=SC2029
             res=$(ssh "${hostname}" "[[ -d '/proc/${pid}' ]] && echo true || echo false") || error "Failed to check process PID ${pid} on ${hostname} over SSH"
             [[ "${res}" == "true" ]] && pid_exists=true
+        else
+            mdebug "- Skipping check of /proc/${pid} on ${hostname}, because --no-ssh"
+            pid_exists=true
+            asterisk=true
         fi
     fi
 
     if ${pid_exists}; then
-        mdebug "- ${hostname}:/proc/${pid} exists"
-        echo "${pid}"
+        if ${asterisk}; then
+            mdebug "- ${hostname}:/proc/${pid} exists (not verified)"
+            echo "${pid}"'*'
+        else
+            mdebug "- ${hostname}:/proc/${pid} exists"
+            echo "${pid}"
+        fi
     else
         mdebug "- ${hostname}:/proc/${pid} does not exist"
         echo ""
@@ -544,11 +556,19 @@ function rs_process_status {
     
     mdebug "rs_process_status(pid=${pid}, hostname=${hostname}):"
     
-    ## Check if pid is still active
-    [[ -n "${pid}" ]] && pid=$(check_pid "${pid}" "${hostname}")
+    ## Check if pid is still active?
+    if [[ -n ${pid} ]]; then
+        pid=$(check_pid "${pid}" "${hostname}")
+    fi
+
     
-    if [[ -n "${pid}" ]]; then
-        echo "running (pid ${pid}) on current machine (${hostname})"
+    if [[ -n ${pid} ]]; then
+        if [[ -z ${warning} ]]; then
+            echo "running (pid ${pid}) on machine (${hostname})"
+        else
+            warn "${warning}"
+            echo "running (pid ${pid}) on machine (${hostname}) [guess]"
+        fi
     else
         echo "not running"
     fi
@@ -893,6 +913,7 @@ port_seed=${RSC_PORT_SEED:-}
 field=
 auth="auth-via-su"
 revtunnel=()
+ssh=${RSC_SSH:-true}
 
 ## Should 'rsession' inherit exported environment variables from the
 ## 'rsc' process?  If 'false', then the default behavior of 'rserver'
@@ -938,6 +959,8 @@ while [[ $# -gt 0 ]]; do
         force=true
     elif [[ "$1" == "--full" ]]; then
         full=true
+    elif [[ "$1" == "--no-ssh" ]]; then
+        ssh=false
     elif [[ "$1" == "--random-password" ]]; then
         RSC_PASSWORD=$(openssl rand -base64 15)
         export RSC_PASSWORD
@@ -1027,6 +1050,7 @@ mdebug "field: ${field}"
 mdebug "auth: ${auth}"
 mdebug "RSC_AUTH_ARG_2: ${RSC_AUTH_ARG_2}"
 mdebug "revtunnel: [n=${#revtunnel[@]}] ${revtunnel[*]}"
+mdebug "ssh: ${ssh}"
 mdebug "args: [n=${#args[@]}] ${args[*]}"
 
 
@@ -1097,8 +1121,13 @@ elif [[ "${action}" == "log" ]]; then
 elif [[ "${action}" == "status" ]]; then
     mdebug "rsc status ..."
     if [[ -z ${field} ]]; then
-        printf "%s: %s\n" "rserver" "$(rserver_status)"
-        printf "%s: %s\n" "rsession" "$(rsession_status)"
+        status="rserver: $(rserver_status)\n"
+        status="${status}rsession: $(rsession_status)"
+        ## AD HOC: Is there an asterisk on the pid?
+        if grep -q -E 'pid [[:digit:]]+[*]' <<< "${status}"; then
+            status="${status}\n* This is only assumed, because without SSH (--no-ssh) we couldn't confirm the process is still running"
+        fi
+        echo -e "${status}"
         workdir=$(config_dir)
         lockfile=${workdir}/pid.lock
         if [[ -f "${lockfile}" ]]; then
@@ -1193,6 +1222,9 @@ elif [[ "${action}" == "start" ]]; then
     
     ## Reverse SSH tunnel?
     if [[ ${#revtunnel[@]} -gt 0 ]]; then
+        if ! ${ssh}; then
+            error "Cannot setup reverse SSH tunnel, because --no-ssh was used"
+        fi
         mdebug "Setting up reverse SSH tunnel ..."
         rev_hostname=${revtunnel[0]}
         rev_port=${revtunnel[1]}
