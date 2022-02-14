@@ -59,7 +59,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.5.0-9002
+### Version: 0.5.0-9003
 ### Copyright: Henrik Bengtsson and Harry Putnam (2021)
 ### License: MIT
 
@@ -174,11 +174,28 @@ function config_dir {
     echo "${path}/rsc"
 }
 
+## I think, rserver is designed so that any user on the system should be
+## able to write to ${config_dir}/rsc/var/run/rstudio-server/ and it's
+## subfolder rstudio-rsession/ when they log in and launch a new 'rsession',
+## because the file permissions are changed to 777 when 'rserver' starts.
+## Because of this, it is important that ${config_dir} is private (700) to
+## the user who lanched 'rsc'. However, to be on the safe side, we're
+## setting this for everything recursively.
+function secure_config_dir {
+    local path
+    mdebug "secure_config_dir() ..."
+    path=${1:-$(config_dir)}
+    [[ -z "${path}" ]] && error "secure_config_dir() requires a folder as first argument"
+    mdebug " - config_dir='${path}'"
+    [[ -d "${path}" ]] && chmod -R 700 "${path}"
+    mdebug "secure_config_dir() ... done"
+}
+
 function make_config_dir {
-    local workdir
-    workdir=$(config_dir)
-    mkdir -p "${workdir}"/{run,tmp,var/lib/rstudio-server,/var/run/rstudio-server}
-    chmod 700 "${workdir}"/{run,tmp,var/lib/rstudio-server,/var/run/rstudio-server}
+    local path
+    path=$(config_dir)
+    mkdir -p "${path}"/{run,tmp,var/lib/rstudio-server,/var/run/rstudio-server}
+    secure_config_dir "${path}"
 }
 
 
@@ -1168,7 +1185,8 @@ elif [[ "${action}" == "start" ]]; then
     exit_on_signals 0 SIGCONT SIGINT SIGTERM SIGUSR2
     
     launch_rserver
-    wait_for_rserver    
+    wait_for_rserver
+    secure_config_dir
 
     ## Update 'port', in case it was 'uid' or 'random'
     port=$(rserver_port)
