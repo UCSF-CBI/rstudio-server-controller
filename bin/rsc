@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /usr/bin/env bash
 ### rsc: An RStudio Server Controller
 ### 
 ### Usage:
@@ -30,6 +30,7 @@
 ###  --random-password   Generate a random password assigned to 'RSC_PASSWORD'
 ###  --force             Force an action
 ###  --full              Output more information
+###  --no-ssh            Skip anything involving SSH
 ###  
 ###  --env-pattern=<re>  Regular expression matching environment variables to be
 ###                      exported. To export all, use "^.+$". To export none,
@@ -59,13 +60,16 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.5.0
-### Copyright: Henrik Bengtsson and Harry Putnam (2021)
+### Version: 0.6.0
+### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: MIT
 
+this="${BASH_SOURCE%/}"
+[[ -L "${this}" ]] && this=$(readlink "${this}")
+
 ## Import bash utility functions
-incl="${BASH_SOURCE%/*}/incl"
-utils="${BASH_SOURCE%/*}/utils"
+incl="$(dirname "${this}")/incl"
+utils="$(dirname "${this}")/utils"
 
 # shellcheck source=incl/asserts.sh
 source "${incl}/asserts.sh"
@@ -79,6 +83,8 @@ source "${incl}/files.sh"
 source "${incl}/output.sh"
 # shellcheck source=incl/ports.sh
 source "${incl}/ports.sh"
+# shellcheck source=incl/system.sh
+source "${incl}/system.sh"
 
 
 # =========================================================================
@@ -138,6 +144,25 @@ function warn_auth_logfile {
   echo
 }
 
+## Parse --auth=<spec> specification
+function parse_auth {
+    local spec
+    local file
+    local ext
+    spec=${1:?}
+    
+    if echo "${spec}" | grep -q -E "^([^:]+)$"; then
+        file=${spec}
+    elif echo "${spec}" | grep -q -E "^([^:]+):([^:]+)$"; then
+        file=${spec/:*/}
+        ext=${spec/$file:/}
+    else
+        error "Invalid --auth=<spec> specification: ${spec}"
+    fi
+    echo "${file}"
+    echo "${ext}"
+}
+
 
 # -------------------------------------------------------------------------
 # Configuration utilities
@@ -150,11 +175,28 @@ function config_dir {
     echo "${path}/rsc"
 }
 
+## I think, rserver is designed so that any user on the system should be
+## able to write to ${config_dir}/rsc/var/run/rstudio-server/ and it's
+## subfolder rstudio-rsession/ when they log in and launch a new 'rsession',
+## because the file permissions are changed to 777 when 'rserver' starts.
+## Because of this, it is important that ${config_dir} is private (700) to
+## the user who lanched 'rsc'. However, to be on the safe side, we're
+## setting this for everything recursively.
+function secure_config_dir {
+    local path
+    mdebug "secure_config_dir() ..."
+    path=${1:-$(config_dir)}
+    [[ -z "${path}" ]] && error "secure_config_dir() requires a folder as first argument"
+    mdebug " - config_dir='${path}'"
+    [[ -d "${path}" ]] && chmod -R 700 "${path}"
+    mdebug "secure_config_dir() ... done"
+}
+
 function make_config_dir {
-    local workdir
-    workdir=$(config_dir)
-    mkdir -p "${workdir}"/{run,tmp,var/lib/rstudio-server,/var/run/rstudio-server}
-    chmod 700 "${workdir}"/{run,tmp,var/lib/rstudio-server,/var/run/rstudio-server}
+    local path
+    path=$(config_dir)
+    mkdir -p "${path}"/{run,tmp,var/lib/rstudio-server,/var/run/rstudio-server}
+    secure_config_dir "${path}"
 }
 
 
@@ -177,9 +219,12 @@ function acquire_lock_file {
 function remove_lock_file {
     local workdir
     local lockfile
+    mdebug "remove_lock_file() ..."
     workdir=$(config_dir)
     lockfile=${workdir}/pid.lock
+    mdebug " - lock file: ${lockfile}"
     [[ -f "${lockfile}" ]] && rm "${lockfile}" && mdebug "Lock file removed: ${lockfile}"
+    mdebug "remove_lock_file() ... done"
 }    
 
 
@@ -279,7 +324,7 @@ function make_rserver_conf {
     port=${1:?}
 
     if [[ "${port}" == "random" ]]; then
-        port=$(free_random_port "${port_seed}")
+        port=$(find_free_port "${port_seed}")
     fi
     assert_port_free "${port}"
 
@@ -349,53 +394,11 @@ function parse_revtunnel {
     echo "${port}"
 }
 
-function parse_auth {
-    local spec
-    local file
-    local ext
-    spec=${1:?}
-    
-    if echo "${spec}" | grep -q -E "^([^:]+)$"; then
-        file=${spec}
-    elif echo "${spec}" | grep -q -E "^([^:]+):([^:]+)$"; then
-        file=${spec/:*/}
-        ext=${spec/$file:/}
-    else
-        error "Invalid --auth=<spec> specification: ${spec}"
-    fi
-    echo "${file}"
-    echo "${ext}"
-}
-
-function wait_for_file {
-    local file
-    local maxseconds
-    
-    file=${1:?}
-    maxseconds=${2:-300}
-    
-    t0=${SECONDS}
-    mdebug "Waiting for file ${file} ..."
-    until [[ -f "${file}" && $((SECONDS - t0)) -lt "${maxseconds}" ]]; do
-        sleep 1.0
-    done
-    [[ ! -f "${file}" ]] && error "Waited for file ${file}, but gave up after ${maxseconds} seconds"
-    mdebug "Waiting for file ${file} ... done"
-}
-
-## A version of 'hostname' that will use either $HOSTNAME or hostname
-function hostname {
-    local res
-    res=${HOSTNAME}
-    [[ -z ${res} ]] && res=$(command hostname)
-    [[ -z ${res} ]] && error "Failed to infer hostname"
-    echo "${res}"
-}
-
 function check_pid {
     local pid
     local hostname
     local pid_exists
+    local asterisk
 
     pid=${1:?}
     hostname=${2:-$(hostname)}
@@ -404,22 +407,32 @@ function check_pid {
     mdebug "check_pid(pid=${pid}, hostname=${hostname}) ..."
 
     pid_exists=false
+    asterisk=false
     if [[ -n "${pid}" ]]; then
         ## Check PID on local machine or another machine?
         if [[ "${hostname}" == "$(hostname)" ]]; then
             mdebug "- Checking /proc/${pid} on current machine (${hostname})"
             [[ -d "/proc/${pid}" ]] && pid_exists=true
-        else
+        elif ${ssh}; then
             mdebug "- Checking /proc/${pid} on ${hostname} over SSH"
             #shellcheck disable=SC2029
             res=$(ssh "${hostname}" "[[ -d '/proc/${pid}' ]] && echo true || echo false") || error "Failed to check process PID ${pid} on ${hostname} over SSH"
             [[ "${res}" == "true" ]] && pid_exists=true
+        else
+            mdebug "- Skipping check of /proc/${pid} on ${hostname}, because --no-ssh"
+            pid_exists=true
+            asterisk=true
         fi
     fi
 
     if ${pid_exists}; then
-        mdebug "- ${hostname}:/proc/${pid} exists"
-        echo "${pid}"
+        if ${asterisk}; then
+            mdebug "- ${hostname}:/proc/${pid} exists (not verified)"
+            echo "${pid}"'*'
+        else
+            mdebug "- ${hostname}:/proc/${pid} exists"
+            echo "${pid}"
+        fi
     else
         mdebug "- ${hostname}:/proc/${pid} does not exist"
         echo ""
@@ -543,11 +556,19 @@ function rs_process_status {
     
     mdebug "rs_process_status(pid=${pid}, hostname=${hostname}):"
     
-    ## Check if pid is still active
-    [[ -n "${pid}" ]] && pid=$(check_pid "${pid}" "${hostname}")
+    ## Check if pid is still active?
+    if [[ -n ${pid} ]]; then
+        pid=$(check_pid "${pid}" "${hostname}")
+    fi
+
     
-    if [[ -n "${pid}" ]]; then
-        echo "running (pid ${pid}) on current machine (${hostname})"
+    if [[ -n ${pid} ]]; then
+        if [[ -z ${warning} ]]; then
+            echo "running (pid ${pid}) on machine (${hostname})"
+        else
+            warn "${warning}"
+            echo "running (pid ${pid}) on machine (${hostname}) [guess]"
+        fi
     else
         echo "not running"
     fi
@@ -577,7 +598,8 @@ function rsession_timeout {
     
     mdebug "rsession timeout: ${timeout} minutes"
     assert_integer "${timeout}"
-    export RSC_RSESSION_TIMEOUT="${timeout}"
+    RSC_RSESSION_TIMEOUT="${timeout}"
+    export RSC_RSESSION_TIMEOUT
     echo "${timeout}"
 }
 
@@ -703,8 +725,11 @@ function rsession_pid {
 
 function terminate_rsession {
     local pid
+    mdebug "terminate_rsession() ..."
     pid=$(rsession_pid)
+    mdebug " - pid: '${pid}'"
     [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rsession (PID ${pid}) terminated"
+    mdebug "terminate_rsession() ... done"
 }
 
 function rsession_status {
@@ -723,6 +748,14 @@ function wait_for_rserver {
     wait_for_file "${workdir}/rserver.pid"
     wait_for_file "${workdir}/rserver.hostname"
     wait_for_file "${workdir}/rserver.port"
+
+    ## Memoize rserver information (needs to be done in parent process)
+    _RSC_RSERVER_PID_=$(rserver_pid)
+    _RSC_RSERVER_HOSTNAME_=$(rserver_hostname)
+    _RSC_RSERVER_PORT_=$(rserver_port)
+    export _RSC_RSERVER_PID_
+    export _RSC_RSERVER_HOSTNAME_
+    export _RSC_RSERVER_PORT_
 }    
 
 function rserver_pid_file {
@@ -733,32 +766,51 @@ function rserver_pid_file {
     echo "${workdir}/rserver.pid"
 }
 
+_RSC_RSERVER_PID_=
 function rserver_pid {
-    read_pid "${1:-false}" "$(rserver_pid_file)"
+    ## Already known?
+    if [[ -z "${_RSC_RSERVER_PID_}" ]]; then
+         _RSC_RSERVER_PID_=$(read_pid "${1:-false}" "$(rserver_pid_file)")
+         export _RSC_RSERVER_PID_ ## NOTE: assigned in the current process
+    fi
+    echo "${_RSC_RSERVER_PID_}"   
 }
 
+_RSC_RSERVER_HOSTNAME_=
 function rserver_hostname {
     local workdir
     local file
-    workdir=$(config_dir)
-    assert_dir_exists "${workdir}"
-    file="${workdir}/rserver.hostname"
-    assert_file_exists "${file}"
-    res=$(cat "${file}")
-    [[ -z "${res}" ]] && error "File is empty: ${file}"
-    echo "${res}"
+    ## Already known?
+    if [[ -z "${_RSC_RSERVER_HOSTNAME_}" ]]; then
+        workdir=$(config_dir)
+        assert_dir_exists "${workdir}"
+        file="${workdir}/rserver.hostname"
+        assert_file_exists "${file}"
+        res=$(cat "${file}")
+        [[ -z "${res}" ]] && error "File is empty: ${file}"
+         _RSC_RSERVER_HOSTNAME_=${res}
+         export _RSC_RSERVER_HOSTNAME_ ## NOTE: assigned in the current process
+    fi
+    echo "${_RSC_RSERVER_HOSTNAME_}"
 }
 
+_RSC_RSERVER_PORT_=
 function rserver_port {
     local workdir
     local file
-    workdir=$(config_dir)
-    assert_dir_exists "${workdir}"
-    file="${workdir}/rserver.port"
-    assert_file_exists "${file}"
-    res=$(cat "${file}")
-    [[ -z "${res}" ]] && error "File is empty: ${file}"
-    echo "${res}"
+    ## Already known?
+    mdebug "_RSC_RSERVER_PORT_='${_RSC_RSERVER_PORT_}'"
+    if [[ -z "${_RSC_RSERVER_PORT_}" ]]; then
+        workdir=$(config_dir)
+        assert_dir_exists "${workdir}"
+        file="${workdir}/rserver.port"
+        assert_file_exists "${file}"
+        res=$(cat "${file}")
+        [[ -z "${res}" ]] && error "File is empty: ${file}"
+         _RSC_RSERVER_PORT_=${res}
+         export _RSC_RSERVER_PORT_ ## NOTE: assigned in the current process
+    fi
+    echo "${_RSC_RSERVER_PORT_}"
 }
 
 function rserver_url {
@@ -767,8 +819,11 @@ function rserver_url {
 
 function terminate_rserver {
     local pid
+    mdebug "terminate_rserver() ..."
     pid=$(rserver_pid)
+    mdebug " - pid: ${pid}"
     [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rserver (PID ${pid}) terminated"
+    mdebug "terminate_rserver() ... done"
 }
 
 function launch_rserver {
@@ -824,28 +879,24 @@ function shutdown {
     } > /dev/null
     message "Shutting down RStudio Server ... done"
 }
-
-function on_sigterm {
-    message "Received a SIGTERM signal"
-    exit 0
+function exit_on_signals {
+    local exit_code
+    local signal
+    local cmd
+    exit_code=${1:?}
+    assert_integer "${exit_code}"
+    shift
+    for signal in "$@"; do
+        mdebug "Registering trap: ${signal} => exit ${exit_code}"
+        cmd="message 'Received a ${signal} signal => exit ${exit_code}'; exit ${exit_code}"
+        mdebug "- trap \"${cmd}\" \"${signal}\""
+        #shellcheck disable=SC2064
+        trap "${cmd}" "${signal}"
+    done
 }
 
-function on_sigcont {
-    message "Received a SIGCONT signal"
-    exit 0
-}
 
-function on_sigusr2 {
-    message "Received a SIGUSR2 signal"
-    exit 0
-}
-
-function on_sigint {
-    message "Received a SIGINT signal"
-    exit 0
-}
-
-# -------------------------------------------------------------------------
+# =========================================================================
 # MAIN
 # -------------------------------------------------------------------------
 ## Actions
@@ -860,15 +911,16 @@ port=${RSC_PORT:-uid}
 port_seed=${RSC_PORT_SEED:-}
 [[ -n ${port_seed} ]] && assert_integer "${port_seed}"
 field=
-auth="auth-via-su"
+auth=${RSC_AUTH:-auth-via-su}
 revtunnel=()
+ssh=${RSC_SSH:-true}
 
 ## Should 'rsession' inherit exported environment variables from the
 ## 'rsc' process?  If 'false', then the default behavior of 'rserver'
 ## is to use a a clean set of environment variables.  That default
 ## behavior prevents R from seeing, for instance, environment variables
 ## set by a job scheduler.
-rsession_inherit_env_pattern="^.+$"
+rsession_inherit_env_pattern=${RSC_ENV_PATTERN:-"^.+$"}
     
 
 # Parse command-line options
@@ -907,6 +959,8 @@ while [[ $# -gt 0 ]]; do
         force=true
     elif [[ "$1" == "--full" ]]; then
         full=true
+    elif [[ "$1" == "--no-ssh" ]]; then
+        ssh=false
     elif [[ "$1" == "--random-password" ]]; then
         RSC_PASSWORD=$(openssl rand -base64 15)
         export RSC_PASSWORD
@@ -996,6 +1050,7 @@ mdebug "field: ${field}"
 mdebug "auth: ${auth}"
 mdebug "RSC_AUTH_ARG_2: ${RSC_AUTH_ARG_2}"
 mdebug "revtunnel: [n=${#revtunnel[@]}] ${revtunnel[*]}"
+mdebug "ssh: ${ssh}"
 mdebug "args: [n=${#args[@]}] ${args[*]}"
 
 
@@ -1066,8 +1121,13 @@ elif [[ "${action}" == "log" ]]; then
 elif [[ "${action}" == "status" ]]; then
     mdebug "rsc status ..."
     if [[ -z ${field} ]]; then
-        printf "%s: %s\n" "rserver" "$(rserver_status)"
-        printf "%s: %s\n" "rsession" "$(rsession_status)"
+        status="rserver: $(rserver_status)\n"
+        status="${status}rsession: $(rsession_status)"
+        ## AD HOC: Is there an asterisk on the pid?
+        if grep -q -E 'pid [[:digit:]]+[*]' <<< "${status}"; then
+            status="${status}\n* This is only assumed, because without SSH (--no-ssh) we couldn't confirm the process is still running"
+        fi
+        echo -e "${status}"
         workdir=$(config_dir)
         lockfile=${workdir}/pid.lock
         if [[ -f "${lockfile}" ]]; then
@@ -1107,8 +1167,16 @@ elif [[ "${action}" == "stop" ]]; then
 elif [[ "${action}" == "reset" ]]; then
     workdir=$(config_dir)
     if [[ -d "${workdir}" ]]; then
+        files=("$(rsession_pid_file)" "${workdir}/rserver.pid" "${workdir}/rserver.hostname" "${workdir}/rserver.port" "${workdir}/pid.lock")
         if $force; then
-            warn "Deleting rsc folder without checking if there is an active RStudio Server instance: ${workdir}"
+            existing=()
+            for file in "${files[@]}"; do
+                [[ -f "${file}" ]] && existing+=("${file}")
+            done
+            mdebug "Files that will be deleted: ${existing[*]}"
+            if [[ ${#existing[@]} -gt 0 ]]; then
+                warn "Deleting rsc folder and files (${existing[*]}) without checking if there is an active RStudio Server instance: ${workdir}"
+            fi
         else
             acquire_lock_file
         fi
@@ -1140,37 +1208,23 @@ elif [[ "${action}" == "start" ]]; then
 
     mdebug "PID for rsc (this process): $$"
 
-    ## For troubleshooting/debugging Slurm termination /HB 2022-01-27
-##    for kk in {0..64}; do
-##        trap "echo '$0: Caught signal ${kk}'" "${kk}"
-##    done
-    
-    ## Make sure to stop the RStudio Server and any R sessions on exit
+    ## Shutdown nicely
     mdebug "Registering 'trap shutdown EXIT', which perform cleanups"
     trap shutdown EXIT
-
-    mdebug "Registering 'trap on_sigterm SIGTERM'"
-    trap on_sigterm SIGTERM
-
-    mdebug "Registering 'trap on_sigterm SIGCONT'"
-    trap on_sigcont SIGCONT
-
-    mdebug "Registering 'trap on_sigterm SIGUSR2'"
-    trap on_sigusr2 SIGUSR2
-
-    mdebug "Registering 'trap on_sigint SIGINT'"
-    trap on_sigint SIGINT
-
-    launch_rserver
-
-    wait_for_rserver    
+    exit_on_signals 0 SIGCONT SIGINT SIGTERM SIGUSR2
     
+    launch_rserver
+    wait_for_rserver
+    secure_config_dir
+
     ## Update 'port', in case it was 'uid' or 'random'
     port=$(rserver_port)
-    mdebug "RStudio Server port: ${port}"
     
     ## Reverse SSH tunnel?
     if [[ ${#revtunnel[@]} -gt 0 ]]; then
+        if ! ${ssh}; then
+            error "Cannot setup reverse SSH tunnel, because --no-ssh was used"
+        fi
         mdebug "Setting up reverse SSH tunnel ..."
         rev_hostname=${revtunnel[0]}
         rev_port=${revtunnel[1]}

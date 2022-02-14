@@ -28,43 +28,54 @@
 ###  freeport --help
 ###  freeport --version
 ###
-###  freeport
-###
-###  # Find the first free port in [1024, 65535]
-###  freeport --method=ordered
-###
-###  # Don't consider ports the first two ports {1024, 1025}
-###  freeport --method=ordered --skip=2
-###
-###  # Alternative for the above
-###  freeport --method=ordered --min=1026
-###
 ###  # Find a random free port in [1024, 65535]
-###  freeport --method=random
+###  freeport
+###  freeport --method=random --min=1024 --max=65535
 ###
-###  # Find a random free port in [1024, 65535] using 1000 as the random seed
-###  freeport --method=random --seed=1000
+###  # Find a random port using user's ID (UID) as the random seed.
+###  # This often finds the same port for the current user, while
+###  # lowering the risk for port conflicts with other users. This
+###  # is useful on multi-tenant systems, where users need to use
+###  # one or more ports.
+###  freeport --seed="$(id --user)"
 ###
-###  # Find a random free port in [1024, 65535] using UID as the random seed 
-###  freeport --method=random --seed="$(id -u)"
+###  # Find a UID random port but skip the first proposal to avoid
+###  # clashing with above port. This can be used to get different
+###  # ports for different applications running at the same time.
+###  freeport --seed="$(id --user)" --skip=1
 ###
-###  # Test if port 4321 is free
-###  freeport --min=4321 --max=4321 > /dev/null
-###  is_free=$?
+###  # Find the first free random port in {11000, 11001, ..., 11999}
+###  freeport --min=11000 --max=11999
 ###
-###  # Alternative for the above
-###  freeport --test=4321
+###  # Find the fourth free random port in {11000, 11001, ..., 11999}
+###  freeport --min=11000 --max=11999 --skip=3
+###
+###  # Find the first free port in {11000, 11001, ..., 11999}
+###  freeport --method=increasing --min=11000 --max=11999
+###
+###  # Find the first free port in {11999, 11998, ..., 11000}
+###  freeport --method=decreasing --min=11000 --max=11999
+###
+###  # Find the first free port in {11000, 11001, ..., 11999}, but
+###  # skip {11000, ..., 11003}
+###  freeport --method=increasing --min=11000 --max=11999 --skip=4
+###
+###  # Test if port 4321 is free (outputs -1 if not)
+###  freeport --min=4321 --max=min
 ###  is_free=$?
 ###
 ### Requirements:
 ### * python
 ###
-### Version: 0.0.0-9000
+### Version: 0.0.0-9001
 ### Copyright: Henrik Bengtsson (2021)
 ### License: MIT
 
+this="${BASH_SOURCE%/}"
+[[ -L "${this}" ]] && this=$(readlink "${this}")
+
 ## Import bash utility functions
-incl="${BASH_SOURCE%/*}/incl"
+incl="$(dirname "${this}")/incl"
 
 # shellcheck source=incl/asserts.sh
 source "${incl}/asserts.sh"
@@ -80,13 +91,95 @@ source "${incl}/output.sh"
 source "${incl}/ports.sh"
 
 
-error "Sorry, $(basename "$0") is not yet implemented"
+# =========================================================================
+# Utility functions
+# =========================================================================
 
-## Was a preferred port specified?
-if [[ -n ${1} ]]; then
-    ## Is it available?
-    nc -z 127.0.0.1 "${1}" || { echo "${1}"; exit 0; }
+# =========================================================================
+# MAIN
+# -------------------------------------------------------------------------
+debug=false
+verbose=false
+quiet=false
+
+skip=0
+min=1024
+max=65535
+method=random
+seed=
+args=()
+
+# Parse command-line options
+while [[ $# -gt 0 ]]; do
+    mdebug "Next CLI argument: $1"
+
+    ## Options (--flags):
+    if [[ "$1" == "--help" ]]; then
+        action=help
+    elif [[ "$1" == "--version" ]]; then
+        action=version
+    elif [[ "$1" == "--debug" ]]; then
+        debug=true
+    elif [[ "$1" == "--verbose" ]]; then
+        verbose=true
+    elif [[ "$1" == "--quiet" ]]; then
+        quiet=true
+        
+    ## Options (--key=value):
+    elif [[ "$1" =~ ^--.*=.*$ ]]; then
+        key=${1//--}
+        key=${key//=*}
+        value=${1//--[[:alpha:]]*=}
+        mdebug "Key-value option '$1' parsed to key='${key}', value='${value}'"
+        if [[ -z ${value} ]]; then
+            merror "Option '--${key}' must not be empty"
+        fi
+        if [[ "${key}" == "method" ]]; then
+            method=${value}
+        elif [[ "${key}" == "seed" ]]; then
+            seed=${value}
+        elif [[ "${key}" == "min" ]]; then
+            min=${value}
+        elif [[ "${key}" == "max" ]]; then
+            max=${value}
+        elif [[ "${key}" == "skip" ]]; then
+            skip=${value}
+        else
+            merror "Unknown option: $1"
+        fi
+    ## Additional options to be appended (rarely needed)
+    else
+        args+=("$1")
+    fi
+    shift
+done
+
+
+## --help should always be available prior to any validation errors
+if [[ $action == "help" ]]; then
+    help full
+    _exit 0
+elif [[ $action == "version" ]]; then
+    version
+    _exit 0
 fi
 
-## Find a random, free port
-python -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()'
+
+# -------------------------------------------------------------------------
+# Validate options
+# -------------------------------------------------------------------------
+if [[ -n "${seed}" ]]; then
+    assert_integer "${seed}"
+fi
+
+assert_integer "${skip}"
+assert_port "${min}"
+if [[ "${max}" == "min" ]]; then
+    max=${min}
+fi
+assert_port "${max}"
+
+port=$(find_free_port "${seed}" "${method}" "${skip}" "${min}" "${max}")
+res=$?
+echo "${port}"
+exit "${res}"

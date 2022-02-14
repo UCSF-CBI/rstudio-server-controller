@@ -1,5 +1,38 @@
 # rstudio-server-launcher
 
+## Version 0.6.0
+
+Security fix:
+
+* The `$HOME/.config/rsc/var/run/rstudio-server/` folder and its subfolder
+  `rstudio-rsession` folder was writable by anyone on the system (777 in
+  Unix terms). The `rserver` process sets these file permissions by design,
+  because these folders are meant to be used by different users on the
+  system. This would not have been a problem if the `$HOME/.config/rsc/`
+  folder would be fully private to the user (700 in Unix terms), but due to
+  a thinko, that folder was accessible and readable by anyone.  Combined,
+  this could lead to anyone on the system being able to write to the above
+  folders. We now make sure `$HOME/.config/rsc/` is fully private. Also,
+  since `rsc` is only used to launch a personal RStudio Server instance,
+  we recursively set all of its files and folders private too (700).
+
+New features:
+
+* Using `rsc status --no-ssh` will skip attempts to SSH into another
+  machine to check if the rserver is running there.
+
+* Now `rsc reset --force` warns if critical rsc-related files exists, and
+  which they are, otherwise the cleanup is silent.
+
+Prototype:
+
+* Add `freeport`.
+
+Bug fixes:
+
+* 'rsc' failed if called via a symbolic link.
+
+
 ## Version 0.5.0
 
 Significant changes:
