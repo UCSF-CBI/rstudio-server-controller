@@ -35,7 +35,7 @@ Prototype:
 
 Bug fixes:
 
-* 'rsc' failed if called via a symbolic link.
+* `rsc` failed if called via a symbolic link.
 
 
 ## Version 0.5.0
