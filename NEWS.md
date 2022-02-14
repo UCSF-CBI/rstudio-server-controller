@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.5.0-9004
+## Version 0.6.0
 
 Security fix:
 

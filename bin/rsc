@@ -60,8 +60,8 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.5.0-9004
-### Copyright: Henrik Bengtsson and Harry Putnam (2021)
+### Version: 0.6.0
+### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: MIT
 
 this="${BASH_SOURCE%/}"
