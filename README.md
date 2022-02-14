@@ -233,13 +233,13 @@ As before, the RStudio Server is available at <http://127.0.0.1:8787>.
 
 * Bash
 
-* `expect` (<https://core.tcl-lang.org/expect/index>) - needed by the `auth-via-ssh` method, and depending system and `su` implementation, also by `auth-via-su`
-
 * R (<https://www.r-project.org>)
 
 * RStudio Server (<https://www.rstudio.com/products/rstudio/#rstudio-server>)
 
 * Python (<https://www.python.org/>) - used for generating random ports and to validate port is available
+
+* `expect` (<https://core.tcl-lang.org/expect/index>) - needed by the `auth-via-ssh` method, and, depending on system and `su` implementation, also by `auth-via-su`
 
 
 ## Installation
