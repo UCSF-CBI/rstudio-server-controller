@@ -60,8 +60,8 @@ local web browser, either locally, or remotely via SSH tunneling.
 
 * The tool attempts to be agile to different POSIX signals to shut
   down everything when the RStudio Server instance is terminated,
-  e.g. by `SIGINT` from <kbd>Ctrl-C</kbd>, or a `SIGUSR2` notification
-  signal by a job scheduler
+  e.g. by `SIGINT` from <kbd>Ctrl-C</kbd>, `SIGQUIT` from <kbd>Ctrl-\</kbd>,
+  or a `SIGUSR2` notification signal by a job scheduler
 
 
 ## Running RStudio Server locally
