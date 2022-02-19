@@ -60,7 +60,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.6.0-9001
+### Version: 0.6.0-9002
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -728,7 +728,11 @@ function terminate_rsession {
     mdebug "terminate_rsession() ..."
     pid=$(rsession_pid)
     mdebug " - pid: '${pid}'"
-    [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rsession (PID ${pid}) terminated"
+    if [[ -n ${pid} ]]; then
+        pid=$(check_pid "${pid}")
+        mdebug " - pid: '${pid}'"
+        [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rsession (PID ${pid}) terminated"
+    fi
     mdebug "terminate_rsession() ... done"
 }
 
@@ -822,7 +826,11 @@ function terminate_rserver {
     mdebug "terminate_rserver() ..."
     pid=$(rserver_pid)
     mdebug " - pid: ${pid}"
-    [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rserver (PID ${pid}) terminated"
+    if [[ -n ${pid} ]]; then
+        pid=$(check_pid "${pid}")
+        mdebug " - pid: '${pid}'"
+        [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rserver (PID ${pid}) terminated"
+    fi
     mdebug "terminate_rserver() ... done"
 }
 

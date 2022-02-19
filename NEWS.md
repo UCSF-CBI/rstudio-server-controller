@@ -1,8 +1,11 @@
 # rstudio-server-launcher
 
-## Version 0.6.0-9001
+## Version 0.6.0-9002
 
-* ...
+Miscellaneous
+
+* `rsc start` would output "rsc: line 825: kill: (30801) - No such process"
+  when terminated via SIGINT (e.g. Ctrl-C).
 
 
 ## Version 0.6.0
