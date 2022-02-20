@@ -1,11 +1,16 @@
 # rstudio-server-launcher
 
-## Version 0.6.0-9002
+## Version 0.6.0-9003
 
-Miscellaneous
+Miscellaneous:
 
 * `rsc start` would output "rsc: line 825: kill: (30801) - No such process"
   when terminated via SIGINT (e.g. Ctrl-C).
+
+Bug fixes:
+
+* `rsc stop` did not stop the SSH reverse-tunnel connection, if called, which
+  prevented the `rsc start --revtunnel=<host>:<port>` call from terminating.
 
 
 ## Version 0.6.0
