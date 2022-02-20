@@ -60,8 +60,8 @@ local web browser, either locally, or remotely via SSH tunneling.
 
 * The tool attempts to be agile to different POSIX signals to shut
   down everything when the RStudio Server instance is terminated,
-  e.g. by `SIGINT` from <kbd>Ctrl-C</kbd>, or a `SIGUSR2` notification
-  signal by a job scheduler
+  e.g. by `SIGINT` from <kbd>Ctrl-C</kbd>, `SIGQUIT` from <kbd>Ctrl-\</kbd>,
+  or a `SIGUSR2` notification signal by a job scheduler
 
 
 ## Running RStudio Server locally
@@ -233,24 +233,24 @@ As before, the RStudio Server is available at <http://127.0.0.1:8787>.
 
 * Bash
 
-* `expect` (<https://core.tcl-lang.org/expect/index>) - needed by the `auth-via-ssh` method, and depending system and `su` implementation, also by `auth-via-su`
-
 * R (<https://www.r-project.org>)
 
 * RStudio Server (<https://www.rstudio.com/products/rstudio/#rstudio-server>)
 
 * Python (<https://www.python.org/>) - used for generating random ports and to validate port is available
 
+* `expect` (<https://core.tcl-lang.org/expect/index>) - needed by the `auth-via-ssh` method, and, depending on system and `su` implementation, also by `auth-via-su`
+
 
 ## Installation
 
 ```sh
 $ cd /path/to/software
-$ curl -L -O https://github.com/UCSF-CBI/rstudio-server-controller/archive/refs/tags/0.6.0.tar.gz
-$ tar xf 0.6.0.tar.gz
-$ PATH=/path/to/softwarerstudio-server-controller-0.6.0/bin:$PATH
+$ curl -L -O https://github.com/UCSF-CBI/rstudio-server-controller/archive/refs/tags/0.6.1.tar.gz
+$ tar xf 0.6.1.tar.gz
+$ PATH=/path/to/softwarerstudio-server-controller-0.6.1/bin:$PATH
 $ export PATH
 $ rsc --version
-0.6.0
+0.6.1
 ```
 

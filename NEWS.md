@@ -1,11 +1,24 @@
 # rstudio-server-launcher
 
+## Version 0.6.1
+
+Miscellaneous:
+
+* `rsc start` would output "rsc: line 825: kill: (30801) - No such process"
+  when terminated via SIGINT (e.g. Ctrl-C).
+
+Bug fixes:
+
+* `rsc stop` did not stop the SSH reverse-tunnel connection, if called, which
+  prevented the `rsc start --revtunnel=<host>:<port>` call from terminating.
+
+
 ## Version 0.6.0
 
 Security fix:
 
 * The `$HOME/.config/rsc/var/run/rstudio-server/` folder and its subfolder
-  `rstudio-rsession` folder was writable by anyone on the system (777 in
+  `rstudio-rsession` folder were writable by anyone on the system (777 in
   Unix terms). The `rserver` process sets these file permissions by design,
   because these folders are meant to be used by different users on the
   system. This would not have been a problem if the `$HOME/.config/rsc/`
@@ -30,7 +43,7 @@ Prototype:
 
 Bug fixes:
 
-* 'rsc' failed if called via a symbolic link.
+* `rsc` failed if called via a symbolic link.
 
 
 ## Version 0.5.0

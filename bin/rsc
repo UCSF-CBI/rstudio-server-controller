@@ -60,9 +60,9 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.6.0
+### Version: 0.6.1
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
-### License: MIT
+### License: ISC
 
 this="${BASH_SOURCE%/}"
 [[ -L "${this}" ]] && this=$(readlink "${this}")
@@ -237,7 +237,7 @@ function remove_stray_lockfile {
     mdebug "remove_stray_lockfile() ..."
     
     ## Nothing to do?
-    [[ ! -f "${lockfile}" ]] || [[ -n "$(rserver_pid true)" ]] || [[ -n "$(rsession_pid true)" ]] && return 0;
+    [[ ! -f "${lockfile}" ]] || [[ -n "$(rserver_pid true)" ]] || [[ -n "$(rsession_pid true)" ]] || [[ -n "$(ssh_revtunnel_pid true)" ]] && return 0;
     
     ## Here we know that there's neither a rserver PID nor a rsession PID
     rm "${lockfile}"
@@ -264,6 +264,8 @@ function remove_stray_pid_file {
         pid_file="$(rserver_pid_file)"
     elif [[ "${what}" == "rsession" ]]; then
         pid_file="$(rsession_pid_file)"
+    elif [[ "${what}" == "ssh_revtunnel" ]]; then
+        pid_file="$(ssh_revtunnel_pid_file)"
     else
         error "Unknown PID file type: ${what}"
     fi
@@ -728,7 +730,11 @@ function terminate_rsession {
     mdebug "terminate_rsession() ..."
     pid=$(rsession_pid)
     mdebug " - pid: '${pid}'"
-    [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rsession (PID ${pid}) terminated"
+    if [[ -n ${pid} ]]; then
+        pid=$(check_pid "${pid}")
+        mdebug " - pid: '${pid}'"
+        [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rsession (PID ${pid}) terminated"
+    fi
     mdebug "terminate_rsession() ... done"
 }
 
@@ -822,7 +828,11 @@ function terminate_rserver {
     mdebug "terminate_rserver() ..."
     pid=$(rserver_pid)
     mdebug " - pid: ${pid}"
-    [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rserver (PID ${pid}) terminated"
+    if [[ -n ${pid} ]]; then
+        pid=$(check_pid "${pid}")
+        mdebug " - pid: '${pid}'"
+        [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rserver (PID ${pid}) terminated"
+    fi
     mdebug "terminate_rserver() ... done"
 }
 
@@ -864,6 +874,35 @@ function rserver_status {
 }    
 
 
+
+# -------------------------------------------------------------------------
+# SSH reverse-tunnel connection
+# -------------------------------------------------------------------------
+function ssh_revtunnel_pid_file {
+    local workdir
+    workdir=$(config_dir)
+    echo "${workdir}/ssh-revtunnel.pid"
+}
+
+_RSC_RSERVER_PID_=
+function ssh_revtunnel_pid {
+    read_pid "${1:-false}" "$(ssh_revtunnel_pid_file)"
+}
+
+function terminate_ssh_revtunnel {
+    local pid
+    mdebug "terminate_ssh_revtunnel() ..."
+    pid=$(ssh_revtunnel_pid)
+    mdebug " - pid: '${pid}'"
+    if [[ -n ${pid} ]]; then
+        pid=$(check_pid "${pid}")
+        mdebug " - pid: '${pid}'"
+        [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "SSH reverse-tunnel connection (PID ${pid}) terminated"
+    fi
+    mdebug "terminate_ssh_revtunnel() ... done"
+}
+
+
 # -------------------------------------------------------------------------
 # Signal trap functions
 # -------------------------------------------------------------------------
@@ -871,11 +910,13 @@ function shutdown {
     message "Shutting down RStudio Server ..."
     terminate_rsession
     terminate_rserver
+    terminate_ssh_revtunnel
     remove_lock_file
     {
         remove_stray_lockfile
         remove_stray_pid_file rsession
         remove_stray_pid_file rserver
+        remove_stray_pid_file ssh_revtunnel
     } > /dev/null
     message "Shutting down RStudio Server ... done"
 }
@@ -1160,6 +1201,10 @@ elif [[ "${action}" == "stop" ]]; then
     pid=$(rserver_pid)
     [[ -n "${pid}" ]] && kill -TERM "${pid}"
 
+    ## Terminate SSH reverse-tunnel connection
+    pid=$(ssh_revtunnel_pid)
+    [[ -n "${pid}" ]] && kill -TERM "${pid}"
+
     ## Remove lock file
     remove_lock_file
     
@@ -1217,6 +1262,10 @@ elif [[ "${action}" == "start" ]]; then
     wait_for_rserver
     secure_config_dir
 
+    rs_pid="$(rserver_pid)"
+    [[ -z "${rs_pid}" ]] && error "RStudio Server failed to start for unknown reasons. One reason for this might be that the port (${port}) is already occupied"
+    pids=("${rs_pid}")
+    
     ## Update 'port', in case it was 'uid' or 'random'
     port=$(rserver_port)
     
@@ -1235,14 +1284,20 @@ elif [[ "${action}" == "start" ]]; then
         mdebug " - rev spec: ${rev_spec}"
 
         message "${USER}, your personal RStudio Server is available on <http://${rev_hostname}:${rev_port}>."
-        
+
+        pid_file=$(ssh_revtunnel_pid_file)
         if $dryrun; then
             echo "DRYRUN: ssh -N -R \"${rev_spec}\" \"${rev_hostname}\""
-            sleep 60
+            sleep 60 &
         else
             mdebug "ssh -N -R \"${rev_spec}\" \"${rev_hostname}\""
-            ssh -N -R "${rev_spec}" "${rev_hostname}"
+            ssh -N -R "${rev_spec}" "${rev_hostname}" &
         fi
+        ssh_pid=$!
+        echo "${ssh_pid}" > "${pid_file}"
+        ssh_pid=$(ssh_revtunnel_pid false)
+        mdebug "Reverse SSH tunnel started (pid ${ssh_pid})"
+        pids+=("${ssh_pid}")
         mdebug "Setting up reverse SSH tunnel ... done"
     else
         if on_local_machine; then
@@ -1253,13 +1308,10 @@ elif [[ "${action}" == "start" ]]; then
         fi
         
         message "Any R session started times out after being idle for $(rsession_timeout) minutes."
-    
-        rs_pid="$(rserver_pid)"
-        [[ -z "${rs_pid}" ]] && error "RStudio Server failed to start for unknown reasons. One reason for this might that the port (${port}) is already occupied"
     fi    
     
-    mdebug "Waiting for 'rserver' (pid ${rs_pid}) to finish ..."
-    wait "${rs_pid}"
+    mdebug "Waiting for background process (pids ${pids[*]}) to finish ..."
+    wait "${pids[@]}"
     res=$?
     mdebug "'rserver' exit code: ${res}"
     mdebug "Waiting for 'rserver' (pid ${rs_pid}) to finish ... done"
