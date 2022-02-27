@@ -1,8 +1,9 @@
 # rstudio-server-launcher
 
-## Version 0.6.1-9000
+## Version 0.6.1-9001
 
-* ...
+* `rsc` now respected environment variable `NO_COLOR`. Set it to any non-empty
+  value to disable colored output.
 
 
 ## Version 0.6.1
