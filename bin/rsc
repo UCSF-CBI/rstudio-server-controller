@@ -7,7 +7,7 @@
 ### Commands:
 ###  start               Start the RStudio Server
 ###  wait                Wait for RStudio Server instance to be available
-###  stop                Stop the RStudio Server and any R session
+###  stop                Stop the RStudio Server and any R and SSH sessions
 ###  status              Check whether the RStudio Server is running or not
 ###  config              Output configuration details
 ###  reset               Wipe all configuration
