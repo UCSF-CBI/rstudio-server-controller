@@ -1272,9 +1272,6 @@ elif [[ "${action}" == "start" ]]; then
 
     validate_auth
 
-    ## Assert that there is no rserver process created by rsc running
-    assert_no_rserver
-    
     make_config_dir
     acquire_lock_file
     
@@ -1286,6 +1283,9 @@ elif [[ "${action}" == "start" ]]; then
 
     mdebug "PID for rsc (this process): $$"
 
+    ## Assert that there is no rserver process created by rsc running
+    assert_no_rserver
+    
     ## Shutdown nicely
     mdebug "Registering 'trap shutdown EXIT', which perform cleanups"
     trap shutdown EXIT
