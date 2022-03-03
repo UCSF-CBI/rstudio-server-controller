@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.6.1-9003
+## Version 0.6.1-9004
 
 ### New features
 
@@ -9,6 +9,9 @@
 
 * `rsc` now respected environment variable `NO_COLOR`. Set it to any
   non-empty value to disable colored output.
+
+* `rsc status` will now warn against stray `rserver` processes that
+  are running despite no existing lock and PID files.
 
 ### Bug fixes
 

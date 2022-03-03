@@ -61,7 +61,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.6.1-9003
+### Version: 0.6.1-9004
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -877,13 +877,17 @@ function rserver_status {
 
 
 function assert_no_rserver {
+    local action
     local pid
     local pids
     local call
+    local msg
     local workdir
+
+    action=${1:-error}
     workdir=$(config_dir)
     
-    mdebug "assert_no_rserver() ..."
+    mdebug "assert_no_rserver(action='$1') ..."
     
     mapfile -t pids < <(pgrep rserver)
     mdebug "rserver PIDs: [n=${#pids[@]}] ${pids[*]}"
@@ -892,11 +896,19 @@ function assert_no_rserver {
         call=$(ps -o args -p "${pid}" | tail -n -1)
         mdebug " - call: ${call}"
         if grep -q -E -- "--config-file=${workdir}/rserver.conf" <<< "${call}"; then
-            error "Even if there are no PID and lock files, there is another rserver process (PID ${pid}) already running on this machine ($(hostname)): ${call}"
+            msg="Even if there are no PID and lock files, there is another rserver process (PID ${pid}) already running on this machine ($(hostname)): ${call}"
+            case ${action} in
+                error)
+                    error "${msg}";;
+                warn)
+                    warn "${msg}";;
+                *)
+                    error "[INTERNAL] Unknown argument to assert_no_rserver(): $1";;
+            esac
         fi
     done
 
-    mdebug "assert_no_rserver() ... done"
+    mdebug "assert_no_rserver(action='$1') ... done"
 }    
 
 # -------------------------------------------------------------------------
@@ -1214,6 +1226,8 @@ elif [[ "${action}" == "status" ]]; then
             rserver_hostname
         fi
     fi
+    ## Warn about stray 'rserver' processes on the current machine
+    ! ${force} && [[ "$(rserver_status)" == "not running" ]] && assert_no_rserver warn
     mdebug "rsc status ... done"
 elif [[ "${action}" == "stop" ]]; then
     workdir=$(config_dir)
