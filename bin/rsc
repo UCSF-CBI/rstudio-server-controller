@@ -45,6 +45,7 @@
 ### Example:
 ###  rsc --help
 ###  rsc --version
+###  rsc --version --full
 ###
 ###  rsc start
 ###  rsc start --port=8787
@@ -60,7 +61,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.6.1-9001
+### Version: 0.6.1-9002
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -1053,7 +1054,13 @@ elif [[ $action == "help" ]]; then
     help full
     _exit 0
 elif [[ $action == "version" ]]; then
-    version
+    if $full; then
+        echo "rsc: $(version)"
+        echo "RStudio Server: $(rstudio-server version)"
+        echo "R: $(R --version | head -1 | sed 's/R version //')"
+    else
+        version
+    fi
     _exit 0
 fi
 
