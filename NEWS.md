@@ -2,17 +2,25 @@
 
 ## Version 0.6.1-9003
 
-* Now `rsc --version --full` report on the version for `rsc`, RStudio Server,
-  and R.
+* Now `rsc --version --full` report on the version for `rsc`, RStudio
+  Server, and R.
 
-* `rsc` now respected environment variable `NO_COLOR`. Set it to any non-empty
-  value to disable colored output.
+* `rsc` now respected environment variable `NO_COLOR`. Set it to any
+  non-empty value to disable colored output.
 
-* Added more protection for launching multiple RStudio Server instances. Now
-  `rsc start` asserts there are no stray `rsc` launched `rserver` processes
-  still running even if it has already validated that there are no lock and
-  PID files.
+* Added more protection for launching multiple RStudio Server
+  instances. Now `rsc start` asserts there are no stray `rsc` launched
+  `rserver` processes still running even if it has already validated
+  that there are no lock and PID files.
   
+Bug fixes:
+
+* In the rare case that `rsc start` found a free random port that
+  immediately after was found to be occupied, it would output the an
+  obscure `ERROR: Not an integer: ERROR: [INTERNAL]: Identified port
+  is not free: 4321` message. Now it reports `ERROR: Identified a free
+  port, which now appears to be occupied: 4321`.
+
 
 ## Version 0.6.1
 
