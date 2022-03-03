@@ -94,3 +94,10 @@ function message {
     
     printf "%s" "${reset}"
 }
+
+
+function relay_condition {
+    grep -q -E "^ERROR: " <<< "${1}" && error "${1#ERROR: }"
+    grep -q -E "^WARNING: " <<< "${1}" && warn "${1#WARNING: }"
+}
+

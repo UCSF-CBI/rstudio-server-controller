@@ -65,7 +65,7 @@ function find_free_port {
     fi
 
     mdebug "${code}"
-    [[ -z ${code} ]] && error "[INTERNAL]: No Python code"
+    [[ -z ${code} ]] && error "[INTERNAL] No Python code"
     
     #shellcheck disable=SC2059
     port=$(printf "${code}" | python -)
@@ -78,7 +78,7 @@ function find_free_port {
         res=1
     else
         assert_port "${port}"
-        is_port_free "${port}" || error "[INTERNAL]: Identified port is not free: ${port}"
+        is_port_free "${port}" || error "Identified a free port, which now appears to be occupied: ${port}"
         echo "${port}"
         res=0
     fi

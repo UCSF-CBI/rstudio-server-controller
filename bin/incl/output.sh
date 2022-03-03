@@ -6,7 +6,7 @@ verbose=false
 theme=
 
 function _tput {
-    if [[ $theme == "none" ]]; then
+    if [[ $theme == "none" ]] || [[ -n ${NO_COLOR} ]]; then
         return
     fi
     tput "$@" 2> /dev/null
