@@ -65,7 +65,7 @@ function find_free_port {
     fi
 
     mdebug "${code}"
-    [[ -z ${code} ]] && error "[INTERNAL]: No Python code"
+    [[ -z ${code} ]] && error "[INTERNAL] No Python code"
     
     #shellcheck disable=SC2059
     port=$(printf "${code}" | python -)
