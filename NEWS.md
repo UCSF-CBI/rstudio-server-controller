@@ -10,13 +10,15 @@
 * `rsc` now respected environment variable `NO_COLOR`. Set it to any
   non-empty value to disable colored output.
 
-* Added more protection for launching multiple RStudio Server
-  instances. Now `rsc start` asserts there are no stray `rsc` launched
-  `rserver` processes still running even if it has already validated
-  that there are no lock and PID files.
-  
 ### Bug fixes
 
+* In rare cases there can be stray `rserver` processes running that
+  where launched by `rsc start`. Investigation showed that the PID
+  files for such processes do not exist, e.g. `rsc status` would
+  report that nothing was running. Now `rsc start` checks for such
+  stray processes before attempting to start another RStudio Server
+  instance and gives an informative error message if detected.
+  
 * In the rare case that `rsc start` found a free random port that
   immediately after was found to be occupied, it would output the an
   obscure `ERROR: Not an integer: ERROR: [INTERNAL]: Identified port
