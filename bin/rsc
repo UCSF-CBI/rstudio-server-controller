@@ -891,7 +891,7 @@ function assert_no_rserver {
         call=$(ps -o args -p "${pid}" | tail -n -1)
         mdebug " - call: ${call}"
         if grep -q -E -- "--config-file=${workdir}/rserver.conf" <<< "${call}"; then
-            error "Even if there are PID and lock files, there is another rserver process (PID ${pid}) already running on this machine ($(hostname)): ${call}"
+            error "Even if there are no PID and lock files, there is another rserver process (PID ${pid}) already running on this machine ($(hostname)): ${call}"
         fi
     done
 
