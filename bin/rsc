@@ -61,7 +61,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.6.1-9002
+### Version: 0.6.1-9003
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -875,6 +875,28 @@ function rserver_status {
 }    
 
 
+function assert_no_rserver {
+    local pid
+    local pids
+    local call
+    local workdir
+    workdir=$(config_dir)
+    
+    mdebug "assert_no_rserver() ..."
+    
+    mapfile -t pids < <(pgrep rserver)
+    mdebug "rserver PIDs: [n=${#pids[@]}] ${pids[*]}"
+    for pid in "${pids[@]}"; do
+        mdebug "Inspecting 'rserver' process with PID ${pid}:"
+        call=$(ps -o args -p "${pid}" | tail -n -1)
+        mdebug " - call: ${call}"
+        if grep -q -E -- "--config-file=${workdir}/rserver.conf" <<< "${call}"; then
+            error "Even if there are PID and lock files, there is another rserver process (PID ${pid}) already running on this machine ($(hostname)): ${call}"
+        fi
+    done
+
+    mdebug "assert_no_rserver() ... done"
+}    
 
 # -------------------------------------------------------------------------
 # SSH reverse-tunnel connection
@@ -1249,6 +1271,9 @@ elif [[ "${action}" == "start" ]]; then
 
     validate_auth
 
+    ## Assert that there is no rserver process created by rsc running
+    assert_no_rserver
+    
     make_config_dir
     acquire_lock_file
     
