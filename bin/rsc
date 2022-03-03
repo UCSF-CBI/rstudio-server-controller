@@ -328,6 +328,7 @@ function make_rserver_conf {
 
     if [[ "${port}" == "random" ]]; then
         port=$(find_free_port "${port_seed}")
+        relay_condition "${port}"
     fi
     assert_port_free "${port}"
 
