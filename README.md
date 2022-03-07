@@ -57,7 +57,11 @@ local web browser, either locally, or remotely via SSH tunneling.
 * The default timeout for an idle R session is two hours. When running
   via a job scheduler, this timeout is the same as the maximum runtime
   of the job. Currently, only Slurm is recognize
-
+  
+* The RStudio Server will timeout five minutes after the most recent
+  R session was terminated. This prevents stray RStudio Server processes
+  being left behind
+  
 * The tool attempts to be agile to different POSIX signals to shut
   down everything when the RStudio Server instance is terminated,
   e.g. by `SIGINT` from <kbd>Ctrl-C</kbd>, `SIGQUIT` from <kbd>Ctrl-\</kbd>,
@@ -72,7 +76,7 @@ To launch your personal RStudio Server instance, call:
 $ rsc start
 alice, your personal RStudio Server is available on <http://127.0.0.1:51172> from
 this machine (alice-notebook).
-Any R session started times out after being idle for 120 minutes.
+Any R session started times out after being idle for 120 minutes
 
 ```
 
@@ -88,7 +92,7 @@ e.g. <kbd>Ctrl-C</kbd>:
 ```sh
  $ rsc start
 alice, your personal RStudio Server is available on <http://127.0.0.1:51172> from
-Any R session started times out after being idle for 120 minutes.
+Any R session started times out after being idle for 120 minutes
 ^C
 Received a SIGINT signal
 Shutting down RStudio Server ...

@@ -105,7 +105,7 @@
 * Now `rsc start` shuts down nicely when it receives a SIGCONT,
   SIGTERM, SIGUSR2, or SIGINT (e.g. Ctrl-C) signal.
 
-* Add built-in 'auth-via-ssh' authenatication tool that use SSH toward
+* Add built-in 'auth-via-ssh' authentication tool that use SSH toward
   a hostname to validate the password,
   e.g. `--auth=auth-via-ssh:log2`.
 
