@@ -61,7 +61,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.7.0-9000
+### Version: 0.7.0-9001
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -263,6 +263,8 @@ function remove_stray_pid_file {
     
     if [[ "${what}" == "rserver" ]]; then
         pid_file="$(rserver_pid_file)"
+    elif [[ "${what}" == "rserver_monitor" ]]; then
+        pid_file="$(rserver_monitor_pid_file)"
     elif [[ "${what}" == "rsession" ]]; then
         pid_file="$(rsession_pid_file)"
     elif [[ "${what}" == "ssh_revtunnel" ]]; then
@@ -911,6 +913,122 @@ function assert_no_rserver {
     mdebug "assert_no_rserver(action='$1') ... done"
 }    
 
+
+# -------------------------------------------------------------------------
+# rserver monitor
+# -------------------------------------------------------------------------
+function rserver_timeout {
+    local timeout
+    local bfr
+    timeout=${RSC_RSERVER_TIMEOUT}
+
+    if [[ -z "${timeout}" ]]; then
+        ## The default is 5 minutes
+        timeout=5
+    fi
+    
+    mdebug "rsession timeout: ${timeout} minutes"
+    assert_integer "${timeout}"
+    RSC_RSERVER_TIMEOUT="${timeout}"
+    export RSC_RSERVER_TIMEOUT
+    echo "${timeout}"
+}
+
+
+function rserver_monitor_pid_file {
+    local workdir
+    workdir=$(config_dir)
+    echo "${workdir}/rserver_monitor.pid"
+}
+
+function rserver_monitor_pid {
+    read_pid "${1:-false}" "$(rserver_monitor_pid_file)"
+}
+
+function terminate_rserver_monitor {
+    local pid
+    mdebug "terminate_rserver_monitor() ..."
+    pid=$(rserver_monitor_pid)
+    mdebug " - pid: '${pid}'"
+    if [[ -n ${pid} ]]; then
+        pid=$(check_pid "${pid}")
+        mdebug " - pid: '${pid}'"
+        [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rserver_monitor (PID ${pid}) terminated"
+    fi
+    mdebug "terminate_rserver_monitor() ... done"
+}
+
+function rserver_monitor_status {
+    rs_process_status "$(rserver_monitor_pid true)" "$(rserver_hostname)"
+}    
+
+# Monitor the rsession PID. If it is gone, start a countdown watch for kill 'rserver'
+
+function rserver_monitor {
+    local endtime
+    local state
+    state="wait_for_rsession_to_start"
+    
+    mdebug "rserver_monitor() ..."
+    while true; do
+        ## Shutdown itself?
+        if [[ $(rserver_status) == "not running" ]]; then
+            mdebug "rserver_monitor(): The 'rserver' process (PID $(rserver_pid)) does not exists, so stopping the monitoring"
+            break
+        fi
+        
+        mdebug "rserver_monitor(): state_=${state}"
+        if [[ "${state}" == "wait_for_rsession_to_start" ]]; then
+            if [[ $(rsession_status) != "not running" ]]; then
+                state="wait_for_rsession_to_end"
+                mdebug "Detected a new 'rsession' process (PID $(rsession_pid))"
+            fi
+        elif [[ "${state}" == "wait_for_rsession_to_end" ]]; then
+            if [[ $(rsession_status) == "not running" ]]; then
+                state="wait_and_terminate_rserver"
+                endtime=$((SECONDS + (60 * $(rserver_timeout)) ))
+                mwarn "The RStudio Server (PID $(rserver_pid)) will time out in $(rserver_timeout) minutes, unless a new R session is started"
+            fi
+        elif [[ "${state}" == "wait_and_terminate_rserver" ]]; then
+            ## Reset or check countdown watch?
+            if [[ $(rsession_status) != "not running" ]]; then
+                state="wait_for_rsession_to_end"
+                minfo "The RStudio Server timeout countdown was reset, because a new R session (PID $(rsession_pid)) was started"
+            else
+                mdebug "rserver_monitor(): countdown clock: $((endtime - SECONDS)) seconds"
+                if [[ ${SECONDS} -gt ${endtime} ]]; then
+                    mwarn "The RStudio Server (PID $(rserver_pid)) was shut down after $(rserver_timeout) minutes without an active R session"
+                    terminate_rserver
+                    terminate_ssh_revtunnel
+                fi
+            fi
+        fi
+        mdebug "rserver_monitor(): sleep"
+        sleep 15  ## check status every 15 seconds
+    done
+    mdebug "rserver_monitor() ... done"
+}
+
+function launch_rserver_monitor {
+    local workdir
+    local pid
+    workdir=$(config_dir)
+    assert_dir_exists "${workdir}"
+
+    pid_file=$(rserver_monitor_pid_file)
+    if $dryrun; then
+        echo "DRYRUN: rserver_monitor launched"
+        sleep 60 &
+    else
+        rserver_monitor &
+    fi
+    pid=$!
+    echo "${pid}" > "${pid_file}"
+    pid=$(rserver_pid)
+    mdebug "rserver monitor started (pid ${pid})"
+}
+
+
 # -------------------------------------------------------------------------
 # SSH reverse-tunnel connection
 # -------------------------------------------------------------------------
@@ -946,12 +1064,14 @@ function shutdown {
     message "Shutting down RStudio Server ..."
     terminate_rsession
     terminate_rserver
+    terminate_rserver_monitor
     terminate_ssh_revtunnel
     remove_lock_file
     {
         remove_stray_lockfile
         remove_stray_pid_file rsession
         remove_stray_pid_file rserver
+        remove_stray_pid_file rserver_monitor
         remove_stray_pid_file ssh_revtunnel
     } > /dev/null
     message "Shutting down RStudio Server ... done"
@@ -1136,11 +1256,11 @@ mdebug "revtunnel: [n=${#revtunnel[@]}] ${revtunnel[*]}"
 mdebug "ssh: ${ssh}"
 mdebug "args: [n=${#args[@]}] ${args[*]}"
 
-
 ## Remove any stray files
 if ! ${force}; then
     remove_stray_pid_file rserver
     remove_stray_pid_file rsession
+    remove_stray_pid_file rserver_monitor
     remove_stray_lockfile
 fi    
 
@@ -1178,6 +1298,7 @@ if [[ "${action}" == "config" ]]; then
     echo "rserver-pid-file=$(rserver_pid_file)"
     echo "rsession-pid-file=$(rsession_pid_file)"
     echo "rsession-log-file=${workdir}/rsession.log"
+    echo "rserver-monitor-pid-file=$(rserver_monitor_pid_file)"
 
     if $full; then
         echo
@@ -1205,7 +1326,8 @@ elif [[ "${action}" == "status" ]]; then
     mdebug "rsc status ..."
     if [[ -z ${field} ]]; then
         status="rserver: $(rserver_status)\n"
-        status="${status}rsession: $(rsession_status)"
+        status="${status}rsession: $(rsession_status)\n"
+        status="${status}rserver monitor: $(rserver_monitor_status)"
         ## AD HOC: Is there an asterisk on the pid?
         if grep -q -E 'pid [[:digit:]]+[*]' <<< "${status}"; then
             status="${status}\n* This is only assumed, because without SSH (--no-ssh) we couldn't confirm the process is still running"
@@ -1245,6 +1367,10 @@ elif [[ "${action}" == "stop" ]]; then
     pid=$(rserver_pid)
     [[ -n "${pid}" ]] && kill -TERM "${pid}"
 
+    ## Terminate rserver monitor
+    pid=$(rserver_monitor_pid)
+    [[ -n "${pid}" ]] && kill -TERM "${pid}"
+
     ## Terminate SSH reverse-tunnel connection
     pid=$(ssh_revtunnel_pid)
     [[ -n "${pid}" ]] && kill -TERM "${pid}"
@@ -1256,7 +1382,7 @@ elif [[ "${action}" == "stop" ]]; then
 elif [[ "${action}" == "reset" ]]; then
     workdir=$(config_dir)
     if [[ -d "${workdir}" ]]; then
-        files=("$(rsession_pid_file)" "${workdir}/rserver.pid" "${workdir}/rserver.hostname" "${workdir}/rserver.port" "${workdir}/pid.lock")
+        files=("$(rsession_pid_file)" "${workdir}/rserver.pid""${workdir}/rserver_monitor.pid" "${workdir}/rserver.hostname" "${workdir}/rserver.port" "${workdir}/pid.lock")
         if $force; then
             existing=()
             for file in "${files[@]}"; do
@@ -1308,13 +1434,19 @@ elif [[ "${action}" == "start" ]]; then
     launch_rserver
     wait_for_rserver
     secure_config_dir
-
+    
     rs_pid="$(rserver_pid)"
     [[ -z "${rs_pid}" ]] && error "RStudio Server failed to start for unknown reasons. One reason for this might be that the port (${port}) is already occupied"
     pids=("${rs_pid}")
     
     ## Update 'port', in case it was 'uid' or 'random'
     port=$(rserver_port)
+
+    ## Launch rserver monitor
+    launch_rserver_monitor
+    pid="$(rserver_monitor_pid)"
+    [[ -z "${pid}" ]] && error "rserver monitor failed to start for unknown reasons"
+    pids=("${pid}")
     
     ## Reverse SSH tunnel?
     if [[ ${#revtunnel[@]} -gt 0 ]]; then

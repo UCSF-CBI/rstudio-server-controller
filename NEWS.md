@@ -1,9 +1,16 @@
 # rstudio-server-launcher
 
-## Version 0.7.0-9000
+## Version 0.7.0-9001
 
-* ...
+### Significant changes
 
+* The RStudio Server will automatically terminate 5 minutes after the
+  most recent R session was terminated. An R session may be terminated
+  either by the user (e.g. calling `quit()` in R), or from timing out
+  because it has been idle for more than two hours.  In other words,
+  the default behavior is to automatically shut down everything after
+  the user having been idle for more than 125 minutes.
+  
 
 ## Version 0.7.0
 
