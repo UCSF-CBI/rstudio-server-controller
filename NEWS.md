@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.7.0-9002
+## Version 0.8.0 [2022-03-07]
 
 ### Significant changes
 
@@ -19,7 +19,7 @@
   requested run time.
   
 
-## Version 0.7.0
+## Version 0.7.0 [2022-03-02]
 
 ### New features
 
@@ -48,7 +48,7 @@
   port, which now appears to be occupied: 4321`.
 
 
-## Version 0.6.1
+## Version 0.6.1 [2022-02-20]
 
 ### Miscellaneous
 
@@ -62,7 +62,7 @@
   call from terminating.
 
 
-## Version 0.6.0
+## Version 0.6.0 [2022-02-13]
 
 ### Security fix
 
@@ -96,7 +96,7 @@
 * `rsc` failed if called via a symbolic link.
 
 
-## Version 0.5.0
+## Version 0.5.0 [2022-02-10]
 
 ### Significant changes
 
@@ -128,7 +128,7 @@
 * Add `rsc start --revtunnel=<spec>`.
 
 
-## Version 0.4.0
+## Version 0.4.0 [2022-02-10]
 
 ### New features
 
@@ -160,7 +160,7 @@
   the way, is extremely rare and a problem with the system setup.
 
 
-## Version 0.3.4
+## Version 0.3.4 [2022-02-08]
 
 ### New features
 
@@ -171,7 +171,7 @@
 * Remove option `--env` in favor of `--env-pattern`.
 
 
-## Version 0.3.3
+## Version 0.3.3 [2022-02-03]
 
 ### Bug fixes
 
@@ -179,7 +179,7 @@
   process PID on another machine.
 
 
-## Version 0.3.2
+## Version 0.3.2 [2022-02-03]
 
 ### Bug fixes
 
@@ -187,7 +187,7 @@
   that there were no 'rserver' and 'rsession' processes running.
 
 
-## Version 0.3.1
+## Version 0.3.1 [2022-02-03]
 
 ### New features
 
@@ -198,7 +198,7 @@
   set, the default is `$HOME/.config`.
 
 
-## Version 0.3.0
+## Version 0.3.0 [2022-01-30]
 
 ### Significant changes
 
@@ -217,7 +217,7 @@
   when called on another machine than where they are running.
 
 
-## Version 0.2.4
+## Version 0.2.4 [2022-01-29]
 
 ### New features
 
@@ -237,7 +237,7 @@
   that they are stray files.
   
 
-## Version 0.2.3
+## Version 0.2.3 [2022-01-29]
 
 ### New features
 
@@ -251,7 +251,7 @@
   launch the RStudio Server.
 
 
-## Version 0.2.2
+## Version 0.2.2 [2022-01-29]
 
 ### New features
 
@@ -271,7 +271,7 @@
   not correct. Now relying on `hostname` instead.
 
 
-## Version 0.2.1
+## Version 0.2.1 [2022-01-26]
 
 ### New features
 
@@ -285,7 +285,7 @@
   standard error. Those are now muffled.
 
 
-## Version 0.2.0
+## Version 0.2.0 [2022-01-26]
 
 ### New features
 
@@ -310,7 +310,7 @@
   and need to be stopped from.
 
 
-## Version 0.1.2
+## Version 0.1.2 [2022-01-25]
 
 ### New features
 
@@ -321,7 +321,7 @@
 * Environment variable R_LIBS_USER was ignore.
 
 
-## Version 0.1.1
+## Version 0.1.1 [2022-01-25]
 
 ### Significant changes
 
@@ -341,7 +341,7 @@
   instance and any running R sessions when exiting.
   
 
-## Version 0.1.0
+## Version 0.1.0 [2022-01-22]
 
 ### New features
 
