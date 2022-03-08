@@ -61,7 +61,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.8.0-9001
+### Version: 0.8.0-9002
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -875,8 +875,8 @@ function rserver_timeout {
     timeout=${RSC_RSERVER_TIMEOUT}
 
     if [[ -z "${timeout}" ]]; then
-        ## The default is 5 minutes
-        timeout=5
+        ## The default is 10 minutes
+        timeout=10
     fi
     
     mdebug "rsession timeout: ${timeout} minutes"
@@ -919,7 +919,7 @@ function rserver_monitor_status {
 function rserver_monitor {
     local endtime
     local state
-    state="wait_for_rsession_to_start"
+    state="wait_and_terminate_rserver"
     
     mdebug "rserver_monitor() ..."
     while true; do
@@ -930,12 +930,7 @@ function rserver_monitor {
         fi
         
         mdebug "rserver_monitor(): state_=${state}"
-        if [[ "${state}" == "wait_for_rsession_to_start" ]]; then
-            if [[ $(rsession_status) != "not running" ]]; then
-                state="wait_for_rsession_to_end"
-                mdebug "Detected a new 'rsession' process (PID $(rsession_pid))"
-            fi
-        elif [[ "${state}" == "wait_for_rsession_to_end" ]]; then
+        if [[ "${state}" == "wait_for_rsession_to_end" ]]; then
             if [[ $(rsession_status) == "not running" ]]; then
                 state="wait_and_terminate_rserver"
                 endtime=$((SECONDS + (60 * $(rserver_timeout)) ))
@@ -1437,8 +1432,10 @@ elif [[ "${action}" == "start" ]]; then
             LOCALPORT=${LOCALPORT:-8787}
             message "${USER}, your personal RStudio Server is available on <http://$(rserver_hostname):${port}>. If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:${LOCALPORT}> by running 'ssh -L ${LOCALPORT}:$(rserver_hostname):${port} ${USER}@$(find_login_host)' in a second terminal."
         fi
-        
+
         message "Any R session started times out after being idle for $(rsession_timeout) minutes."
+        
+        mwarn "You now have $(rserver_timeout) minutes to connect to the RStudio Server and start the R session before it times out."
     fi    
     
     mdebug "Waiting for background process (pids ${pids[*]}) to finish ..."

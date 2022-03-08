@@ -1,11 +1,19 @@
 # rstudio-server-launcher
 
-## Version 0.8.0-9001 [2022-03-07]
+## Version 0.8.0-9002 [2022-03-07]
 
 ### New features
 
-* Now timeout warnings reports also on the timepoint when the timeout
+* The `rsc startup` startup message now includes "WARNING: You now
+  have 10 minutes to connect to the RStudio Server and start the R
+  session before it times out".
+
+* Now timeout warnings reports also on the time point when the timeout
   shutdown will take place.
+
+### Bug fixes
+
+* The RStudio Server timeout did not apply if the user never logged.
 
 
 ## Version 0.8.0 [2022-03-07]
