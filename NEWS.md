@@ -16,6 +16,8 @@
   have 10 minutes to connect to the RStudio Server and start the R
   session before everything times out".
 
+* Increased the RStudio Server timeout to 10 minutes.
+
 * Now timeout warnings reports also on the time point when the timeout
   shutdown will take place.
 
