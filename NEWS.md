@@ -1,8 +1,11 @@
 # rstudio-server-launcher
 
-## Version 0.8.1-9000 [2022-03-07]
+## Version 0.8.1-9001 [2022-03-07]
 
-* ...
+### Bug fixes
+
+* When using `rsc start --revtunnel=<spec>`, the startup message did not
+  including messages about timeout limits.
 
 
 ## Version 0.8.1 [2022-03-07]
