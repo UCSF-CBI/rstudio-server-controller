@@ -61,7 +61,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.8.0-9000
+### Version: 0.8.0-9001
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -939,7 +939,7 @@ function rserver_monitor {
             if [[ $(rsession_status) == "not running" ]]; then
                 state="wait_and_terminate_rserver"
                 endtime=$((SECONDS + (60 * $(rserver_timeout)) ))
-                mwarn "The RStudio Server (PID $(rserver_pid)) will time out in $(rserver_timeout) minutes, unless a new R session is started"
+                mwarn "The RStudio Server (PID $(rserver_pid)) will time out in $(rserver_timeout) minutes on $(date --rfc-3339=seconds --date="+$(rserver_timeout) minutes"), unless a new R session is started"
             fi
         elif [[ "${state}" == "wait_and_terminate_rserver" ]]; then
             ## Reset or check countdown watch?
@@ -949,7 +949,7 @@ function rserver_monitor {
             else
                 mdebug "rserver_monitor(): countdown clock: $((endtime - SECONDS)) seconds"
                 if [[ ${SECONDS} -gt ${endtime} ]]; then
-                    mwarn "The RStudio Server (PID $(rserver_pid)) was shut down after $(rserver_timeout) minutes without an active R session"
+                    mwarn "The RStudio Server (PID $(rserver_pid)) was shut down on $(date --rfc-3339=seconds) after $(rserver_timeout) minutes without an active R session"
                     terminate_rserver
                     terminate_ssh_revtunnel
                 fi

@@ -1,8 +1,11 @@
 # rstudio-server-launcher
 
-## Version 0.8.0-9000 [2022-03-07]
+## Version 0.8.0-9001 [2022-03-07]
 
-* ...
+### New features
+
+* Now timeout warnings reports also on the timepoint when the timeout
+  shutdown will take place.
 
 
 ## Version 0.8.0 [2022-03-07]
