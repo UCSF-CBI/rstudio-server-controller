@@ -921,6 +921,9 @@ function rserver_monitor {
     local state
     state="wait_and_terminate_rserver"
     
+    ## Add 60 seconds leeway for the startup delay
+    endtime=$((SECONDS + (60 * $(rserver_timeout)) + 60 ))
+    
     mdebug "rserver_monitor() ..."
     while true; do
         ## Shutdown itself?
@@ -1435,7 +1438,7 @@ elif [[ "${action}" == "start" ]]; then
 
         message "Any R session started times out after being idle for $(rsession_timeout) minutes."
         
-        mwarn "You now have $(rserver_timeout) minutes to connect to the RStudio Server and start the R session before it times out."
+        mwarn "You now have $(rserver_timeout) minutes to connect to the RStudio Server and start the R session before everything times out."
     fi    
     
     mdebug "Waiting for background process (pids ${pids[*]}) to finish ..."
