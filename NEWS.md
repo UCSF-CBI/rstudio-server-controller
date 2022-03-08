@@ -1,5 +1,10 @@
 # rstudio-server-launcher
 
+## Version 0.8.1-9000 [2022-03-07]
+
+* ...
+
+
 ## Version 0.8.1 [2022-03-07]
 
 ### New features
