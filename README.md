@@ -54,7 +54,7 @@ local web browser, either locally, or remotely via SSH tunneling.
   system, which minimized the number of stray instances being left
   behind
 
-* The RStudio Server will timeout five minutes after the most recent
+* The RStudio Server will time out ten minutes after the most recent
   R session was terminated. This prevents stray RStudio Server processes
   being left behind
   
