@@ -7,4 +7,4 @@ shellcheck:
 	)
 
 spelling:
-	Rscript -e "spelling::spell_check_files('README.md', ignore=readLines('WORDLIST'))"
+	Rscript -e "spelling::spell_check_files(c('README.md', 'NEWS.md'), ignore=readLines('WORDLIST'))"

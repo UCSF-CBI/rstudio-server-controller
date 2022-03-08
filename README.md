@@ -54,9 +54,11 @@ local web browser, either locally, or remotely via SSH tunneling.
   system, which minimized the number of stray instances being left
   behind
 
-* The default timeout for an idle R session is two hours. When running
-  via a job scheduler, this timeout is the same as the maximum runtime
-  of the job. Currently, only Slurm is recognize
+* The RStudio Server will timeout five minutes after the most recent
+  R session was terminated. This prevents stray RStudio Server processes
+  being left behind
+  
+* The default timeout for an idle R session is two hours
 
 * The tool attempts to be agile to different POSIX signals to shut
   down everything when the RStudio Server instance is terminated,
@@ -72,7 +74,7 @@ To launch your personal RStudio Server instance, call:
 $ rsc start
 alice, your personal RStudio Server is available on <http://127.0.0.1:51172> from
 this machine (alice-notebook).
-Any R session started times out after being idle for 120 minutes.
+Any R session started times out after being idle for 120 minutes
 
 ```
 
@@ -88,7 +90,7 @@ e.g. <kbd>Ctrl-C</kbd>:
 ```sh
  $ rsc start
 alice, your personal RStudio Server is available on <http://127.0.0.1:51172> from
-Any R session started times out after being idle for 120 minutes.
+Any R session started times out after being idle for 120 minutes
 ^C
 Received a SIGINT signal
 Shutting down RStudio Server ...
@@ -246,11 +248,11 @@ As before, the RStudio Server is available at <http://127.0.0.1:8787>.
 
 ```sh
 $ cd /path/to/software
-$ curl -L -O https://github.com/UCSF-CBI/rstudio-server-controller/archive/refs/tags/0.7.0.tar.gz
-$ tar xf 0.7.0.tar.gz
-$ PATH=/path/to/softwarerstudio-server-controller-0.7.0/bin:$PATH
+$ curl -L -O https://github.com/UCSF-CBI/rstudio-server-controller/archive/refs/tags/0.8.0.tar.gz
+$ tar xf 0.8.0.tar.gz
+$ PATH=/path/to/softwarerstudio-server-controller-0.8.0/bin:$PATH
 $ export PATH
 $ rsc --version
-0.7.0
+0.8.0
 ```
 
