@@ -1,6 +1,6 @@
 # rstudio-server-launcher
 
-## Version 0.7.0-9001
+## Version 0.7.0-9002
 
 ### Significant changes
 
@@ -10,6 +10,13 @@
   because it has been idle for more than two hours.  In other words,
   the default behavior is to automatically shut down everything after
   the user having been idle for more than 125 minutes.
+
+* The timeout limit of an R session is now two hours regardless of how
+  the RStudio Server is running. Previously, this timeout limit would
+  be overridden by the maximum runtime of the job scheduler, but in
+  order to avoid jobs running idle for a long time, locking up slots
+  of the scheduler, we choose to time out everything regardless of
+  requested run time.
   
 
 ## Version 0.7.0

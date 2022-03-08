@@ -61,7 +61,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.7.0-9001
+### Version: 0.7.0-9002
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -467,42 +467,6 @@ function read_pid {
     echo "${pid}"
 }    
 
-function dhms_to_minutes {
-    local bfr
-    local value
-    local total
-    local multipliers
-    local parts
-    bfr=${1:?}
-    
-    parts=()
-    until [[ -z "${bfr}" ]]; do
-        mdebug "Parsing: ${bfr}"
-        echo "${bfr}" | grep -q -F "[[:digit:]]+$" && error "Syntax error: ${bfr}"
-        value=$(echo "${bfr}" | sed -E 's/^(.*[[:digit:]]+[:-]|)([[:digit:]]+)$/\2/')
-        assert_integer "${value}"
-        bfr=$(echo "${bfr}" | sed -E 's/[:-]?([[:digit:]]+)$//')
-        parts+=("${value}")
-    done
-    mdebug "parts=${parts[*]}"
-
-    ## seconds, minutes, hours, days
-    multipliers=(1 60 3600 86400)
-    total=0
-    for (( kk=0; kk < ${#parts[@]}; kk++ )); do
-        value=$(( multipliers[kk] * parts[kk] ))
-        mdebug "$(printf "%d. %d*%d = %d\n" "${kk}" "${multipliers[${kk}]}" "${parts[${kk}]}" "${value}")"
-        total=$(( total + value ))
-    done
-    mdebug "total=${total} seconds"
-
-    ## Round down to nearest minute
-    total=$((total / 60))
-    mdebug "total=${total} minutes"
-    
-    echo "${total}"
-}
-
 function on_local_machine {
     ## If who shows a entry with LINE that has :0 or similar, then that
     ## suggests the user is on the current machine, and not logged in
@@ -585,18 +549,6 @@ function rsession_timeout {
     local bfr
     timeout=${RSC_RSESSION_TIMEOUT}
 
-    ## Running as a Slurm job?
-    if [[ -n "${SLURM_JOB_ID}" ]]; then
-        ## Query Slurm for it's requested run-time
-        if bfr=$(squeue --jobs="${SLURM_JOB_ID}" --noheader --format="%l" 2> /dev/null); then
-            bfr=$(echo "${bfr}" | head -n 1)
-            mdebug "Slurm run-time limit: '${bfr}'"
-            if [[ -n "${bfr}" ]]; then
-                timeout=$(dhms_to_minutes "${bfr}")
-            fi
-        fi
-    fi
-    
     if [[ -z "${timeout}" ]]; then
         ## The default is 120 minutes (2 hours)
         timeout=120
