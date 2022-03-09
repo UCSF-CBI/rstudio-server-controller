@@ -3,8 +3,9 @@
 # RStudio Server Controller (RSC)
 
 This is a shell tool for conveniently launching a personal instance of
-the RStudio Server on a Linux machine, which then can be access in the
+the [RStudio Server] on a Linux machine, which then can be access in the
 local web browser, either locally, or remotely via SSH tunneling.
+RStudio is an integrated development environment (IDE) for [R].
 
 
 ## Features
@@ -45,7 +46,7 @@ local web browser, either locally, or remotely via SSH tunneling.
   --random-password`](https://github.com/UCSF-CBI/rstudio-server-controller/blob/main/bin/utils/auth-via-env)
   can be used to authenticate with a one-time, temporary password
   that is echoed. It is also possible to use a custom authentication
-  helper, e.g. `--auth=<command-on-PATH>` and `--auth=<file>`.
+  helper, e.g. `--auth=<command-on-PATH>` and `--auth=<file>`
 
 
 ### Stability
@@ -267,3 +268,5 @@ $ rsc --version
 0.8.1
 ```
 
+[R]: https://www.r-project.org/
+[RStudio Server]: https://www.rstudio.com/products/rstudio/#rstudio-server
