@@ -76,8 +76,8 @@ $ rsc start
 alice, your personal RStudio Server is available on <http://127.0.0.1:51172> from this
 machine (alice-notebook).
 Any R session started times out after being idle for 120 minutes.
-WARNING: You now have 10 minutes to connect to the RStudio Server and start the R session
-before everything times out.
+WARNING: You now have 10 minutes, until 2022-03-11 13:30:33-08:00, to connect and log
+in to the RStudio Server before everything times out.
 ```
 
 The RStudio Server can then be accessed via the web browser at
@@ -94,8 +94,8 @@ e.g. <kbd>Ctrl-C</kbd>:
 alice, your personal RStudio Server is available on <http://127.0.0.1:51172> from this
 machine (alice-notebook).
 Any R session started times out after being idle for 120 minutes.
-WARNING: You now have 10 minutes to connect to the RStudio Server and start the R session
-before everything times out.
+WARNING: You now have 10 minutes, until 2022-03-11 13:30:33-08:00, to connect and log
+in to the RStudio Server before everything times out.
 ^C
 Received a SIGINT signal
 Shutting down RStudio Server ...
@@ -161,8 +161,8 @@ If you are running from a remote machine without direct access to server.myuniv.
 can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by
 running 'ssh -L 8787:server.myuniv.org:51172 alice@server.myuniv.org' in a second terminal.
 Any R session started times out after being idle for 120 minutes.
-WARNING: You now have 10 minutes to connect to the RStudio Server and start the R session
-before everything times out.
+WARNING: You now have 10 minutes, until 2022-03-11 13:30:33-08:00, to connect and log
+in to the RStudio Server before everything times out.
 ```
 
 If we follow these instructions set up a _second_, _concurrent_ SSH connection to the remote server:
@@ -194,8 +194,8 @@ If you are running from a remote machine without direct access to server.myuniv.
 can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by
 running 'ssh -L 8787:server.myuniv.org:51172 alice@login.myuniv.org' in a second terminal.
 Any R session started times out after being idle for 120 minutes.
-WARNING: You now have 10 minutes to connect to the RStudio Server and start the R session
-before everything times out.
+WARNING: You now have 10 minutes, until 2022-03-11 13:30:33-08:00, to connect and log
+in to the RStudio Server before everything times out.
 ```
 
 In this case, we do:
@@ -221,8 +221,8 @@ If you are running from a remote machine without direct access to server.myuniv.
 can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by
 running 'ssh -L 8787:server.myuniv.org:51172 alice@login.myuniv.org' in a second terminal.
 Any R session started times out after being idle for 120 minutes.
-WARNING: You now have 10 minutes to connect to the RStudio Server and start the R session
-before everything times out.
+WARNING: You now have 10 minutes, until 2022-03-11 13:30:33-08:00, to connect and log
+in to the RStudio Server before everything times out.
 ```
 
 As before, the RStudio Server is available at <http://127.0.0.1:8787>.

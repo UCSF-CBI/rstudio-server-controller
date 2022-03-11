@@ -1,6 +1,12 @@
 # rstudio-server-launcher
 
-## Version 0.8.1-9001 [2022-03-07]
+## Version 0.8.1-9002 [2022-03-11]
+
+### New features
+
+* The `rsc start` message now not only specified for how long, but
+  also until what time the user has to connect and log into to the
+  RStudio Server before everything times out.
 
 ### Bug fixes
 
