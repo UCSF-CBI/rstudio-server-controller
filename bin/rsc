@@ -1439,7 +1439,7 @@ elif [[ "${action}" == "start" ]]; then
 
     message "Any R session started times out after being idle for $(rsession_timeout) minutes."
         
-    mwarn "You now have $(rserver_timeout) minutes to connect to the RStudio Server and start the R session before everything times out."
+    mwarn "You now have $(rserver_timeout) minutes, until $(date --rfc-3339=seconds --date="+$(rserver_timeout) minutes"), to connect to the RStudio Server and start the R session before everything times out."
     
     mdebug "Waiting for background process (pids ${pids[*]}) to finish ..."
     wait "${pids[@]}"
