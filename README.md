@@ -260,12 +260,12 @@ As before, the RStudio Server is available at <http://127.0.0.1:8787>.
 
 ```sh
 $ cd /path/to/software
-$ curl -L -O https://github.com/UCSF-CBI/rstudio-server-controller/archive/refs/tags/0.8.1.tar.gz
-$ tar xf 0.8.1.tar.gz
-$ PATH=/path/to/softwarerstudio-server-controller-0.8.1/bin:$PATH
+$ curl -L -O https://github.com/UCSF-CBI/rstudio-server-controller/archive/refs/tags/0.8.2.tar.gz
+$ tar xf 0.8.2.tar.gz
+$ PATH=/path/to/softwarerstudio-server-controller-0.8.2/bin:$PATH
 $ export PATH
 $ rsc --version
-0.8.1
+0.8.2
 ```
 
 [R]: https://www.r-project.org/
