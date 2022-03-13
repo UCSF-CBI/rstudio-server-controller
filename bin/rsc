@@ -61,7 +61,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.8.1-9002
+### Version: 0.8.1-9003
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -993,6 +993,10 @@ function ssh_revtunnel_pid {
     read_pid "${1:-false}" "$(ssh_revtunnel_pid_file)"
 }
 
+function ssh_revtunnel_status {
+    rs_process_status "$(ssh_revtunnel_pid true)" "$(rserver_hostname)"
+}    
+
 function terminate_ssh_revtunnel {
     local pid
     mdebug "terminate_ssh_revtunnel() ..."
@@ -1277,11 +1281,14 @@ elif [[ "${action}" == "status" ]]; then
     if [[ -z ${field} ]]; then
         status="rserver: $(rserver_status)\n"
         status="${status}rsession: $(rsession_status)\n"
-        status="${status}rserver monitor: $(rserver_monitor_status)"
+        status="${status}rserver monitor: $(rserver_monitor_status)\n"
+        status="${status}SSH reverse tunnel (optional): $(ssh_revtunnel_status)"
+        
         ## AD HOC: Is there an asterisk on the pid?
         if grep -q -E 'pid [[:digit:]]+[*]' <<< "${status}"; then
             status="${status}\n* This is only assumed, because without SSH (--no-ssh) we couldn't confirm the process is still running"
         fi
+        
         echo -e "${status}"
         workdir=$(config_dir)
         lockfile=${workdir}/pid.lock
