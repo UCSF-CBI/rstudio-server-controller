@@ -1,5 +1,21 @@
 # rstudio-server-launcher
 
+## Version 0.8.2 [2022-03-13]
+
+### New features
+
+* Now `rsc status` reports also on the optional SSH reverse tunnel.
+
+* The `rsc start` message now not only specified for how long, but
+  also until what time the user has to connect and log into to the
+  RStudio Server before everything times out.
+
+### Bug fixes
+
+* When using `rsc start --revtunnel=<spec>`, the startup message did
+  not including messages about timeout limits.
+
+
 ## Version 0.8.1 [2022-03-07]
 
 ### New features
@@ -7,6 +23,8 @@
 * The `rsc startup` startup message now includes "WARNING: You now
   have 10 minutes to connect to the RStudio Server and start the R
   session before everything times out".
+
+* Increased the RStudio Server timeout to 10 minutes.
 
 * Now timeout warnings reports also on the time point when the timeout
   shutdown will take place.
