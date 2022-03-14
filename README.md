@@ -44,9 +44,12 @@ RStudio is an integrated development environment (IDE) for [R].
   which authenticates using SSH towards host `<hostname>`. If neither
   are an option, [`--auth=auth-via-env
   --random-password`](https://github.com/UCSF-CBI/rstudio-server-controller/blob/main/bin/utils/auth-via-env)
-  can be used to authenticate with a one-time, temporary password
-  that is echoed. It is also possible to use a custom authentication
-  helper, e.g. `--auth=<command-on-PATH>` and `--auth=<file>`
+  can be used to authenticate with a one-time, temporary password that
+  is echoed. If `--random-password` is not specified for the latter,
+  then the password is taken from environment variable `RSC_PASSWORD`,
+  which is _not_ echoed.  It is also possible to use a custom
+  authentication helper, e.g. `--auth=<command-on-PATH>` and
+  `--auth=<file>`
 
 
 ### Stability
