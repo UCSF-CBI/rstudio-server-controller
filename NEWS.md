@@ -1,6 +1,6 @@
-# rstudio-server-launcher
+# rstudio-server-controller
 
-## Version 0.8.2-9000 [2022-03-13]
+## Version 0.8.2-9000 [2022-03-14]
 
 * ...
 
