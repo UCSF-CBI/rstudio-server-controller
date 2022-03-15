@@ -11,7 +11,7 @@
 
 * Now `rsc status` reports also on the optional SSH reverse tunnel.
 
-* The `rsc start` message now not only specified for how long, but
+* The `rsc start` message now not only specifies for how long, but
   also until what time the user has to connect and log into to the
   RStudio Server before everything times out.
 
