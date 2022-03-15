@@ -6,7 +6,7 @@ source "${pwd}"/asserts.sh
 function change_dir {
     local opwd
     opwd=${PWD}
-    assert_directory_exists "$1"
+    assert_dir_exists "$1"
     cd "$1" || error "Failed to set working directory to $1"
     mdebug "New working directory: '$1' (was '${opwd}')"
 }
