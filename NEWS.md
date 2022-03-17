@@ -1,8 +1,13 @@
 # rstudio-server-controller
 
-## Version 0.8.2-9000 [2022-03-14]
+## Version 0.8.2-9001 [2022-03-16]
 
-* ...
+### Significant changes
+
+* For security reasons, environment variable `RSC_PASSWORD` is never
+  exported to any of the R sessions running via the RStudio Server.
+  Likewise, it is never written to the config files or any temporary
+  file.
 
 
 ## Version 0.8.2 [2022-03-13]
