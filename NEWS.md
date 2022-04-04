@@ -1,4 +1,19 @@
-# rstudio-server-launcher
+# rstudio-server-controller
+
+## Version 0.8.3 [2022-04-03]
+
+### Significant changes
+
+* For security reasons, environment variable `RSC_PASSWORD` is never
+  exported to any of the R sessions running via the RStudio Server.
+  Likewise, it is never written to the config files or any temporary
+  file.
+
+### New features
+
+* Environment variable `RSC_PASSWORD=random` now corresponds to
+  specifying command-line option `--random-password`.
+  
 
 ## Version 0.8.2 [2022-03-13]
 
@@ -6,7 +21,7 @@
 
 * Now `rsc status` reports also on the optional SSH reverse tunnel.
 
-* The `rsc start` message now not only specified for how long, but
+* The `rsc start` message now not only specifies for how long, but
   also until what time the user has to connect and log into to the
   RStudio Server before everything times out.
 
