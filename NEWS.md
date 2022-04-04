@@ -1,6 +1,6 @@
 # rstudio-server-controller
 
-## Version 0.8.2-9002 [2022-04-02]
+## Version 0.8.3 [2022-04-03]
 
 ### Significant changes
 
