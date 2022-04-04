@@ -61,7 +61,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.8.2-9001
+### Version: 0.8.2-9002
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -1115,10 +1115,7 @@ while [[ $# -gt 0 ]]; do
     elif [[ "$1" == "--no-ssh" ]]; then
         ssh=false
     elif [[ "$1" == "--random-password" ]]; then
-        RSC_PASSWORD=$(openssl rand -base64 15)
-        export RSC_PASSWORD
-        message "One-time random password: ${RSC_PASSWORD}"
-        
+        RSC_PASSWORD="random"
     ## Options (--key=value):
     elif [[ "$1" =~ ^--.*=.*$ ]]; then
         key=${1//--}
@@ -1369,6 +1366,12 @@ elif [[ "${action}" == "start" ]]; then
         assert_port_free "${port}"
     fi
 
+    if [[ "${RSC_PASSWORD}" == "random" ]]; then
+        RSC_PASSWORD=$(openssl rand -base64 15)
+        export RSC_PASSWORD
+        message "Your one-time random password for RStudio Server is ${RSC_PASSWORD}"
+    fi
+    
     validate_auth
 
     make_config_dir

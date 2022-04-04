@@ -1,6 +1,6 @@
 # rstudio-server-controller
 
-## Version 0.8.2-9001 [2022-03-16]
+## Version 0.8.2-9002 [2022-04-02]
 
 ### Significant changes
 
@@ -9,6 +9,11 @@
   Likewise, it is never written to the config files or any temporary
   file.
 
+### New features
+
+* Environment variable `RSC_PASSWORD=random` now corresponds to
+  specifying command-line option `--random-password`.
+  
 
 ## Version 0.8.2 [2022-03-13]
 
