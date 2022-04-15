@@ -1,8 +1,11 @@
 # rstudio-server-controller
 
-## Version 0.8.3-9000 [2022-04-03]
+## Version 0.8.3-9001 [2022-04-15]
 
-* ...
+### New features
+
+* The warning and error messages on stray 'rserver' processes will now
+  include instructions on how to terminate such processes.
 
 
 ## Version 0.8.3 [2022-04-03]

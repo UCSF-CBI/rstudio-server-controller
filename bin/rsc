@@ -61,7 +61,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.8.3-9000
+### Version: 0.8.3-9001
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -852,7 +852,7 @@ function assert_no_rserver {
         call=$(ps -o args -p "${pid}" | tail -n -1)
         mdebug " - call: ${call}"
         if grep -q -E -- "--config-file=${workdir}/rserver.conf" <<< "${call}"; then
-            msg="Even if there are no PID and lock files, there is another rserver process (PID ${pid}) already running on this machine ($(hostname)): ${call}"
+            msg="Even if there are no PID and lock files, there is another rserver process (PID ${pid}: '${call}') already running on this machine ($(hostname)). If you think this is a stray process, you can terminate it using: kill -p ${pid}"
             case ${action} in
                 error)
                     error "${msg}";;
@@ -1450,7 +1450,7 @@ elif [[ "${action}" == "start" ]]; then
     fi    
 
     message "Any R session started times out after being idle for $(rsession_timeout) minutes."
-        
+ 
     mwarn "You now have $(rserver_timeout) minutes, until $(date --rfc-3339=seconds --date="+$(rserver_timeout) minutes"), to connect and log in to the RStudio Server before everything times out."
     
     mdebug "Waiting for background process (pids ${pids[*]}) to finish ..."
