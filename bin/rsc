@@ -61,7 +61,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.8.3
+### Version: 0.8.4
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -212,7 +212,7 @@ function acquire_lock_file {
 
     lockfile=${workdir}/pid.lock
     if [[ -f "${lockfile}" ]]; then
-        error "${USER}, another RStudio Server session of yours is already running on $(rserver_hostname) on this system. See 'rsc status' for details. Please terminate that first, e.g. call 'rsc stop' from that machine. As a last resort, call 'pkill rserver; pkill rsession', remove lock file '${lockfile}', and retry."
+        error "${USER}, another RStudio Server instance of yours is already running on $(rserver_hostname) on this system. See 'rsc status' for details. If you want to start a new instance, please terminate the existing one first by calling 'rsc stop' from that machine."
     fi
     echo "${PPID}" > "${lockfile}"
 }
@@ -844,15 +844,16 @@ function assert_no_rserver {
     workdir=$(config_dir)
     
     mdebug "assert_no_rserver(action='$1') ..."
-    
-    mapfile -t pids < <(pgrep rserver)
+
+    ## Find all 'rserver' processes owned by user
+    mapfile -t pids < <(pgrep -u "${UID}" rserver)
     mdebug "rserver PIDs: [n=${#pids[@]}] ${pids[*]}"
     for pid in "${pids[@]}"; do
         mdebug "Inspecting 'rserver' process with PID ${pid}:"
         call=$(ps -o args -p "${pid}" | tail -n -1)
         mdebug " - call: ${call}"
         if grep -q -E -- "--config-file=${workdir}/rserver.conf" <<< "${call}"; then
-            msg="Even if there are no PID and lock files, there is another rserver process (PID ${pid}) already running on this machine ($(hostname)): ${call}"
+            msg="Even if there are no PID and lock files, there is another rserver process (PID ${pid}: '${call}') owned by you (${USER}; UID ${UID}) already running on this machine ($(hostname)). If you think this is a stray process, you can terminate it using: kill ${pid}"
             case ${action} in
                 error)
                     error "${msg}";;
@@ -1450,7 +1451,7 @@ elif [[ "${action}" == "start" ]]; then
     fi    
 
     message "Any R session started times out after being idle for $(rsession_timeout) minutes."
-        
+ 
     mwarn "You now have $(rserver_timeout) minutes, until $(date --rfc-3339=seconds --date="+$(rserver_timeout) minutes"), to connect and log in to the RStudio Server before everything times out."
     
     mdebug "Waiting for background process (pids ${pids[*]}) to finish ..."
