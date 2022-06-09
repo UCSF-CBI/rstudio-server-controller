@@ -1,8 +1,12 @@
 # rstudio-server-controller
 
-## Version 0.8.4-9000 [2022-04-20]
+## Version 0.8.4-9001 [2022-06-09]
 
-* ...
+### New features
+
+ * When using `rsc start --auth=auth-via-env --random-password`, the
+   password is now display at the very end, instead of at the
+   beginning.
 
 
 ## Version 0.8.4 [2022-04-20]

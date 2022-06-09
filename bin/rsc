@@ -61,7 +61,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.8.4-9000
+### Version: 0.8.4-9001
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -1370,7 +1370,7 @@ elif [[ "${action}" == "start" ]]; then
     if [[ "${RSC_PASSWORD}" == "random" ]]; then
         RSC_PASSWORD=$(openssl rand -base64 15)
         export RSC_PASSWORD
-        message "Your one-time random password for RStudio Server is ${RSC_PASSWORD}"
+        RSC_PASSWORD_ECHO=${RSC_PASSWORD_ECHO:-true}
     fi
     
     validate_auth
@@ -1453,6 +1453,10 @@ elif [[ "${action}" == "start" ]]; then
     message "Any R session started times out after being idle for $(rsession_timeout) minutes."
  
     mwarn "You now have $(rserver_timeout) minutes, until $(date --rfc-3339=seconds --date="+$(rserver_timeout) minutes"), to connect and log in to the RStudio Server before everything times out."
+
+    if ${RSC_PASSWORD_ECHO:-false}; then
+        message "Your password for this RStudio Server instance is: ${RSC_PASSWORD}"
+    fi
     
     mdebug "Waiting for background process (pids ${pids[*]}) to finish ..."
     wait "${pids[@]}"
