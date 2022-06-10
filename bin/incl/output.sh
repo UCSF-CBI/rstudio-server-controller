@@ -90,6 +90,12 @@ function mnote {
     } 1>&2
 }
 
+function fg_magenta {
+    _tput setaf 5 ## magenta
+    echo "$*"
+    _tput sgr0    ## reset
+}
+
 function _exit {
     local value
 
@@ -120,25 +126,51 @@ function term_colors {
         cyan=$(tput setaf 6)
         white=$(tput setaf 7)
 
-        ## Text modes
-        bold=$(tput bold)
-        dim=$(tput dim)
+        ## Text effects
+        bold=$(tput bold)  # bold
+        dim=$(tput dim)    # dim
+        smso=$(tput smso)  # standout
+        rmso=$(tput rmso)  # standout end
+        smul=$(tput smso)  # underline
+        rmul=$(tput rmso)  # underline end
+
+        ## Reset text effects and foreground colors
         reset=$(tput sgr0)
     else
-        export black=
-        export red=
-        export green=
-        export yellow=
-        export blue=
-        export magenta=
-        export cyan=
-        export white=
-
-        export bold=
-        export dim=
-
-        export reset=
+        black=""
+        red=""
+        green=""
+        yellow=""
+        blue=""
+        magenta=""
+        cyan=""
+        white=""
+        bold=""
+        dim=""
+        smso=""
+        rmso=""
+        smul=""
+        rmul=""
+        reset=""
     fi
+    undo=$'\016' ## ASCII Shift Out = ASCII 14 = ASCII 016 = ASCII 0x0E
+    
+    export black
+    export red
+    export green
+    export yellow
+    export blue
+    export magenta
+    export cyan
+    export white
+    export bold
+    export dim
+    export smso
+    export rmso
+    export smul
+    export rmul
+    export reset
+    export undo
 }
 
 
