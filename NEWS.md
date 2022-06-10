@@ -1,6 +1,6 @@
 # rstudio-server-controller
 
-## Version 0.8.4-9001 [2022-06-09]
+## Version 0.8.4-9002 [2022-06-09]
 
 ### New features
 
@@ -8,6 +8,9 @@
    password is now display at the very end, instead of at the
    beginning.
 
+ * `rsc start` now highlights URLs and temporary passwords in output,
+   if the terminal supports it.
+ 
 
 ## Version 0.8.4 [2022-04-20]
 

@@ -28,7 +28,9 @@ function error {
         reset=$(tput sgr0)
     fi
 
-    echo -e "${reset}${red}${bold}ERROR:${reset} ${bold}$*${reset}"
+    msg="${reset}${red}${bold}ERROR:${reset} ${bold}$*${reset}"
+    [[ -z ${undo} ]] || msg="${msg/${undo}/${reset}}"
+    echo -e "${msg}"
 
     if ${TRACEBACK_ON_ERROR}; then
        echo -e "${gray}Traceback:"
@@ -65,7 +67,9 @@ function warn {
         reset=$(tput sgr0)
     fi
     
-    echo -e "${reset}${yellow}${bold}WARNING${reset}: $*"
+    msg="${reset}${yellow}${bold}WARNING${reset}: $*"
+    [[ -z ${undo} ]] || msg="${msg/${undo}/${reset}}"
+    echo -e "${msg}"
     
     if ${TRACEBACK_ON_WARN}; then
        echo -e "${gray}Traceback:"
@@ -81,7 +85,8 @@ function warn {
 function message {
     local bold
     local reset
-
+    local msg
+    
     ## Nothing to do?
     ${quiet:-false} && return 0;
        
@@ -89,8 +94,10 @@ function message {
         bold=$(tput bold)
         reset=$(tput sgr0)
     fi
-    
-    echo -e "${reset}${bold}$*${reset}"
+
+    msg="${reset}${bold}$*${reset}"
+    [[ -z ${undo} ]] || msg="${msg/${undo}/${reset}${bold}}"
+    echo -e "${msg}"
     
     printf "%s" "${reset}"
 }
