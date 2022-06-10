@@ -1,6 +1,6 @@
 # rstudio-server-controller
 
-## Version 0.8.4-9006 [2022-06-09]
+## Version 0.8.4-9007 [2022-06-09]
 
 ### New features
 
@@ -17,6 +17,12 @@
  * The error message produced by `rsc start` when an instance is
    already running now suggests calling `rsc status --full` for
    instructions on how to reconnect.
+
+### Bug fixes
+
+ * `rsc start` and `rsc status` could report on the incorrect hostname
+   of the machine where the RStudio Server instance is running,
+   e.g. when launched via an interactive Slurm job.
 
 
 ## Version 0.8.4 [2022-04-20]
