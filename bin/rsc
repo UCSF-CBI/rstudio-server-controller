@@ -54,6 +54,7 @@
 ###  rsc start --port-seed="$(id -u)" --port=random  ## same as --port=uid
 ###
 ###  rsc status
+###  rsc status --full
 ###
 ###  rsc stop
 ###
@@ -61,7 +62,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.8.4-9001
+### Version: 0.8.4-9004
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -991,9 +992,36 @@ function ssh_revtunnel_pid_file {
     echo "${workdir}/ssh-revtunnel.pid"
 }
 
+function ssh_revtunnel_spec_file {
+    local workdir
+    local file
+    workdir=$(config_dir)
+    echo "${workdir}/ssh-revtunnel.spec"
+}
+
 _RSC_RSERVER_PID_=
 function ssh_revtunnel_pid {
     read_pid "${1:-false}" "$(ssh_revtunnel_pid_file)"
+}
+
+function ssh_revtunnel_hostname {
+    local file
+    local tmp
+    file=$(ssh_revtunnel_spec_file)
+    if [[ -f "${file}" ]]; then
+        mapfile -t tmp < "${file}"
+        echo "${res[0]}"
+    fi
+}
+
+function ssh_revtunnel_port {
+    local file
+    local tmp
+    file=$(ssh_revtunnel_spec_file)
+    if [[ -f "${file}" ]]; then
+        mapfile -t tmp < "${file}"
+        echo "${res[1]}"
+    fi
 }
 
 function ssh_revtunnel_status {
@@ -1030,6 +1058,7 @@ function shutdown {
         remove_stray_pid_file rserver
         remove_stray_pid_file rserver_monitor
         remove_stray_pid_file ssh_revtunnel
+        rm -f "$(ssh_revtunnel_spec_file)"
     } > /dev/null
     message "Shutting down RStudio Server ... done"
 }
@@ -1047,6 +1076,23 @@ function exit_on_signals {
         #shellcheck disable=SC2064
         trap "${cmd}" "${signal}"
     done
+}
+
+
+# -------------------------------------------------------------------------
+# Information
+# -------------------------------------------------------------------------
+function display_access_instructions {
+    if [[ "$(ssh_revtunnel_status)" != "not running" ]]; then
+        message "${USER}, your personal RStudio Server is available on <${blue}http://$(ssh_revtunnel_hostname):$(ssh_revtunnel_port)${undo}>."
+    elif on_local_machine; then
+        message "${USER}, your personal RStudio Server is available on <${blue}http://127.0.0.1:$(rserver_port)${undo}> from this machine ($(rserver_hostname))."
+    else
+        LOCALPORT=${LOCALPORT:-8787}
+        hostname=$(rserver_hostname)
+        port=$(rserver_port)
+        message "${USER}, your personal RStudio Server is available on <${blue}http://${hostname}:${port}${undo}>. If you are running from a remote machine without direct access to ${hostname}, you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:${LOCALPORT}> by running '${blue}ssh -L ${LOCALPORT}:${hostname}:${port} ${USER}@$(find_login_host)${undo}' in a second terminal."
+    fi
 }
 
 
@@ -1300,6 +1346,15 @@ elif [[ "${action}" == "status" ]]; then
         else
             echo "lock file: does not exist"
         fi
+
+        ## Display info on how to reconnect?
+        if $full; then
+            message "\nInformation on how to reconnect:"
+            res=$(rs_process_status "$(rserver_pid true)" "$(rserver_hostname)")
+            if [[ "${res}" != "not running" ]]; then
+                display_access_instructions
+            fi
+        fi
     else
         ! ${force} && [[ "$(rserver_status)" == "not running" ]] && error "Not running"
         if [[ "${field}" == "port" ]]; then
@@ -1414,7 +1469,7 @@ elif [[ "${action}" == "start" ]]; then
     [[ -z "${pid}" ]] && error "rserver monitor failed to start for unknown reasons"
     pids=("${pid}")
     
-    ## Reverse SSH tunnel?
+    ## Launch reverse SSH tunnel?
     if [[ ${#revtunnel[@]} -gt 0 ]]; then
         if ! ${ssh}; then
             error "Cannot setup reverse SSH tunnel, because --no-ssh was used"
@@ -1428,14 +1483,13 @@ elif [[ "${action}" == "start" ]]; then
         rev_spec=${rev_port}:localhost:${port}
         mdebug " - rev spec: ${rev_spec}"
 
-        message "${USER}, your personal RStudio Server is available on <${blue}http://${rev_hostname}:${rev_port}${undo}>."
-
         pid_file=$(ssh_revtunnel_pid_file)
         if $dryrun; then
             echo "DRYRUN: ssh -N -R \"${rev_spec}\" \"${rev_hostname}\""
             sleep 60 &
         else
             mdebug "ssh -N -R \"${rev_spec}\" \"${rev_hostname}\""
+            printf "%s\n%s\n" "${rev_hostname}" "${rev_port}" > "$(ssh_revtunnel_spec_file)"
             ssh -N -R "${rev_spec}" "${rev_hostname}" &
         fi
         ssh_pid=$!
@@ -1443,15 +1497,13 @@ elif [[ "${action}" == "start" ]]; then
         ssh_pid=$(ssh_revtunnel_pid false)
         mdebug "Reverse SSH tunnel started (pid ${ssh_pid})"
         pids+=("${ssh_pid}")
+        
         mdebug "Setting up reverse SSH tunnel ... done"
-    else
-        if on_local_machine; then
-            message "${USER}, your personal RStudio Server is available on <${blue}http://127.0.0.1:${port}${undo}> from this machine ($(rserver_hostname))."
-        else
-            LOCALPORT=${LOCALPORT:-8787}
-            message "${USER}, your personal RStudio Server is available on <${blue}http://$(rserver_hostname):${port}${undo}>. If you are running from a remote machine without direct access to $(rserver_hostname), you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:${LOCALPORT}> by running '${blue}ssh -L ${LOCALPORT}:$(rserver_hostname):${port} ${USER}@$(find_login_host)${undo}' in a second terminal."
-        fi
-    fi    
+    fi
+
+
+    ## Give instructions
+    display_access_instructions
 
     message "Any R session started times out after being idle for $(rsession_timeout) minutes."
  

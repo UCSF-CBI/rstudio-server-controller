@@ -1,6 +1,6 @@
 # rstudio-server-controller
 
-## Version 0.8.4-9002 [2022-06-09]
+## Version 0.8.4-9004 [2022-06-09]
 
 ### New features
 
@@ -10,7 +10,10 @@
 
  * `rsc start` now highlights URLs and temporary passwords in output,
    if the terminal supports it.
- 
+
+ * `rsc status --full` will show information how to reconnect to an
+   already running RStudio Server instance.
+
 
 ## Version 0.8.4 [2022-04-20]
 
