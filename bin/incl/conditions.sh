@@ -29,7 +29,7 @@ function error {
     fi
 
     msg="${reset}${red}${bold}ERROR:${reset} ${bold}$*${reset}"
-    [[ -z ${undo} ]] || msg="${msg/${undo}/${reset}}"
+    [[ -z ${undo} ]] || msg="${msg//${undo}/${reset}${bold}}"
     echo -e "${msg}"
 
     if ${TRACEBACK_ON_ERROR}; then
@@ -68,7 +68,7 @@ function warn {
     fi
     
     msg="${reset}${yellow}${bold}WARNING${reset}: $*"
-    [[ -z ${undo} ]] || msg="${msg/${undo}/${reset}}"
+    [[ -z ${undo} ]] || msg="${msg//${undo}/${reset}}"
     echo -e "${msg}"
     
     if ${TRACEBACK_ON_WARN}; then
@@ -96,7 +96,7 @@ function message {
     fi
 
     msg="${reset}${bold}$*${reset}"
-    [[ -z ${undo} ]] || msg="${msg/${undo}/${reset}${bold}}"
+    [[ -z ${undo} ]] || msg="${msg//${undo}/${reset}${bold}}"
     echo -e "${msg}"
     
     printf "%s" "${reset}"
