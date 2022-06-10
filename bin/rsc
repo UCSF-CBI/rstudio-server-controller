@@ -1091,7 +1091,7 @@ function display_access_instructions {
         LOCALPORT=${LOCALPORT:-8787}
         hostname=$(rserver_hostname)
         port=$(rserver_port)
-        message "${USER}, your personal RStudio Server is available on <${blue}http://${hostname}:${port}${undo}>.\n\nIf you are running from a remote machine without direct access to ${hostname}, you can use SSH port forwarding to access the RStudio Server at <${blue}http://127.0.0.1:${LOCALPORT}${undo}> by first running '${blue}ssh -L ${LOCALPORT}:${hostname}:${port} ${USER}@$(find_login_host)${undo}' in a second terminal."
+        message "${USER}, your personal RStudio Server is available on <${blue}http://${hostname}:${port}${undo}>.\nIf you are running from a remote machine without direct access to ${hostname}, you can use SSH port forwarding to access the RStudio Server at <${blue}http://127.0.0.1:${LOCALPORT}${undo}> by first running '${blue}ssh -L ${LOCALPORT}:${hostname}:${port} ${USER}@$(find_login_host)${undo}' in a second terminal."
     fi
 }
 
