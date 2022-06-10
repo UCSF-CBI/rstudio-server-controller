@@ -122,10 +122,9 @@ produce an informative error message, e.g.
 ```sh
 $ rsc start
 ERROR: alice, another RStudio Server session of yours is already running on
-alice-notebook on this system. See 'rsc status' for details. Please terminate
-that first, e.g. call 'rsc stop' from that machine. As a last resort, call
-'pkill rserver; pkill rsession', remove lock file '/home/alice/.config/rsc/
-pid.lock', and retry.
+alice-notebook on this system. Call 'rsc status --full' for details on how
+to reconnect. If you want to start a new instance, pleas e terminate the
+existing one first by calling 'rsc stop' from that machine.
 ```
 
 This limit applies across all machines on the same file system, which
@@ -143,6 +142,8 @@ rserver monitor: running (pid 29101) on machine (alice-notebook)
 lock file: exists (/home/alice/.config/rsc/pid.lock)
 ```
 
+As the above error message suggests, add `--full` to also get information
+on how to reconnect to the already running RStudio Server instance.
 
 ## Running RStudio Server remotely
 
@@ -160,9 +161,10 @@ If we launch `rsc` on the remote server, we will get:
 ```sh
 [alice@server ~]$ rsc start
 alice, your personal RStudio Server is available on <http://server.myuniv.org:51172>.
-If you are running from a remote machine without direct access to server.myuniv.org, you
-can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by
-running 'ssh -L 8787:server.myuniv.org:51172 alice@server.myuniv.org' in a second terminal.
+If you are running from a remote machine without direct access to server.myuniv.org,
+you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787>
+by first running 'ssh -L 8787:server.myuniv.org:51172 alice@server.myuniv.org' in a
+second terminal.
 Any R session started times out after being idle for 120 minutes.
 WARNING: You now have 10 minutes, until 2022-03-11 13:30:33-08:00, to connect and log
 in to the RStudio Server before everything times out.
@@ -193,9 +195,10 @@ If we launch `rsc` on the remote server, we will get very similar instructions:
 ```sh
 [alice@server ~]$ rsc start
 alice, your personal RStudio Server is available on <http://server.myuniv.org:51172>.
-If you are running from a remote machine without direct access to server.myuniv.org, you
-can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by
-running 'ssh -L 8787:server.myuniv.org:51172 alice@login.myuniv.org' in a second terminal.
+If you are running from a remote machine without direct access to server.myuniv.org,
+you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787>
+by first running 'ssh -L 8787:server.myuniv.org:51172 alice@server.myuniv.org' in a
+second terminal.
 Any R session started times out after being idle for 120 minutes.
 WARNING: You now have 10 minutes, until 2022-03-11 13:30:33-08:00, to connect and log
 in to the RStudio Server before everything times out.
@@ -220,9 +223,10 @@ Note that, the reason why we have to use two concurrent SSH connections, is that
 [alice@login ~]$ ssh -l alice server.myuniv.org
 [alice@server ~]$ rsc start --port=51172
 alice, your personal RStudio Server is available on <http://server.myuniv.org:51172>.
-If you are running from a remote machine without direct access to server.myuniv.org, you
-can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787> by
-running 'ssh -L 8787:server.myuniv.org:51172 alice@login.myuniv.org' in a second terminal.
+If you are running from a remote machine without direct access to server.myuniv.org,
+you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787>
+by first running 'ssh -L 8787:server.myuniv.org:51172 alice@server.myuniv.org' in a
+second terminal.
 Any R session started times out after being idle for 120 minutes.
 WARNING: You now have 10 minutes, until 2022-03-11 13:30:33-08:00, to connect and log
 in to the RStudio Server before everything times out.
