@@ -1,6 +1,6 @@
 # rstudio-server-controller
 
-## Version 0.8.4-9004 [2022-06-09]
+## Version 0.8.4-9005 [2022-06-09]
 
 ### New features
 
@@ -13,6 +13,10 @@
 
  * `rsc status --full` will show information how to reconnect to an
    already running RStudio Server instance.
+
+ * The error message produced by `rsc start` when an instance is
+   already running now suggests calling `rsc status --full` for
+   instructions on how to reconnect.
 
 
 ## Version 0.8.4 [2022-04-20]
