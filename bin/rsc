@@ -62,7 +62,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.9.0-9001
+### Version: 0.9.0-9002
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -684,16 +684,23 @@ function rsession_pid {
     read_pid "${1:-false}" "$(rsession_pid_file)"
 }
 
+function terminate_pid {
+    local pid
+    mdebug "terminate_pid() ..."
+    pid=${1:?}
+    mdebug " - pid: '${pid}' (before check)"
+    pid=$(check_pid "${pid}")
+    mdebug " - pid: '${pid}' (after check)"
+    if [[ -n "${pid}" ]]; then
+        kill -TERM "${pid}" && mdebug "Process PID=${pid} terminated"
+    fi
+    mdebug "terminate_pid() ... done"
+}
+
 function terminate_rsession {
     local pid
     mdebug "terminate_rsession() ..."
-    pid=$(rsession_pid)
-    mdebug " - pid: '${pid}'"
-    if [[ -n ${pid} ]]; then
-        pid=$(check_pid "${pid}")
-        mdebug " - pid: '${pid}'"
-        [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rsession (PID ${pid}) terminated"
-    fi
+    terminate_pid "$(rsession_pid)"
     mdebug "terminate_rsession() ... done"
 }
 
@@ -785,13 +792,7 @@ function rserver_url {
 function terminate_rserver {
     local pid
     mdebug "terminate_rserver() ..."
-    pid=$(rserver_pid)
-    mdebug " - pid: ${pid}"
-    if [[ -n ${pid} ]]; then
-        pid=$(check_pid "${pid}")
-        mdebug " - pid: '${pid}'"
-        [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rserver (PID ${pid}) terminated"
-    fi
+    terminate_pid "$(rserver_pid)"
     mdebug "terminate_rserver() ... done"
 }
 
@@ -904,13 +905,7 @@ function rserver_monitor_pid {
 function terminate_rserver_monitor {
     local pid
     mdebug "terminate_rserver_monitor() ..."
-    pid=$(rserver_monitor_pid)
-    mdebug " - pid: '${pid}'"
-    if [[ -n ${pid} ]]; then
-        pid=$(check_pid "${pid}")
-        mdebug " - pid: '${pid}'"
-        [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rserver_monitor (PID ${pid}) terminated"
-    fi
+    terminate_pid "$(rserver_monitor_pid)"
     mdebug "terminate_rserver_monitor() ... done"
 }
 
@@ -1029,13 +1024,7 @@ function ssh_revtunnel_status {
 function terminate_ssh_revtunnel {
     local pid
     mdebug "terminate_ssh_revtunnel() ..."
-    pid=$(ssh_revtunnel_pid)
-    mdebug " - pid: '${pid}'"
-    if [[ -n ${pid} ]]; then
-        pid=$(check_pid "${pid}")
-        mdebug " - pid: '${pid}'"
-        [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "SSH reverse-tunnel connection (PID ${pid}) terminated"
-    fi
+    terminate_pid "$(ssh_revtunnel_pid)"
     mdebug "terminate_ssh_revtunnel() ... done"
 }
 
