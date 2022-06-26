@@ -62,7 +62,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.9.0-9000
+### Version: 0.9.0-9001
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -918,8 +918,6 @@ function rserver_monitor_status {
     rs_process_status "$(rserver_monitor_pid true)" "$(rserver_hostname)"
 }    
 
-# Monitor the rsession PID. If it is gone, start a countdown watch for kill 'rserver'
-
 function rserver_monitor {
     local endtime
     local state
@@ -1375,20 +1373,16 @@ elif [[ "${action}" == "stop" ]]; then
     fi
 
     ## Terminate rsession
-    pid=$(rsession_pid)
-    [[ -n "${pid}" ]] && kill -TERM "${pid}"
+    terminate_rsession
 
     ## Terminate rserver
-    pid=$(rserver_pid)
-    [[ -n "${pid}" ]] && kill -TERM "${pid}"
+    terminate_rserver
 
     ## Terminate rserver monitor
-    pid=$(rserver_monitor_pid)
-    [[ -n "${pid}" ]] && kill -TERM "${pid}"
+    terminate_rserver_monitor
 
     ## Terminate SSH reverse-tunnel connection
-    pid=$(ssh_revtunnel_pid)
-    [[ -n "${pid}" ]] && kill -TERM "${pid}"
+    terminate_ssh_revtunnel
 
     ## Remove lock file
     remove_lock_file
