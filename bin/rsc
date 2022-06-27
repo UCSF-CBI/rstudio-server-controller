@@ -62,7 +62,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.9.0-9002
+### Version: 0.9.0-9003
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -686,15 +686,38 @@ function rsession_pid {
 
 function terminate_pid {
     local pid
-    mdebug "terminate_pid() ..."
-    pid=${1:?}
-    mdebug " - pid: '${pid}' (before check)"
-    pid=$(check_pid "${pid}")
-    mdebug " - pid: '${pid}' (after check)"
-    if [[ -n "${pid}" ]]; then
-        kill -TERM "${pid}" && mdebug "Process PID=${pid} terminated"
+    local signals
+    local signal
+    mdebug "terminate_pid($*) ..."
+    pid=${1}
+    if [[ -n ${pid} ]]; then
+       shift
+       signals=("$@")
+       if [[ ${#signals[@]} -eq 0 ]]; then
+           signals=("SIGTERM" "SIGTERM" "SIGTERM" "SIGTERM" "SIGKILL")
+       fi
+       mdebug " - pid: ${pid} (before check)"
+       mdebug " - signals: [n=${#signals[@]}] ${signals[*]}"
+       pid=$(check_pid "${pid}")
+       for kk in $(seq ${#signals[@]}); do
+           if [[ -z "${pid}" ]]; then
+               break
+           fi
+           signal=${signals[$((kk - 1))]}
+           mdebug "Attempt ${kk}: kill -${signal} ${pid}"
+           kill "-${signal}" "${pid}" && mdebug "Sending ${signal} to PID ${pid}"
+           pid=$(check_pid "${pid}")
+           if [[ -n "${pid}" ]]; then
+               warn "Failed to terminate process (PID ${pid}). Will try again in 3 seconds"
+               sleep 3.0
+           fi
+       done
+
+       if [[ -n "${pid}" ]]; then
+           warn "Failed to terminate process (PID ${pid}). Attempted ${#signals[@]} times using signals ${signals[*]}."
+       fi
     fi
-    mdebug "terminate_pid() ... done"
+    mdebug "terminate_pid($*) ... done"
 }
 
 function terminate_rsession {
