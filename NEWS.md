@@ -1,6 +1,6 @@
 # rstudio-server-controller
 
-## Version 0.9.0-9003 [2022-06-26]
+## Version 0.9.1 [2022-06-27]
 
 ### Bug Fixes
 
