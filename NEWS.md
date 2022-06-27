@@ -1,5 +1,16 @@
 # rstudio-server-controller
 
+## Version 0.9.1 [2022-06-27]
+
+### Bug Fixes
+
+ * If `rsc stop` could fail to terminate some processes,
+   e.g. `rserver` or `rsession`.  Now it attempts multiple times
+   before giving up with an informative warning.  It attempts four
+   times with TERM signals with three seconds in-between.  If those
+   fail, it tries one last time with the stronger KILL signal.
+
+
 ## Version 0.9.0 [2022-06-09]
 
 ### New features

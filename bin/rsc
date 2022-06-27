@@ -62,7 +62,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.9.0
+### Version: 0.9.1
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -535,10 +535,10 @@ function rs_process_status {
     
     if [[ -n ${pid} ]]; then
         if [[ -z ${warning} ]]; then
-            echo "running (pid ${pid}) on machine (${hostname})"
+            echo "running (PID ${pid}) on machine (${hostname})"
         else
             warn "${warning}"
-            echo "running (pid ${pid}) on machine (${hostname}) [guess]"
+            echo "running (PID ${pid}) on machine (${hostname}) [guess]"
         fi
     else
         echo "not running"
@@ -684,16 +684,47 @@ function rsession_pid {
     read_pid "${1:-false}" "$(rsession_pid_file)"
 }
 
+function terminate_pid {
+    local pid
+    local signals
+    local signal
+    mdebug "terminate_pid($*) ..."
+    pid=${1}
+    if [[ -n ${pid} ]]; then
+       shift
+       signals=("$@")
+       if [[ ${#signals[@]} -eq 0 ]]; then
+           signals=("SIGTERM" "SIGTERM" "SIGTERM" "SIGTERM" "SIGKILL")
+       fi
+       mdebug " - pid: ${pid} (before check)"
+       mdebug " - signals: [n=${#signals[@]}] ${signals[*]}"
+       pid=$(check_pid "${pid}")
+       for kk in $(seq ${#signals[@]}); do
+           if [[ -z "${pid}" ]]; then
+               break
+           fi
+           signal=${signals[$((kk - 1))]}
+           mdebug "Attempt ${kk}: kill -${signal} ${pid}"
+           kill "-${signal}" "${pid}" && mdebug "Sending ${signal} to PID ${pid}"
+           sleep 1.0
+           pid=$(check_pid "${pid}")
+           if [[ -n "${pid}" ]]; then
+               warn "Failed to terminate process (PID ${pid}). Will try again in three seconds"
+               sleep 2.0
+           fi
+       done
+
+       if [[ -n "${pid}" ]]; then
+           warn "Failed to terminate process (PID ${pid}). Attempted ${#signals[@]} times using signals ${signals[*]}."
+       fi
+    fi
+    mdebug "terminate_pid($*) ... done"
+}
+
 function terminate_rsession {
     local pid
     mdebug "terminate_rsession() ..."
-    pid=$(rsession_pid)
-    mdebug " - pid: '${pid}'"
-    if [[ -n ${pid} ]]; then
-        pid=$(check_pid "${pid}")
-        mdebug " - pid: '${pid}'"
-        [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rsession (PID ${pid}) terminated"
-    fi
+    terminate_pid "$(rsession_pid)"
     mdebug "terminate_rsession() ... done"
 }
 
@@ -785,13 +816,7 @@ function rserver_url {
 function terminate_rserver {
     local pid
     mdebug "terminate_rserver() ..."
-    pid=$(rserver_pid)
-    mdebug " - pid: ${pid}"
-    if [[ -n ${pid} ]]; then
-        pid=$(check_pid "${pid}")
-        mdebug " - pid: '${pid}'"
-        [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rserver (PID ${pid}) terminated"
-    fi
+    terminate_pid "$(rserver_pid)"
     mdebug "terminate_rserver() ... done"
 }
 
@@ -819,7 +844,7 @@ function launch_rserver {
     rs_pid=$!
     echo "${rs_pid}" > "${pid_file}"
     rs_pid=$(rserver_pid)
-    mdebug "RStudio Server started (pid ${rs_pid})"
+    mdebug "RStudio Server started (PID ${rs_pid})"
 }
 
 function rserver_status {
@@ -904,21 +929,13 @@ function rserver_monitor_pid {
 function terminate_rserver_monitor {
     local pid
     mdebug "terminate_rserver_monitor() ..."
-    pid=$(rserver_monitor_pid)
-    mdebug " - pid: '${pid}'"
-    if [[ -n ${pid} ]]; then
-        pid=$(check_pid "${pid}")
-        mdebug " - pid: '${pid}'"
-        [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "rserver_monitor (PID ${pid}) terminated"
-    fi
+    terminate_pid "$(rserver_monitor_pid)"
     mdebug "terminate_rserver_monitor() ... done"
 }
 
 function rserver_monitor_status {
     rs_process_status "$(rserver_monitor_pid true)" "$(rserver_hostname)"
 }    
-
-# Monitor the rsession PID. If it is gone, start a countdown watch for kill 'rserver'
 
 function rserver_monitor {
     local endtime
@@ -979,7 +996,7 @@ function launch_rserver_monitor {
     pid=$!
     echo "${pid}" > "${pid_file}"
     pid=$(rserver_pid)
-    mdebug "rserver monitor started (pid ${pid})"
+    mdebug "rserver monitor started (PID ${pid})"
 }
 
 
@@ -1031,13 +1048,7 @@ function ssh_revtunnel_status {
 function terminate_ssh_revtunnel {
     local pid
     mdebug "terminate_ssh_revtunnel() ..."
-    pid=$(ssh_revtunnel_pid)
-    mdebug " - pid: '${pid}'"
-    if [[ -n ${pid} ]]; then
-        pid=$(check_pid "${pid}")
-        mdebug " - pid: '${pid}'"
-        [[ -n "${pid}" ]] && kill -TERM "${pid}" && mdebug "SSH reverse-tunnel connection (PID ${pid}) terminated"
-    fi
+    terminate_pid "$(ssh_revtunnel_pid)"
     mdebug "terminate_ssh_revtunnel() ... done"
 }
 
@@ -1375,20 +1386,16 @@ elif [[ "${action}" == "stop" ]]; then
     fi
 
     ## Terminate rsession
-    pid=$(rsession_pid)
-    [[ -n "${pid}" ]] && kill -TERM "${pid}"
+    terminate_rsession
 
     ## Terminate rserver
-    pid=$(rserver_pid)
-    [[ -n "${pid}" ]] && kill -TERM "${pid}"
+    terminate_rserver
 
     ## Terminate rserver monitor
-    pid=$(rserver_monitor_pid)
-    [[ -n "${pid}" ]] && kill -TERM "${pid}"
+    terminate_rserver_monitor
 
     ## Terminate SSH reverse-tunnel connection
-    pid=$(ssh_revtunnel_pid)
-    [[ -n "${pid}" ]] && kill -TERM "${pid}"
+    terminate_ssh_revtunnel
 
     ## Remove lock file
     remove_lock_file
@@ -1495,7 +1502,7 @@ elif [[ "${action}" == "start" ]]; then
         ssh_pid=$!
         echo "${ssh_pid}" > "${pid_file}"
         ssh_pid=$(ssh_revtunnel_pid false)
-        mdebug "Reverse SSH tunnel started (pid ${ssh_pid})"
+        mdebug "Reverse SSH tunnel started (PID ${ssh_pid})"
         pids+=("${ssh_pid}")
         
         mdebug "Setting up reverse SSH tunnel ... done"
@@ -1513,10 +1520,10 @@ elif [[ "${action}" == "start" ]]; then
         message "Your password for this RStudio Server instance is: ${blue}${RSC_PASSWORD}${undo}"
     fi
     
-    mdebug "Waiting for background process (pids ${pids[*]}) to finish ..."
+    mdebug "Waiting for background process (PIDs ${pids[*]}) to finish ..."
     wait "${pids[@]}"
     res=$?
     mdebug "'rserver' exit code: ${res}"
-    mdebug "Waiting for 'rserver' (pid ${rs_pid}) to finish ... done"
+    mdebug "Waiting for 'rserver' (PID ${rs_pid}) to finish ... done"
     mdebug "$0 is exiting..."
 fi
