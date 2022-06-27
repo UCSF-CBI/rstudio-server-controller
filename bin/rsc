@@ -62,7 +62,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.9.0-9003
+### Version: 0.9.0-9004
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -535,10 +535,10 @@ function rs_process_status {
     
     if [[ -n ${pid} ]]; then
         if [[ -z ${warning} ]]; then
-            echo "running (pid ${pid}) on machine (${hostname})"
+            echo "running (PID ${pid}) on machine (${hostname})"
         else
             warn "${warning}"
-            echo "running (pid ${pid}) on machine (${hostname}) [guess]"
+            echo "running (PID ${pid}) on machine (${hostname}) [guess]"
         fi
     else
         echo "not running"
@@ -844,7 +844,7 @@ function launch_rserver {
     rs_pid=$!
     echo "${rs_pid}" > "${pid_file}"
     rs_pid=$(rserver_pid)
-    mdebug "RStudio Server started (pid ${rs_pid})"
+    mdebug "RStudio Server started (PID ${rs_pid})"
 }
 
 function rserver_status {
@@ -996,7 +996,7 @@ function launch_rserver_monitor {
     pid=$!
     echo "${pid}" > "${pid_file}"
     pid=$(rserver_pid)
-    mdebug "rserver monitor started (pid ${pid})"
+    mdebug "rserver monitor started (PID ${pid})"
 }
 
 
@@ -1502,7 +1502,7 @@ elif [[ "${action}" == "start" ]]; then
         ssh_pid=$!
         echo "${ssh_pid}" > "${pid_file}"
         ssh_pid=$(ssh_revtunnel_pid false)
-        mdebug "Reverse SSH tunnel started (pid ${ssh_pid})"
+        mdebug "Reverse SSH tunnel started (PID ${ssh_pid})"
         pids+=("${ssh_pid}")
         
         mdebug "Setting up reverse SSH tunnel ... done"
@@ -1520,10 +1520,10 @@ elif [[ "${action}" == "start" ]]; then
         message "Your password for this RStudio Server instance is: ${blue}${RSC_PASSWORD}${undo}"
     fi
     
-    mdebug "Waiting for background process (pids ${pids[*]}) to finish ..."
+    mdebug "Waiting for background process (PIDs ${pids[*]}) to finish ..."
     wait "${pids[@]}"
     res=$?
     mdebug "'rserver' exit code: ${res}"
-    mdebug "Waiting for 'rserver' (pid ${rs_pid}) to finish ... done"
+    mdebug "Waiting for 'rserver' (PID ${rs_pid}) to finish ... done"
     mdebug "$0 is exiting..."
 fi
