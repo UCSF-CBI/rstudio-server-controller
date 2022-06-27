@@ -2,13 +2,13 @@
 
 ## Version 0.9.0-9003 [2022-06-26]
 
-### New features
+### Bug Fixes
 
- * If `rsc stop` fails to terminate a process (e.g. `rserver` or
-   `rsession`), then it will attempt multiple times before giving up
-   with an informative warning.  It attempts four times with TERM
-   signals and a three-second delay in-between.  If they fail, it
-   tries with a KILL signal as a last attempt.
+ * If `rsc stop` could fail to terminate some processes,
+   e.g. `rserver` or `rsession`.  Now it attempts multiple times
+   before giving up with an informative warning.  It attempts four
+   times with TERM signals with three seconds in-between.  If those
+   fail, it tries one last time with the stronger KILL signal.
 
 
 ## Version 0.9.0 [2022-06-09]
