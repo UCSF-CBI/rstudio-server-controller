@@ -1,12 +1,28 @@
 # rstudio-server-controller
 
-## Version 0.9.1-9001 [2022-07-26]
+## Version (development version)
+
+### Significant changes
+
+ * Now `--port=uid` (default) generates a different port than
+   previously.  The reason is that a new algorithm, [port4me], is used
+   to generate the user-specific, pseudo-random, but deterministic
+   port.  Previously, a Python-based implementation was used.  The new
+   behavior corresponds to `--port="$(port4me --tool=rsc)"`.
+
+ * Dropped command-line option `--port-seed=<seed>`.
+
+ * Python is no longer needed for this tool.
 
 ### Miscellaneous
 
-* ROBUSTNESS: Now declaring integer type for local variables, whenever
-  possible.
+ * ROBUSTNESS: Now declaring integer type for local variables,
+   whenever possible.
 
+### Deprecated and defunct
+
+ * `--port=random` is deprecated and now equal to `--port=uid`.
+ 
 
 ## Version 0.9.1 [2022-06-27]
 
@@ -452,3 +468,6 @@
   the current machine at a random port. The server and any running R
   session it launched will be terminated when `launch_rstudio_server`
   terminates, e.g. from Ctrl-C.
+
+
+[port4me]: https://github.com/HenrikBengtsson/port4me

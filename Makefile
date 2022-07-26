@@ -2,7 +2,6 @@ shellcheck:
 	(cd bin; \
 	   shellcheck --shell=bash --external-sources -- incl/*.sh; \
 	   shellcheck --external-sources rsc; \
-	   shellcheck --external-sources freeport; \
 	   shellcheck utils/*; \
 	)
 

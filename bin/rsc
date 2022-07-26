@@ -35,11 +35,9 @@
 ###  --env-pattern=<re>  Regular expression matching environment variables to be
 ###                      exported. To export all, use "^.+$". To export none,
 ###                      use "^$". (Default: "^.+$")
-###  --port=<int>        A port in [1,65535]. If 'random', a free random port
-###                      in [1024,65535] is used. If 'uid', similar to 'random'
-###                      but is likely to be unique and deterministic for each
-###                      user (Default: uid)
-###  --port-seed=<int>   Random seed used to draw a random port (Default: none)
+###  --port=<int>        A port in [1,65535]. If 'uid' (default), a free, user-
+###                      specific, pseudo-random, but deterministic port in
+###                      [1024,65535] is used
 ### ---
 ###
 ### Example:
@@ -49,9 +47,7 @@
 ###
 ###  rsc start
 ###  rsc start --port=8787
-###  rsc start --port=random
 ###  rsc start --port=uid (default)
-###  rsc start --port-seed="$(id -u)" --port=random  ## same as --port=uid
 ###
 ###  rsc status
 ###  rsc status --full
@@ -62,7 +58,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.9.1-9001
+### Version: 0.9.1-9002
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -83,8 +79,8 @@ source "${incl}/conditions.sh"
 source "${incl}/files.sh"
 # shellcheck source=incl/output.sh
 source "${incl}/output.sh"
-# shellcheck source=incl/ports.sh
-source "${incl}/ports.sh"
+# shellcheck source=incl/port4me.bash
+source "${incl}/port4me.bash"
 # shellcheck source=incl/system.sh
 source "${incl}/system.sh"
 
@@ -329,8 +325,8 @@ function make_rserver_conf {
     assert_dir_exists "${workdir}"
     port=${1:?}
 
-    if [[ "${port}" == "random" ]]; then
-        port=$(find_free_port "${port_seed}")
+    if [[ "${port}" == "uid" ]]; then
+        port=$(PORT4ME_TOOL=rsc port4me)
         relay_condition "${port}"
     fi
     assert_port_free "${port}"
@@ -1119,8 +1115,6 @@ quiet=false
 args=()
 full=false
 port=${RSC_PORT:-uid}
-port_seed=${RSC_PORT_SEED:-}
-[[ -n ${port_seed} ]] && assert_integer "${port_seed}"
 field=
 auth=${RSC_AUTH:-auth-via-su}
 revtunnel=()
@@ -1185,8 +1179,6 @@ while [[ $# -gt 0 ]]; do
         fi
         if [[ "${key}" == "port" ]]; then
             port=${value}
-        elif [[ "${key}" == "port-seed" ]]; then
-            port_seed=${value}
         elif [[ "${key}" == "env-pattern" ]]; then
             rsession_inherit_env_pattern=${value}
         elif [[ "${key}" == "field" ]]; then
@@ -1235,18 +1227,12 @@ fi
 # Validate options
 # -------------------------------------------------------------------------
 ## Validate 'port':
-if [[ "${port}" == "uid" ]]; then
-    port_seed=$(id -u)
-    assert_integer "${port_seed}"
-    port="random"
-elif [[ "${port}" != "random" ]]; then
+if [[ "${port}" == "random" ]]; then
+    port="uid"
+    mwarn "--port=random is deprecated in favor of --port=uid (default)"
+elif [[ "${port}" != "uid" ]]; then
     assert_port "${port}"
 fi
-
-## Validate 'port_seed':
-if [[ -n ${port_seed} ]]; then
-    assert_integer "${port_seed}"
-fi    
 
 
 # -------------------------------------------------------------------------
@@ -1258,7 +1244,6 @@ mdebug "verbose: ${verbose}"
 mdebug "dryrun: ${dryrun}"
 mdebug "force: ${force}"
 mdebug "port: ${port}"
-mdebug "port_seed: ${port_seed}"
 mdebug "rsession_inherit_env_pattern: ${rsession_inherit_env_pattern}"
 mdebug "field: ${field}"
 mdebug "auth: ${auth}"
@@ -1428,7 +1413,7 @@ elif [[ "${action}" == "start" ]]; then
     assert_executable R
     assert_executable rserver
     assert_executable rsession
-    if [[ "${port}" != "random" ]]; then
+    if [[ "${port}" != "uid" ]]; then
         assert_port_free "${port}"
     fi
 
