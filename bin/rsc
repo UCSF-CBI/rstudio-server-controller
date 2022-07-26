@@ -773,6 +773,8 @@ _RSC_RSERVER_HOSTNAME_=
 function rserver_hostname {
     local workdir
     local file
+    local res
+    
     ## Already known?
     if [[ -z "${_RSC_RSERVER_HOSTNAME_}" ]]; then
         workdir=$(config_dir)
@@ -791,6 +793,8 @@ _RSC_RSERVER_PORT_=
 function rserver_port {
     local workdir
     local file
+    local res
+    
     ## Already known?
     mdebug "_RSC_RSERVER_PORT_='${_RSC_RSERVER_PORT_}'"
     if [[ -z "${_RSC_RSERVER_PORT_}" ]]; then
@@ -1005,7 +1009,6 @@ function ssh_revtunnel_pid_file {
 
 function ssh_revtunnel_spec_file {
     local workdir
-    local file
     workdir=$(config_dir)
     echo "${workdir}/ssh-revtunnel.spec"
 }
