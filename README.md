@@ -258,6 +258,8 @@ As before, the RStudio Server is available at <http://127.0.0.1:8787>.
 
 * RStudio Server (<https://www.rstudio.com/products/rstudio/#rstudio-server>)
 
+* Netcat `nc` or socket statistics `ss` to check whether a TCP port is available or not - needed by `--port=uid` (default)
+
 * `expect` (<https://core.tcl-lang.org/expect/index>) - needed by the `auth-via-ssh` method, and, depending on system and `su` implementation, also by `auth-via-su`
 
 
