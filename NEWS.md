@@ -1,8 +1,12 @@
 # rstudio-server-controller
 
-## Version 0.9.1-9000 [2022-06-27]
+## Version 0.9.1-9001 [2022-07-26]
 
- * ...
+### Miscellaneous
+
+* ROBUSTNESS: Now declaring integer type for local variables, whenever
+  possible.
+
 
 ## Version 0.9.1 [2022-06-27]
 

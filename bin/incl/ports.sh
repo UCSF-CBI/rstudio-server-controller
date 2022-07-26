@@ -15,11 +15,11 @@ source "${pwd}"/asserts.sh
 ## If 'seed' is not set, then no random seed is set.
 ## Outputs a free port in [1024,65535].
 function find_free_port {
-    local port
-    local seed
-    local skip
-    local min
-    local max
+    local -i port
+    local -i seed
+    local -i skip
+    local -i min
+    local -i max
     local algorithm
     seed=${1:-}
     algorithm=${2:-random}
@@ -90,7 +90,7 @@ function find_free_port {
 
 ## Usage: is_port_free <port>
 function is_port_free {
-    local port
+    local -i port
     local res
     port=${1:?}
     assert_integer "${port}"
