@@ -720,7 +720,6 @@ function terminate_pid {
 }
 
 function terminate_rsession {
-    local pid
     mdebug "terminate_rsession() ..."
     terminate_pid "$(rsession_pid)"
     mdebug "terminate_rsession() ... done"
@@ -812,7 +811,6 @@ function rserver_url {
 }
 
 function terminate_rserver {
-    local pid
     mdebug "terminate_rserver() ..."
     terminate_pid "$(rserver_pid)"
     mdebug "terminate_rserver() ... done"
@@ -924,7 +922,6 @@ function rserver_monitor_pid {
 }
 
 function terminate_rserver_monitor {
-    local pid
     mdebug "terminate_rserver_monitor() ..."
     terminate_pid "$(rserver_monitor_pid)"
     mdebug "terminate_rserver_monitor() ... done"
@@ -1043,7 +1040,6 @@ function ssh_revtunnel_status {
 }    
 
 function terminate_ssh_revtunnel {
-    local pid
     mdebug "terminate_ssh_revtunnel() ..."
     terminate_pid "$(ssh_revtunnel_pid)"
     mdebug "terminate_ssh_revtunnel() ... done"
