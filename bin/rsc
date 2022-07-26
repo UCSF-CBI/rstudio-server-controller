@@ -79,6 +79,8 @@ source "${incl}/conditions.sh"
 source "${incl}/files.sh"
 # shellcheck source=incl/output.sh
 source "${incl}/output.sh"
+# shellcheck source=incl/ports.sh
+source "${incl}/ports.sh"
 # shellcheck source=incl/port4me.bash
 source "${incl}/port4me.bash"
 # shellcheck source=incl/system.sh
