@@ -328,7 +328,7 @@ function make_rserver_conf {
     port=${1:?}
 
     if [[ "${port}" == "uid" ]]; then
-        port=$(PORT4ME_TOOL=rsc port4me)
+        port=$(PORT4ME_TOOL=rsc port4me 2>&1)
         relay_condition "${port}"
     fi
     assert_port_free "${port}"
