@@ -197,7 +197,7 @@ If we launch `rsc` on the remote server, we will get very similar instructions:
 alice, your personal RStudio Server is available on <http://server.myuniv.org:20612>.
 If you are running from a remote machine without direct access to server.myuniv.org,
 you can use SSH port forwarding to access the RStudio Server at <http://127.0.0.1:8787>
-by first running 'ssh -L 8787:server.myuniv.org:20612 alice@server.myuniv.org' in a
+by first running 'ssh -L 8787:server.myuniv.org:20612 alice@login.myuniv.org' in a
 second terminal.
 Any R session started times out after being idle for 120 minutes.
 WARNING: You now have 10 minutes, until 2022-03-11 13:30:33-08:00, to connect and log
