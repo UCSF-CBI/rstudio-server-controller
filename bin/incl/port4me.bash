@@ -1,9 +1,39 @@
 #! /usr/bin/env bash
 
+#' port4me: Get the Same, Personal, Free TCP Port over and over
+#'
+#' This Bash script is a self-contained version of the port4me tool.
+#' It provides function port4me() that takes a set of environment
+#' variables as input:
+#'
+#' - PORT4ME_USER   : The name of the current user (default: ${USER})
+#' - PORT4ME_TOOL   : The name of the software tool (optional)
+#' - PORT4ME_INCLUDE: Ports to be considered (default: 1024-65535)
+#' - PORT4ME_EXCLUDE: Ports to be excluded (optional)
+#' - PORT4ME_PREPEND: Ports to be considered first (optional)
+#' - PORT4ME_SKIP   : Number of ports to skip in the set of ports
+#'                    considered after applying prepended, included,
+#'                    and excluded (optional)
+#' - PORT4ME_LIST   : Number of ports to list regardless of
+#'                    availability (optional)
+#' - PORT4ME_TEST   : Port to check if it is available (optional)
+#'
+#' Examples:
+#' port4me
+#' PORT4ME_TOOL=jupyter_lab port4me
+#' PORT4ME_EXCLUDE=8787 port4me
+#' PORT4ME_PREPEND=4001-4003 port4me
+#' PORT4ME_LIST=5 port4me
+#' PORT4ME_TEST=4321 port4me
+#'
+#' Version: 0.4.0-9004
+#' Copyright: Henrik Bengtsson (2022)
+#' License: ISC
+#' Source code: https://github.com/HenrikBengtsson/port4me
 declare -i LCG_SEED
 export LCG_SEED
 
-p4m_error() {
+_p4m_error() {
     >&2 echo "ERROR: $1"
     exit 1
 }
@@ -16,24 +46,36 @@ p4m_error() {
 #'
 #' Requirements:
 #' * either 'nc' or 'ss'
-p4m_can_port_be_opened() {
+PORT4ME_PORT_COMMAND=
+_p4m_can_port_be_opened() {
     local -i port=${1:?}
+    local cmds=(nc ss)
+    local cmd
     
-    (( port < 1 || port > 65535 )) && p4m_error "Port is out of range [1,65535]: ${port}"
-    
+    (( port < 1 || port > 65535 )) && _p4m_error "Port is out of range [1,65535]: ${port}"
+
+    ## Identify port command and memoize, unless already done
+    if [[ -z ${PORT4ME_PORT_COMMAND} ]]; then
+        for cmd in "${cmds[@]}"; do
+            if command -v "${cmd}" > /dev/null; then
+                PORT4ME_PORT_COMMAND=${cmd}
+                break
+            fi
+        done
+        [[ -z ${PORT4ME_PORT_COMMAND} ]] && _p4m_error "Cannot check if port is available or not. None of the following commands exist on this system: ${cmds[*]}"
+    fi
+
     ## Is port occupied?
-    if command -v nc > /dev/null; then
+    if [[ ${PORT4ME_PORT_COMMAND} == "nc" ]]; then
         if nc -z 127.0.0.1 "$port"; then
             return 1
         fi
-    elif command -v ss > /dev/null; then
+    elif [[ ${PORT4ME_PORT_COMMAND} == "ss" ]]; then
         if ss -H -l -n src :"$port" | grep -q -E ":$port\b"; then
             return 1
         fi
-    else
-        p4m_error "Neither command 'nc' nor 'ss' is available on this host ($HOSTNAME)"
     fi
-    
+
     ## FIXME: A port can be free, but it might be that the user
     ## don't have the right to open it, e.g. port 1-1023.
     ## WORKAROUND: If non-root, assume 1-1023 can't be opened
@@ -47,7 +89,7 @@ p4m_can_port_be_opened() {
 }
 
 #' Analogue to Java hashCode() but returns a non-signed integer
-p4m_string_to_uint() {
+_p4m_string_to_uint() {
     local str="$1"
     local -i kk byte
     local -i hash=0
@@ -63,7 +105,7 @@ p4m_string_to_uint() {
     printf "%d" $hash
 }
 
-p4m_parse_ports() {
+_p4m_parse_ports() {
     local spec=${1:?}
     local specs
     local -a ports
@@ -95,7 +137,7 @@ p4m_parse_ports() {
     fi
 }
 
-p4m_lcg() {
+_p4m_lcg() {
     local -i a=75 c=74 modulus=65537 seed="${LCG_SEED:?}"
     local -i seed_next
 
@@ -115,11 +157,11 @@ p4m_lcg() {
 
     ## Sanity checks
     if (( seed_next < 0 )); then
-        p4m_error "INTERNAL: New LCG seed is non-positive: $seed_next, where (a, c, modulus) = ($a, $c, $modulus) with seed = $seed"
+        _p4m_error "INTERNAL: New LCG seed is non-positive: $seed_next, where (a, c, modulus) = ($a, $c, $modulus) with seed = $seed"
     elif (( seed_next > modulus )); then
-        p4m_error "INTERNAL: New LCG seed is too large: $seed_next, where (a, c, modulus) = ($a, $c, $modulus) with seed = $seed"
+        _p4m_error "INTERNAL: New LCG seed is too large: $seed_next, where (a, c, modulus) = ($a, $c, $modulus) with seed = $seed"
     elif (( seed_next == seed )); then
-        p4m_error "INTERNAL: New LCG seed is same a current seed, where (a, c, modulus) = ($a, $c, $modulus) with seed = $seed"
+        _p4m_error "INTERNAL: New LCG seed is same a current seed, where (a, c, modulus) = ($a, $c, $modulus) with seed = $seed"
     fi
     
     LCG_SEED=${seed_next}
@@ -127,10 +169,10 @@ p4m_lcg() {
     echo "${LCG_SEED}"
 }
 
-p4m_string_to_seed() {
+_p4m_string_to_seed() {
     local seed=${PORT4ME_USER:-${USER:?}},${PORT4ME_TOOL}
     seed=${seed%%,}  ## trim trailing commas
-    p4m_string_to_uint "$seed"
+    _p4m_string_to_uint "$seed"
 }
 
 port4me() {
@@ -138,30 +180,35 @@ port4me() {
     local must_work=${PORT4ME_MUST_WORK:-true}
     local -i skip=${PORT4ME_SKIP:-0}
     local -i list=${PORT4ME_LIST:-0}
+    local -i test=${PORT4ME_TEST:-0}
+
     local -i exclude include prepend
     local -i count tries
 
-    mapfile -t exclude < <(p4m_parse_ports "${PORT4ME_EXCLUDE},${PORT4ME_EXCLUDE_SITE}")
-    mapfile -t include < <(p4m_parse_ports "${PORT4ME_INCLUDE},${PORT4ME_INCLUDE_SITE}")
-    mapfile -t prepend < <(p4m_parse_ports "${PORT4ME_PREPEND},${PORT4ME_PREPEND_SITE}")
+    if [[ $test -ne 0 ]]; then
+        _p4m_can_port_be_opened "${test}"
+        return $?
+    fi
+    
+    mapfile -t exclude < <(_p4m_parse_ports "${PORT4ME_EXCLUDE},${PORT4ME_EXCLUDE_SITE}")
+    mapfile -t include < <(_p4m_parse_ports "${PORT4ME_INCLUDE},${PORT4ME_INCLUDE_SITE}")
+    mapfile -t prepend < <(_p4m_parse_ports "${PORT4ME_PREPEND},${PORT4ME_PREPEND_SITE}")
 
     if (( list > 0 )); then
         max_tries=${list}
     fi
     
-    LCG_SEED=$(p4m_string_to_seed)
+    LCG_SEED=$(_p4m_string_to_seed)
 
     count=0
     tries=0
     while (( tries < max_tries )); do
-        tries=$(( tries + 1 ))
-        
         if (( ${#prepend[@]} > 0 )); then
             port=${prepend[0]}
-            (( port < 1 || port > 65535 )) && p4m_error "Prepended port out of range [1,65535]: ${port}"
+            (( port < 1 || port > 65535 )) && _p4m_error "Prepended port out of range [1,65535]: ${port}"
             prepend=("${prepend[@]:1}") ## drop first element
         else
-            p4m_lcg > /dev/null
+            _p4m_lcg > /dev/null
             port=${LCG_SEED:?}
         fi
 
@@ -183,6 +230,7 @@ port4me() {
             continue
         fi
 
+        tries=$(( tries + 1 ))
         count=$((count + 1))
 
         if (( list > 0 )); then
@@ -195,7 +243,7 @@ port4me() {
             
             ${PORT4ME_DEBUG:-false} && >&2 printf "%d. port=%d\n" "$count" "$port"
     
-            if p4m_can_port_be_opened "$port"; then
+            if _p4m_can_port_be_opened "$port"; then
                 printf "%d\n" "$port"
                 return 0
             fi
@@ -205,7 +253,7 @@ port4me() {
 
     if (( list == 0 )); then
         if $must_work; then
-            p4m_error "Failed to find a free TCP port after ${max_tries} attempts"
+            _p4m_error "Failed to find a free TCP port after ${max_tries} attempts"
         fi
 
         printf "%d\n" "-1"

@@ -4,7 +4,7 @@
 
 ### Significant changes
 
- * Now `--port=uid` (default) generates a different port than
+ * Now `--port=port4me` (default) generates a different port than
    previously.  The reason is that a new algorithm, [port4me], is used
    to generate the user-specific, pseudo-random, but deterministic
    port.  Previously, a Python-based implementation was used.  The new
@@ -21,7 +21,8 @@
 
 ### Deprecated and defunct
 
- * `--port=random` is deprecated and now equal to `--port=uid`.
+ * `--port=random` and `--port=uid` are deprecated and equal to
+   `--port=port4me`.
  
 
 ## Version 0.9.1 [2022-06-27]

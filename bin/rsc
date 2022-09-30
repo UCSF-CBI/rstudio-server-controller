@@ -35,9 +35,9 @@
 ###  --env-pattern=<re>  Regular expression matching environment variables to be
 ###                      exported. To export all, use "^.+$". To export none,
 ###                      use "^$". (Default: "^.+$")
-###  --port=<int>        A port in [1,65535]. If 'uid' (default), a free, user-
-###                      specific, pseudo-random, but deterministic port in
-###                      [1024,65535] is used
+###  --port=<int>        A port in [1,65535]. If 'port4me' (default), a free,
+###                      user-specific, pseudo-random, but deterministic port
+###                      in [1024,65535] is used
 ### ---
 ###
 ### Example:
@@ -47,7 +47,7 @@
 ###
 ###  rsc start
 ###  rsc start --port=8787
-###  rsc start --port=uid (default)
+###  rsc start --port=port4me (default)
 ###
 ###  rsc status
 ###  rsc status --full
@@ -58,7 +58,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.9.1-9004
+### Version: 0.9.1-9005
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -327,7 +327,7 @@ function make_rserver_conf {
     assert_dir_exists "${workdir}"
     port=${1:?}
 
-    if [[ "${port}" == "uid" ]]; then
+    if [[ "${port}" == "port4me" ]]; then
         port=$(PORT4ME_TOOL=rsc port4me 2>&1)
         relay_condition "${port}"
     fi
@@ -1114,7 +1114,7 @@ verbose=false
 quiet=false
 args=()
 full=false
-port=${RSC_PORT:-uid}
+port=${RSC_PORT:-port4me}
 field=
 auth=${RSC_AUTH:-auth-via-su}
 revtunnel=()
@@ -1228,9 +1228,12 @@ fi
 # -------------------------------------------------------------------------
 ## Validate 'port':
 if [[ "${port}" == "random" ]]; then
-    port="uid"
-    mwarn "--port=random is deprecated in favor of --port=uid (default)"
-elif [[ "${port}" != "uid" ]]; then
+    port="port4me"
+    mwarn "--port=random is deprecated in favor of --port=port4me (default)"
+elif [[ "${port}" == "uid" ]]; then
+    port="port4me"
+    mwarn "--port=uid is deprecated in favor of --port=port4me (default)"
+elif [[ "${port}" != "port4me" ]]; then
     assert_port "${port}"
 fi
 
@@ -1413,7 +1416,7 @@ elif [[ "${action}" == "start" ]]; then
     assert_executable R
     assert_executable rserver
     assert_executable rsession
-    if [[ "${port}" != "uid" ]]; then
+    if [[ "${port}" != "port4me" ]]; then
         assert_port_free "${port}"
     fi
 
@@ -1452,7 +1455,7 @@ elif [[ "${action}" == "start" ]]; then
     [[ -z "${rs_pid}" ]] && error "RStudio Server failed to start for unknown reasons. One reason for this might be that the port (${port}) is already occupied"
     pids=("${rs_pid}")
     
-    ## Update 'port', in case it was 'uid' or 'random'
+    ## Update 'port', in case it was 'port4me'
     port=$(rserver_port)
 
     ## Launch rserver monitor
