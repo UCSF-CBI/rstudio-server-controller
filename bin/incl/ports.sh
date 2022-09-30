@@ -19,5 +19,5 @@ function assert_port {
 
 function assert_port_free {
     assert_port "${1}"
-    p4m_can_port_be_opened "$1" || error "Port is already in use on $(hostname): ${1}"
+    PORT4ME_TEST="$1" port4me || error "Port is already in use on $(hostname): ${1}"
 }
