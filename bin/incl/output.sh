@@ -97,7 +97,7 @@ function fg_magenta {
 }
 
 function _exit {
-    local value
+    local -i value
 
     value=${1:-0}
     mdebug "Exiting with exit code $value"
@@ -175,14 +175,14 @@ function term_colors {
 
 
 function term_width {
-    local value
+    local -i value
     value=$(tput cols)
     [[ -z ${value} ]] && value=79
     echo "${value}"
 }
 
 function term_height {
-    local value
+    local -i value
     value=$(tput lines)
     [[ -z ${value} ]] && value=24
     echo "${value}"
@@ -190,7 +190,7 @@ function term_height {
 
 
 function ruler {
-    local width
+    local -i width
     local symbol
     symbol=${1:-"-"}
     width=${2:-$(term_width)}
