@@ -1,5 +1,10 @@
 # rstudio-server-controller
 
+## Version (development version)
+
+ * ...
+
+
 ## Version 0.10.0 [2022-09-29]
 
 ### Significant changes
