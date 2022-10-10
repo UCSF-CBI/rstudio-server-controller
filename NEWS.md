@@ -2,7 +2,9 @@
 
 ## Version (development version)
 
- * ...
+### New Features
+
+ * Now `rsc config` reports also on the RStudio configuration folder.
 
 
 ## Version 0.10.0 [2022-09-29]
