@@ -5,6 +5,8 @@
 ### New Features
 
  * Now `rsc config` reports also on the RStudio configuration folder.
+   To get a details summary on what is stored in this folder, see
+    `rsc config --full`.
 
 
 ## Version 0.10.0 [2022-09-29]

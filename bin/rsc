@@ -58,7 +58,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.10.0-9001
+### Version: 0.10.0-9002
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -1320,13 +1320,6 @@ if [[ "${action}" == "config" ]]; then
     echo "rsession-log-file=${workdir}/rsession.log"
     echo "rserver-monitor-pid-file=$(rserver_monitor_pid_file)"
 
-    echo 
-    echo "RStudio configuration files:"
-    echo "XDG_DATA_HOME=${XDG_DATA_HOME:-<not set>}"
-    echo "RSTUDIO_DATA_HOME=${RSTUDIO_DATA_HOME:-<not set>}"
-    workdir=$(rstudio_config_dir)
-    echo "RStudio config folder=${workdir}"
-
     if $full; then
         echo
         for file in "${files[@]}"; do
@@ -1338,6 +1331,20 @@ if [[ "${action}" == "config" ]]; then
             fi
         done
     fi
+
+    echo 
+    echo "RStudio configuration files:"
+    echo "XDG_DATA_HOME=${XDG_DATA_HOME:-<not set>}"
+    echo "RSTUDIO_DATA_HOME=${RSTUDIO_DATA_HOME:-<not set>}"
+    workdir=$(rstudio_config_dir)
+    echo "RStudio config folder=${workdir}"
+    if $full && [[ -d "${workdir}" ]]; then
+        du --human-readable --si --summarize "${workdir}"/*
+        if [[ -d "${workdir}"/sessions/active/ ]]; then
+            echo "Active RStudio Sessions:"
+            du --human-readable --si "${workdir}"/sessions/active/*
+        fi
+    fi        
 elif [[ "${action}" == "log" ]]; then
     workdir=$(config_dir)
     file=${workdir}/rsession.log
