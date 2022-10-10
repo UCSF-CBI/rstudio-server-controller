@@ -1283,7 +1283,7 @@ fi
 if [[ "${action}" == "config" ]]; then
     files=()
 
-    echo "Configuration files:"
+    echo "RStudio Server Controller Storage:"
     echo "XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-<not set>}"
     
     workdir=$(config_dir)
@@ -1333,7 +1333,7 @@ if [[ "${action}" == "config" ]]; then
     fi
 
     echo 
-    echo "RStudio configuration files:"
+    echo "RStudio User State Storage:"
     echo "XDG_DATA_HOME=${XDG_DATA_HOME:-<not set>}"
     echo "RSTUDIO_DATA_HOME=${RSTUDIO_DATA_HOME:-<not set>}"
     workdir=$(rstudio_config_dir)
