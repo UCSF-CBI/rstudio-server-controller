@@ -58,7 +58,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.10.0-9002
+### Version: 0.10.0-9003
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -1341,8 +1341,8 @@ if [[ "${action}" == "config" ]]; then
     if $full && [[ -d "${workdir}" ]]; then
         du --human-readable --si --summarize "${workdir}"/*
         if [[ -d "${workdir}"/sessions/active/ ]]; then
-            echo "Active RStudio Sessions:"
-            du --human-readable --si "${workdir}"/sessions/active/*
+            echo "Suspended RStudio Session Data:"
+            du --human-readable --si "${workdir}"/sessions/active/*/suspended-session-data/
         fi
     fi        
 elif [[ "${action}" == "log" ]]; then
