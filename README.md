@@ -271,19 +271,19 @@ As before, the RStudio Server is available at <http://127.0.0.1:8787>.
 
 ```sh
 $ cd /path/to/software
-$ curl -L -O https://github.com/UCSF-CBI/rstudio-server-controller/archive/refs/tags/0.11.0.tar.gz
-$ tar xf 0.11.0.tar.gz
-$ PATH=/path/to/softwarerstudio-server-controller-0.11.0/bin:$PATH
+$ curl -L -O https://github.com/UCSF-CBI/rstudio-server-controller/archive/refs/tags/0.11.1.tar.gz
+$ tar xf 0.11.1.tar.gz
+$ PATH=/path/to/softwarerstudio-server-controller-0.11.1/bin:$PATH
 $ export PATH
 $ rsc --version
-0.11.0
+0.11.1
 ```
 
 To verify that the tool can find R and the RStudio Server executables, call:
 
 ```sh
 $ rsc --version --full
-rsc: 0.11.0
+rsc: 0.11.1
 RStudio Server: 2022.07.2-576 (Spotted Wakerobin) for Linux
 R: 4.2.1 (2022-06-23) -- "Funny-Looking Kid"
 ```
