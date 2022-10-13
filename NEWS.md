@@ -8,6 +8,10 @@
    folder.  To get a details summary on what is stored in this folder,
    see `rsc config --full`.
 
+ * Now `rsc status --full` report also on the CPU usage, RAM usage,
+   status, and start time for the rserver, rsession, and the rserver 
+   monitor processes, if they are running.
+ 
 
 ## Version 0.10.0 [2022-09-29]
 

@@ -58,7 +58,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.10.0-9003
+### Version: 0.10.0-9004
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -532,8 +532,11 @@ function find_login_host {
 # -------------------------------------------------------------------------
 ## Usage: rs_process_status <pid> <hostname>
 function rs_process_status {
-    local pid
     local hostname
+    local pid
+    local pid_info
+    local pid_stats
+    local tmp
     pid=${1}
     hostname=${2}
     
@@ -546,11 +549,20 @@ function rs_process_status {
 
     
     if [[ -n ${pid} ]]; then
+        pid_info="PID ${pid}"
+        ## Gather process details?
+        if $full && [[ "${hostname}" == "$(hostname)" ]]; then
+            read -r -a tmp <<< "$(ps -p "${pid}" -o "%cpu=,%mem=,rss=,vsize=,state=")"
+            pid_stats="$(printf "cpu=%s%%, ram=%s%%, rss=%s KiB, vsize=%s KiB, state=%s" "${tmp[0]}" "${tmp[1]}" "${tmp[2]}" "${tmp[3]}" "${tmp[4]}")"
+            pid_stats="${pid_stats}, since=$(ps -p "${pid}" -o "lstart=")"
+            pid_info="${pid_info}; ${pid_stats}"
+        fi
+
         if [[ -z ${warning} ]]; then
-            echo "running (PID ${pid}) on machine (${hostname})"
+            echo "running (${pid_info}) on machine (${hostname})"
         else
             warn "${warning}"
-            echo "running (PID ${pid}) on machine (${hostname}) [guess]"
+            echo "running (${pid_info}) on machine (${hostname}) [guess]"
         fi
     else
         echo "not running"
