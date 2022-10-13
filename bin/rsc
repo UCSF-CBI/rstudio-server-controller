@@ -1353,8 +1353,11 @@ if [[ "${action}" == "config" ]]; then
     if $full && [[ -d "${workdir}" ]]; then
         du --human-readable --si --summarize "${workdir}"/*
         if [[ -d "${workdir}"/sessions/active/ ]]; then
-            echo "Suspended RStudio Session Data:"
-            du --human-readable --si "${workdir}"/sessions/active/*/suspended-session-data/
+            res=$(du --human-readable --si "${workdir}"/sessions/active/*/suspended-session-data/ 2> /dev/null)
+            if [[ -n ${res} ]]; then
+                echo "Suspended RStudio Session Data:"
+                echo "$res"
+            fi
         fi
     fi        
 elif [[ "${action}" == "log" ]]; then
