@@ -58,7 +58,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.10.0
+### Version: 0.11.0
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
 ### License: ISC
 
@@ -197,6 +197,20 @@ function make_config_dir {
     path=$(config_dir)
     mkdir -p "${path}"/{run,tmp,var/lib/rstudio-server,/var/run/rstudio-server}
     secure_config_dir "${path}"
+}
+
+
+# -------------------------------------------------------------------------
+# RStudio Server configuration file
+# -------------------------------------------------------------------------
+# Source: https://docs.rstudio.com/ide/server-pro/r_sessions/workspace_management.html#storage-location-customization
+function rstudio_config_dir {
+    local path
+    path=${RSTUDIO_DATA_HOME}
+    if [[ -z ${path} ]]; then
+        path=${XDG_CONFIG_HOME:-$HOME/.local/share}/rstudio
+    fi
+    echo "${path}"
 }
 
 
@@ -518,8 +532,11 @@ function find_login_host {
 # -------------------------------------------------------------------------
 ## Usage: rs_process_status <pid> <hostname>
 function rs_process_status {
-    local pid
     local hostname
+    local pid
+    local pid_info
+    local pid_stats
+    local tmp
     pid=${1}
     hostname=${2}
     
@@ -532,11 +549,20 @@ function rs_process_status {
 
     
     if [[ -n ${pid} ]]; then
+        pid_info="PID ${pid}"
+        ## Gather process details?
+        if $full && [[ "${hostname}" == "$(hostname)" ]]; then
+            read -r -a tmp <<< "$(ps -p "${pid}" -o "%cpu=,%mem=,rss=,vsize=,state=")"
+            pid_stats="$(printf "cpu=%s%%, ram=%s%%, rss=%s KiB, vsize=%s KiB, state=%s" "${tmp[0]}" "${tmp[1]}" "${tmp[2]}" "${tmp[3]}" "${tmp[4]}")"
+            pid_stats="${pid_stats}, since=$(ps -p "${pid}" -o "lstart=")"
+            pid_info="${pid_info}; ${pid_stats}"
+        fi
+
         if [[ -z ${warning} ]]; then
-            echo "running (PID ${pid}) on machine (${hostname})"
+            echo "running (${pid_info}) on machine (${hostname})"
         else
             warn "${warning}"
-            echo "running (PID ${pid}) on machine (${hostname}) [guess]"
+            echo "running (${pid_info}) on machine (${hostname}) [guess]"
         fi
     else
         echo "not running"
@@ -1268,6 +1294,10 @@ fi
 
 if [[ "${action}" == "config" ]]; then
     files=()
+
+    echo "RStudio Server Controller Storage:"
+    echo "XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-<not set>}"
+    
     workdir=$(config_dir)
     echo "config-dir=${workdir}"
 
@@ -1313,6 +1343,20 @@ if [[ "${action}" == "config" ]]; then
             fi
         done
     fi
+
+    echo 
+    echo "RStudio User State Storage:"
+    echo "XDG_DATA_HOME=${XDG_DATA_HOME:-<not set>}"
+    echo "RSTUDIO_DATA_HOME=${RSTUDIO_DATA_HOME:-<not set>}"
+    workdir=$(rstudio_config_dir)
+    echo "RStudio config folder=${workdir}"
+    if $full && [[ -d "${workdir}" ]]; then
+        du --human-readable --si --summarize "${workdir}"/*
+        if [[ -d "${workdir}"/sessions/active/ ]]; then
+            echo "Suspended RStudio Session Data:"
+            du --human-readable --si "${workdir}"/sessions/active/*/suspended-session-data/
+        fi
+    fi        
 elif [[ "${action}" == "log" ]]; then
     workdir=$(config_dir)
     file=${workdir}/rsession.log
