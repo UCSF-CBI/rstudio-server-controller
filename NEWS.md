@@ -1,5 +1,15 @@
 # rstudio-server-controller
 
+## Version 0.11.1 [2022-10-12]
+
+### Bug Fixes
+
+ * `rsc status --full` would give an error `du: cannot access '
+    .../.local/share/rstudio/sessions/active/*/suspended-session-data/':
+    No such file or directory` if there were no suspended RStudio
+    Server session.
+ 
+
 ## Version 0.11.0 [2022-10-12]
 
 ### New Features
