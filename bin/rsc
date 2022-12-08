@@ -904,7 +904,7 @@ function assert_no_rserver {
         call=$(ps -o args -p "${pid}" | tail -n -1)
         mdebug " - call: ${call}"
         if grep -q -E -- "--config-file=${workdir}/rserver.conf" <<< "${call}"; then
-            msg="Even if there are no lock and PID files, there is another rserver process (PID ${pid}: '${call}') owned by you (${USER}; UID ${UID}) already running on this machine ($(hostname)). If you think this is a stray process, you can try to terminate it using 'rsc stop'. If that does not help, try with 'kill -SIGTERM ${pid}' and 'kill -SIGKILL ${pid}' as a last resort."
+            msg="Even if there are no lock and PID files, there is another rserver process (PID ${pid}: '${call}') owned by you (${USER}; UID ${UID}) already running on this machine ($(hostname)). If you think this is a stray process, you can try to terminate it using 'kill -SIGTERM ${pid}'. If that does not help, try with the stronger 'kill -SIGKILL ${pid}'."
             case ${action} in
                 error)
                     error "${msg}";;
