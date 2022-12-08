@@ -4,8 +4,10 @@
 
 ### Miscellaneous
 
- * The internal `assert_no_rserver()` function now suggests `rsc stop`
-   before `kill <PID>` if there's a stray `rserver` process running.
+ * The error message produced by the internal `assert_no_rserver()`
+   function now suggests `rsc stop` before `kill -SIGTERM <PID>` and
+   `kill -SIGKILL <PID>`, if it detects a stray `rserver` process
+   running.
 
 
 ## Version 0.11.1 [2022-10-12]
