@@ -9,6 +9,8 @@
    `rserver` process running.  Now it suggests `kill -SIGTERM <PID>`,
    and `kill -SIGKILL <PID>` as a last resort.
 
+ * ROBUSTNESS: Declaring more local variables as integers.
+
 
 ## Version 0.11.1 [2022-10-12]
 
