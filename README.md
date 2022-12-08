@@ -113,9 +113,12 @@ $ rsc stop
 RStudio Server stopped
 ```
 
-which sends a `SIGTERM` signal to shut it down nicely.  If this command is
-not called from the same machine as from where `rsc start` was called, then
-it will attempt to SSH to that machine to terminate the RStudio Server.
+which sends a `SIGTERM` signal asking the different RStudio Server
+processes to shut down nicely.  This is attempted multiple times.  As
+a last resort, it will send `SIGKILL`, which kills the processes
+abruptly.  If this command is not called from the same machine as from
+where `rsc start` was called, then it will attempt to SSH to that
+machine to terminate the RStudio Server.
 
 A user can only launch one instance.  Attempts to start more, will
 produce an informative error message, e.g.
@@ -145,6 +148,7 @@ lock file: exists (/home/alice/.config/rsc/pid.lock)
 
 As the above error message suggests, add `--full` to also get information
 on how to reconnect to the already running RStudio Server instance.
+
 
 ## Running RStudio Server remotely
 
@@ -285,7 +289,7 @@ To verify that the tool can find R and the RStudio Server executables, call:
 $ rsc --version --full
 rsc: 0.11.1
 RStudio Server: 2022.07.2-576 (Spotted Wakerobin) for Linux
-R: 4.2.1 (2022-06-23) -- "Funny-Looking Kid"
+R: 4.2.2 (2022-10-31) -- "Innocent and Trusting"
 ```
 
 
