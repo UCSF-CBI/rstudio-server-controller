@@ -2,7 +2,12 @@
 
 ## Version (development version)
 
- * ...
+### New Features
+
+ * Add argument `--localport` for specifying the local port that binds
+   to the port on the remote machine where the RStudio Server is
+   running, if it runs remotely.  The special case `--localport=port`
+   will use the same port as specified by `--port`.
 
 
 ## Version 0.11.2 [2023-02-18]
