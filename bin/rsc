@@ -58,8 +58,13 @@
 ###  rsc config --full
 ###  rsc log
 ###
+<<<<<<< HEAD
 ### Version: 0.11.1
 ### Copyright: Henrik Bengtsson and Harry Putnam (2022)
+=======
+### Version: 0.11.2
+### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
+>>>>>>> release/0.11.2
 ### License: ISC
 
 this="${BASH_SOURCE%/}"
@@ -265,7 +270,7 @@ function remove_stray_pid_file {
     local workdir
     local file
     local pid_file
-    local pid
+    local -i pid
     local rserver_hostname
     local what
     what=${1:?}
@@ -291,11 +296,13 @@ function remove_stray_pid_file {
     [[ ! -f "${pid_file}" ]] && return 0;
 
     ## Get PID
+    ## If PID file is empty, 'pid' is assigned 0, because we
+    ## declared it as an integer above.
     pid=$(read_pid true "${pid_file}")
     mdebug " - pid=${pid}"
     
-    ## Empty PID (shouldn't really happen)
-    if [[ -z "${pid}" ]]; then
+    ## If PID file isEmpty PID (shouldn't really happen)
+    if [[ ${pid} -eq 0 ]]; then
         rm "${pid_file}"
          warn "Detected a stray PID file (${pid_file}). This file was removed, because it was empty."
         return 0
@@ -414,11 +421,13 @@ function parse_revtunnel {
 }
 
 function check_pid {
-    local pid
+    local -i pid
     local hostname
     local pid_exists
     local asterisk
 
+    ## If 'pid' is assigned an empty value, then it becomes pid=0,
+    ## because we declared it as an integer above.
     pid=${1:?}
     hostname=${2:-$(hostname)}
     
@@ -427,7 +436,7 @@ function check_pid {
 
     pid_exists=false
     asterisk=false
-    if [[ -n "${pid}" ]]; then
+    if [[ ${pid} -ne 0 ]]; then
         ## Check PID on local machine or another machine?
         if [[ "${hostname}" == "$(hostname)" ]]; then
             mdebug "- Checking /proc/${pid} on current machine (${hostname})"
@@ -462,18 +471,18 @@ function check_pid {
 function read_pid {
     local keep
     local file
-    local pid
+    local -i pid
     keep="${1:?}"
     file="${2:?}"
     mdebug "read_pid(keep=${keep}, file='${file}') ..."
-    pid=
+    pid=0
     if [[ -f "${file}" ]]; then
         mdebug "- reading ..."
         pid=$(cat "${file}")
     fi
     mdebug "- pid=${pid}"
 
-    ! $keep && [[ -n ${pid} ]] && pid=$(check_pid "${pid}")
+    ! $keep && [[ ${pid} -ne 0 ]] && pid=$(check_pid "${pid}")
     mdebug "- pid=${pid}"
     
     mdebug "read_pid(keep=${keep}, file='${file}') ... done"
@@ -533,7 +542,7 @@ function find_login_host {
 ## Usage: rs_process_status <pid> <hostname>
 function rs_process_status {
     local hostname
-    local pid
+    local -i pid
     local pid_info
     local pid_stats
     local tmp
@@ -542,13 +551,13 @@ function rs_process_status {
     
     mdebug "rs_process_status(pid=${pid}, hostname=${hostname}):"
     
-    ## Check if pid is still active?
-    if [[ -n ${pid} ]]; then
+    ## Check if PID is still active?
+    if [[ ${pid} -ne 0 ]]; then
         pid=$(check_pid "${pid}" "${hostname}")
     fi
 
     
-    if [[ -n ${pid} ]]; then
+    if [[ ${pid} -ne 0 ]]; then
         pid_info="PID ${pid}"
         ## Gather process details?
         if $full && [[ "${hostname}" == "$(hostname)" ]]; then
@@ -709,12 +718,12 @@ function rsession_pid {
 }
 
 function terminate_pid {
-    local pid
+    local -i pid
     local signals
     local signal
     mdebug "terminate_pid($*) ..."
     pid=${1}
-    if [[ -n ${pid} ]]; then
+    if [[ ${pid} -ne 0 ]]; then
        shift
        signals=("$@")
        if [[ ${#signals[@]} -eq 0 ]]; then
@@ -724,7 +733,7 @@ function terminate_pid {
        mdebug " - signals: [n=${#signals[@]}] ${signals[*]}"
        pid=$(check_pid "${pid}")
        for kk in $(seq ${#signals[@]}); do
-           if [[ -z "${pid}" ]]; then
+           if [[ ${pid} -eq 0 ]]; then
                break
            fi
            signal=${signals[$((kk - 1))]}
@@ -732,13 +741,13 @@ function terminate_pid {
            kill "-${signal}" "${pid}" && mdebug "Sending ${signal} to PID ${pid}"
            sleep 1.0
            pid=$(check_pid "${pid}")
-           if [[ -n "${pid}" ]]; then
+           if [[ ${pid} -ne 0 ]]; then
                warn "Failed to terminate process (PID ${pid}). Will try again in three seconds"
                sleep 2.0
            fi
        done
 
-       if [[ -n "${pid}" ]]; then
+       if [[ ${pid} -ne 0 ]]; then
            warn "Failed to terminate process (PID ${pid}). Attempted ${#signals[@]} times using signals ${signals[*]}."
        fi
     fi
@@ -848,7 +857,7 @@ function terminate_rserver {
 
 function launch_rserver {
     local workdir
-    local rs_pid
+    local -i rs_pid
     local port
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
@@ -904,7 +913,7 @@ function assert_no_rserver {
         call=$(ps -o args -p "${pid}" | tail -n -1)
         mdebug " - call: ${call}"
         if grep -q -E -- "--config-file=${workdir}/rserver.conf" <<< "${call}"; then
-            msg="Even if there are no PID and lock files, there is another rserver process (PID ${pid}: '${call}') owned by you (${USER}; UID ${UID}) already running on this machine ($(hostname)). If you think this is a stray process, you can terminate it using: kill ${pid}"
+            msg="Even if there are no lock and PID files, there is another rserver process (PID ${pid}: '${call}') owned by you (${USER}; UID ${UID}) already running on this machine ($(hostname)). If you think this is a stray process, you can try to terminate it using 'kill -SIGTERM ${pid}'. If that does not help, try with the stronger 'kill -SIGKILL ${pid}' as a last resort."
             case ${action} in
                 error)
                     error "${msg}";;
@@ -962,7 +971,7 @@ function rserver_monitor_status {
 }    
 
 function rserver_monitor {
-    local endtime
+    local -i endtime
     local state
     state="wait_and_terminate_rserver"
     
@@ -1006,7 +1015,7 @@ function rserver_monitor {
 
 function launch_rserver_monitor {
     local workdir
-    local pid
+    local -i pid
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
 
@@ -1019,6 +1028,7 @@ function launch_rserver_monitor {
     fi
     pid=$!
     echo "${pid}" > "${pid_file}"
+
     pid=$(rserver_pid)
     mdebug "rserver monitor started (PID ${pid})"
 }
