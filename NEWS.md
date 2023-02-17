@@ -5,9 +5,9 @@
 ### Miscellaneous
 
  * The error message produced by the internal `assert_no_rserver()`
-   function only suggested `kill <PID>`, if it detects a stray
-   `rserver` process running.  Now it suggests `kill -SIGTERM <PID>`,
-   and `kill -SIGKILL <PID>` as a last resort.
+   function when it detects a stray`rserver` process running suggested
+   only `kill <PID>`.  Now it suggests `kill -SIGTERM <PID>`, and
+   `kill -SIGKILL <PID>` as a last resort.
 
  * ROBUSTNESS: Declaring more local variables as integers.
 
