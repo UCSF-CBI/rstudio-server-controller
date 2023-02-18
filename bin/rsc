@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.11.2-9002
+### Version: 0.11.2-9003
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -510,6 +510,11 @@ function find_login_host_via_who {
         ## Extract the hostname
         bfr=$(echo "${bfr}" | sed -E 's/(.*[[:space:]]+[(]|[)][[:space:]]*)//g')
         mdebug "4. ${bfr}"
+	## Special case: tty2 is not a host name
+	if [[ $bfr == "tty2" ]]; then
+	    bfr=
+	fi
+        mdebug "5. ${bfr}"
     fi        
     echo "${bfr}"
 }

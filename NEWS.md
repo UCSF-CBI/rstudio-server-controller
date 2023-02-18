@@ -9,6 +9,11 @@
    running, if it runs remotely.  The special case `--localport=port`
    will use the same port as specified by `--port`.
 
+### Bug Fixes
+
+  * `rsc start` could think 'tty2' is a hostname and suggest it for
+    SSH port forwarding.
+  
 
 ## Version 0.11.2 [2023-02-18]
 
