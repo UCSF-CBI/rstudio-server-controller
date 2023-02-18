@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.11.2-9001
+### Version: 0.11.2-9002
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1153,7 +1153,7 @@ quiet=false
 args=()
 full=false
 port=${RSC_PORT:-port4me}
-localport=8787
+localport=${RSC_LOCALPORT:-8787}
 field=
 auth=${RSC_AUTH:-auth-via-su}
 revtunnel=()
