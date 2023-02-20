@@ -6,7 +6,7 @@
 
  * The instructions for SSH port forwarding now suggests to use the
    same port number on local host as used by the RStudio Server
-   instance. Previously, the port was hardcoded to 8787, when using
+   instance. Previously, the port was hard-coded to 8787, when using
    SSH port forwarding.  This simplifies the instructions, because
    only one port number is involved.  It also makes the instructions
    for connection directly on the machine and remotely use the same
@@ -14,10 +14,11 @@
 
 ### New Features
 
- * Add argument `--localport` for specifying the local port that binds
-   to the port on the remote machine where the RStudio Server is
-   running, if it runs remotely.  The special case `--localport=port`
-   (new default) will use the same port as specified by `--port`.
+ * Add command-line option `--localport` for specifying the local port
+   that binds to the port on the remote machine where the RStudio
+   Server is running, if it runs remotely.  The special case
+   `--localport=port` (new default) will use the same port as
+   specified by `--port`.
 
 ### Bug Fixes
 
