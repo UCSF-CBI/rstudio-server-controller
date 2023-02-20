@@ -1,5 +1,38 @@
 # rstudio-server-controller
 
+## Version 0.12.0 [2023-02-20]
+
+### Significant Changes
+
+ * The instructions for SSH port forwarding now suggests to use the
+   same port number on local host as used by the RStudio Server
+   instance. Previously, the port was hard-coded to 8787, when using
+   SSH port forwarding.  This simplifies the instructions, because
+   only one port number is involved.  It also makes the instructions
+   for connection directly on the machine and remotely use the same
+   port, which removes one potential point of confusion.
+
+### New Features
+
+ * Add command-line option `--localport` for specifying the local port
+   that binds to the port on the remote machine where the RStudio
+   Server is running, if it runs remotely.  The special case
+   `--localport=port` (new default) will use the same port as
+   specified by `--port`.
+
+ * `rsc start` now skips instructions for setting up SSH port
+   forwarding when it cannot detect if running from an SSH connection.
+
+### Miscellaneous
+
+ * Cleaned up and clarified `rsc start` instructions.
+
+### Bug Fixes
+
+ * The connection URL given in the `rsc start --revtunnel=<spec>`
+   instructions did not have a hostname or a port.
+  
+
 ## Version 0.11.2 [2023-02-18]
 
 ### Miscellaneous

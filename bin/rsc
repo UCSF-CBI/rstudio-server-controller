@@ -38,6 +38,11 @@
 ###  --port=<int>        A port in [1,65535]. If 'port4me' (default), a free,
 ###                      user-specific, pseudo-random, but deterministic port
 ###                      in [1024,65535] is used
+###  --localport=<int>   A port in [1,65535]. If 'port', then the same port as
+###                      the port given by --port (Default: 'port'). This
+###                      argument is only for the instructions on how to set up
+###                      SSH port forwarding, in case RStudio Server runs on a
+###                      remote machine
 ### ---
 ###
 ### Example:
@@ -58,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.11.2
+### Version: 0.12.0
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1055,7 +1060,7 @@ function ssh_revtunnel_hostname {
     file=$(ssh_revtunnel_spec_file)
     if [[ -f "${file}" ]]; then
         mapfile -t tmp < "${file}"
-        echo "${res[0]}"
+        echo "${tmp[0]}"
     fi
 }
 
@@ -1065,7 +1070,7 @@ function ssh_revtunnel_port {
     file=$(ssh_revtunnel_spec_file)
     if [[ -f "${file}" ]]; then
         mapfile -t tmp < "${file}"
-        echo "${res[1]}"
+        echo "${tmp[1]}"
     fi
 }
 
@@ -1121,16 +1126,28 @@ function exit_on_signals {
 # Information
 # -------------------------------------------------------------------------
 function display_access_instructions {
-    if [[ "$(ssh_revtunnel_status)" != "not running" ]]; then
-        message "${USER}, your personal RStudio Server is available on <${blue}http://$(ssh_revtunnel_hostname):$(ssh_revtunnel_port)${undo}>."
-    elif on_local_machine; then
-        message "${USER}, your personal RStudio Server is available on <${blue}http://127.0.0.1:$(rserver_port)${undo}> from this machine ($(rserver_hostname))."
+    local msg
+    
+    if [[ ${#revtunnel[@]} -gt 0 ]]; then
+        if [[ "$(ssh_revtunnel_status)" != "not running" ]]; then
+            msg="${USER}, your personal RStudio Server is available on <${blue}http://$(ssh_revtunnel_hostname):$(ssh_revtunnel_port)${undo}>.\n"
+        elif on_local_machine; then
+            msg="${USER}, your personal RStudio Server is available on <${blue}http://127.0.0.1:$(rserver_port)${undo}>.\n"
+	fi
     else
-        LOCALPORT=${LOCALPORT:-8787}
         hostname=$(rserver_hostname)
         port=$(rserver_port)
-        message "${USER}, your personal RStudio Server is available on <${blue}http://${hostname}:${port}${undo}>.\nIf you are running from a remote machine without direct access to ${hostname}, you can use SSH port forwarding to access the RStudio Server at <${blue}http://127.0.0.1:${LOCALPORT}${undo}> by first running '${blue}ssh -L ${LOCALPORT}:${hostname}:${port} ${USER}@$(find_login_host)${undo}' in a second terminal."
+        if [[ ${localport} == "port" ]]; then
+	    localport=$port
+	fi
+        msg="${USER}, your personal RStudio Server is available on <${blue}http://127.0.0.1:${port}${undo}>.\n"
+
+	if [[ -n ${SSH_CLIENT} ]] || [[ -n ${SSH_CONNECTION} ]] || [[ -n ${SSH_TTY} ]]; then
+	msg="${msg}\nImportantly, if you are running from a remote machine without direct access to ${hostname}, you need to set up SSH port forwarding first, which you can do by running:\n\\n  ${blue}ssh -L ${localport}:${hostname}:${port} ${USER}@$(find_login_host)${undo}\n\nin a second terminal from you local computer.\n"
+        fi
     fi
+    
+    message "\n${msg}"
 }
 
 
@@ -1146,6 +1163,7 @@ quiet=false
 args=()
 full=false
 port=${RSC_PORT:-port4me}
+localport=${RSC_LOCALPORT:-port}
 field=
 auth=${RSC_AUTH:-auth-via-su}
 revtunnel=()
@@ -1210,6 +1228,8 @@ while [[ $# -gt 0 ]]; do
         fi
         if [[ "${key}" == "port" ]]; then
             port=${value}
+        elif [[ "${key}" == "localport" ]]; then
+            localport=${value}
         elif [[ "${key}" == "env-pattern" ]]; then
             rsession_inherit_env_pattern=${value}
         elif [[ "${key}" == "field" ]]; then
@@ -1267,6 +1287,12 @@ elif [[ "${port}" == "uid" ]]; then
 elif [[ "${port}" != "port4me" ]]; then
     assert_port "${port}"
 fi
+
+## Validate 'localport':
+if [[ "${localport}" != "port" ]]; then
+    assert_port "${localport}"
+fi
+
 
 
 # -------------------------------------------------------------------------
