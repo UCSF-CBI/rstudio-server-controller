@@ -26,11 +26,6 @@
 ### Miscellaneous
 
   * Cleaned up and clarified `rsc start` instructions.
-
-### Bug Fixes
-
-  * `rsc start` could think 'tty2' is a hostname and suggest it for
-    SSH port forwarding.
   
 
 ## Version 0.11.2 [2023-02-18]
