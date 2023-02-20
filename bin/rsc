@@ -39,7 +39,7 @@
 ###                      user-specific, pseudo-random, but deterministic port
 ###                      in [1024,65535] is used
 ###  --localport=<int>   A port in [1,65535]. If 'port', then the same port as
-###                      the port given by --port (Default: 8787). This
+###                      the port given by --port (Default: 'port'). This
 ###                      argument is only for the instructions on how to set up
 ###                      SSH port forwarding, in case RStudio Server runs on a
 ###                      remote machine
@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.11.2-9003
+### Version: 0.11.2-9004
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1158,7 +1158,7 @@ quiet=false
 args=()
 full=false
 port=${RSC_PORT:-port4me}
-localport=${RSC_LOCALPORT:-8787}
+localport=${RSC_LOCALPORT:-port}
 field=
 auth=${RSC_AUTH:-auth-via-su}
 revtunnel=()
