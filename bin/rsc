@@ -514,7 +514,7 @@ function find_login_host_via_who {
 	if [[ $bfr == "tty2" ]]; then
 	    bfr=
 	fi
-        mdebug "5. ${bfr}"
+        mdebug "5. ${bfr} (empty)"
     fi        
     echo "${bfr}"
 }
