@@ -20,6 +20,10 @@
    `--localport=port` (new default) will use the same port as
    specified by `--port`.
 
+### Miscellaneous
+
+  * Cleaned up and clarified `rsc start` instructions.
+
 ### Bug Fixes
 
   * `rsc start` could think 'tty2' is a hostname and suggest it for

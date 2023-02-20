@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.11.2-9004
+### Version: 0.11.2-9005
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1131,17 +1131,19 @@ function exit_on_signals {
 # Information
 # -------------------------------------------------------------------------
 function display_access_instructions {
-    if [[ "$(ssh_revtunnel_status)" != "not running" ]]; then
-        message "${USER}, your personal RStudio Server is available on <${blue}http://$(ssh_revtunnel_hostname):$(ssh_revtunnel_port)${undo}>."
-    elif on_local_machine; then
-        message "${USER}, your personal RStudio Server is available on <${blue}http://127.0.0.1:$(rserver_port)${undo}> from this machine ($(rserver_hostname))."
+    if [[ ${#revtunnel[@]} -gt 0 ]]; then
+        if [[ "$(ssh_revtunnel_status)" != "not running" ]]; then
+            message "\n${USER}, your personal RStudio Server is available on <${blue}http://$(ssh_revtunnel_hostname):$(ssh_revtunnel_port)${undo}>."
+        elif on_local_machine; then
+            message "\n${USER}, your personal RStudio Server is available on <${blue}http://127.0.0.1:$(rserver_port)${undo}> from this machine ($(rserver_hostname))."
+	fi
     else
         hostname=$(rserver_hostname)
         port=$(rserver_port)
         if [[ ${localport} == "port" ]]; then
 	    localport=$port
 	fi
-        message "${USER}, your personal RStudio Server is available on <${blue}http://${hostname}:${port}${undo}>.\nIf you are running from a remote machine without direct access to ${hostname}, you can use SSH port forwarding to access the RStudio Server at <${blue}http://127.0.0.1:${localport}${undo}> by first running '${blue}ssh -L ${localport}:${hostname}:${port} ${USER}@$(find_login_host)${undo}' in a second terminal."
+        message "\n${USER}, your personal RStudio Server is available on <${blue}http://127.0.0.1:${port}${undo}>.\n\nImportantly, if you are running from a remote machine without direct access to ${hostname}, you need to set up SSH port forwarding first, which you can do by running:\n\\n  ${blue}ssh -L ${localport}:${hostname}:${port} ${USER}@$(find_login_host)${undo}\n\nin a second terminal from you local computer.\n"
     fi
 }
 
