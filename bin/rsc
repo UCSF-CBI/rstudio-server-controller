@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.11.2-9007
+### Version: 0.11.2-9008
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1060,7 +1060,7 @@ function ssh_revtunnel_hostname {
     file=$(ssh_revtunnel_spec_file)
     if [[ -f "${file}" ]]; then
         mapfile -t tmp < "${file}"
-        echo "${res[0]}"
+        echo "${tmp[0]}"
     fi
 }
 
@@ -1070,7 +1070,7 @@ function ssh_revtunnel_port {
     file=$(ssh_revtunnel_spec_file)
     if [[ -f "${file}" ]]; then
         mapfile -t tmp < "${file}"
-        echo "${res[1]}"
+        echo "${tmp[1]}"
     fi
 }
 
@@ -1130,9 +1130,9 @@ function display_access_instructions {
     
     if [[ ${#revtunnel[@]} -gt 0 ]]; then
         if [[ "$(ssh_revtunnel_status)" != "not running" ]]; then
-            msg="${USER}, your personal RStudio Server is available on <${blue}http://$(ssh_revtunnel_hostname):$(ssh_revtunnel_port)${undo}>."
+            msg="${USER}, your personal RStudio Server is available on <${blue}http://$(ssh_revtunnel_hostname):$(ssh_revtunnel_port)${undo}>.\n"
         elif on_local_machine; then
-            msg="${USER}, your personal RStudio Server is available on <${blue}http://127.0.0.1:$(rserver_port)${undo}> from this machine ($(rserver_hostname))."
+            msg="${USER}, your personal RStudio Server is available on <${blue}http://127.0.0.1:$(rserver_port)${undo}>.\n"
 	fi
     else
         hostname=$(rserver_hostname)

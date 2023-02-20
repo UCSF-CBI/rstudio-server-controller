@@ -25,7 +25,12 @@
 
 ### Miscellaneous
 
-  * Cleaned up and clarified `rsc start` instructions.
+ * Cleaned up and clarified `rsc start` instructions.
+
+### Bug Fixes
+
+ * The connection URL given in the `rsc start --revtunnel=<spec>`
+   instructions did not have a hostname or a port.
   
 
 ## Version 0.11.2 [2023-02-18]
