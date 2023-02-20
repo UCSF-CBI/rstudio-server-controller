@@ -20,6 +20,9 @@
    `--localport=port` (new default) will use the same port as
    specified by `--port`.
 
+ * `rsc start` now skips instructions for setting up SSH port
+   forwarding when it cannot detect if running from an SSH connection.
+
 ### Miscellaneous
 
   * Cleaned up and clarified `rsc start` instructions.
