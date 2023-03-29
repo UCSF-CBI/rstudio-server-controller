@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.12.0-9002
+### Version: 0.12.0-9003
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1062,7 +1062,7 @@ function r_version_string {
 }
 
 function r_version {
-    r_version_string | sed 's/R version //'
+    r_version_string | sed 's/ .*//'
 }
 
 
