@@ -347,8 +347,8 @@ call:
 ```sh
 $ rsc --version --full
 rsc: 0.13.0
-RStudio Server: 2022.07.2-576 (Spotted Wakerobin) for Linux
-R: 4.2.2 (2022-10-31) -- "Innocent and Trusting"
+RStudio Server: 2022.07.2-576 (Spotted Wakerobin) for Linux [/path/to/rstudio-server/bin/rstudio-server]
+R: 4.2.2 (2022-10-31) -- "Innocent and Trusting" [/path/to/R/bin/R]
 ```
 
 

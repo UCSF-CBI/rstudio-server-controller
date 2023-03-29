@@ -1,3 +1,11 @@
+## Version (development version)
+
+### New Features
+
+ * `rsc --version --full` now also reports on the location of the
+   RStudio Server and R executables.
+
+
 ## Version 0.13.0 [2023-03-29]
 
 ### New Features
