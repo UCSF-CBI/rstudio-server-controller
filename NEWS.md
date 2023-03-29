@@ -1,4 +1,16 @@
-# rstudio-server-controller
+## Version 0.13.0 [2023-03-29]
+
+### New Features
+
+ * `rsc start` now reports on the RStudio Server and R versions.
+
+### Miscellaneous
+
+ * `rsc start` now makes sure that also R is a working state, before
+   launching the RStudio Server instance. This is done by verify that
+   `R --version`, `R --help`, and `R --vanilla -e 42` run without an
+   error code.
+
 
 ## Version 0.12.0 [2023-02-20]
 

@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.12.0
+### Version: 0.13.0
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -768,6 +768,14 @@ function rsession_status {
 # -------------------------------------------------------------------------
 # rserver utilities
 # -------------------------------------------------------------------------
+function rserver_version_string {
+    rstudio-server version
+}
+
+function rserver_version {
+    rserver_version_string | sed -E 's/ .*//'
+}
+
 function wait_for_rserver {
     workdir=$(config_dir)
     [[ ! -d "${workdir}" ]] && error "There appear to be no RStudio Server instance started"
@@ -929,6 +937,7 @@ function assert_no_rserver {
 }    
 
 
+
 # -------------------------------------------------------------------------
 # rserver monitor
 # -------------------------------------------------------------------------
@@ -1035,6 +1044,29 @@ function launch_rserver_monitor {
 
 
 # -------------------------------------------------------------------------
+# R utils
+# -------------------------------------------------------------------------
+function assert_r {
+    assert_executable R
+    
+    R --version > /dev/null || error "The R installation appears broken. Calling 'R --version' fails"
+    
+    R --help > /dev/null || error "The R installation appears broken. Calling 'R --help' fails"
+
+    R --vanilla -e 42 > /dev/null  || error "The R installation appears broken. Calling 'R --vanilla -e 42' fails"
+}
+
+
+function r_version_string {
+    R --version | head -1 | sed 's/R version //'
+}
+
+function r_version {
+    r_version_string | sed 's/ .*//'
+}
+
+
+# -------------------------------------------------------------------------
 # SSH reverse-tunnel connection
 # -------------------------------------------------------------------------
 function ssh_revtunnel_pid_file {
@@ -1127,12 +1159,14 @@ function exit_on_signals {
 # -------------------------------------------------------------------------
 function display_access_instructions {
     local msg
-    
+
+    msg="${USER}, your personal RStudio Server $(rserver_version) running R $(r_version) is available on:\n\n"
+
     if [[ ${#revtunnel[@]} -gt 0 ]]; then
         if [[ "$(ssh_revtunnel_status)" != "not running" ]]; then
-            msg="${USER}, your personal RStudio Server is available on <${blue}http://$(ssh_revtunnel_hostname):$(ssh_revtunnel_port)${undo}>.\n"
+            msg="${msg}  <${blue}http://$(ssh_revtunnel_hostname):$(ssh_revtunnel_port)${undo}>\n"
         elif on_local_machine; then
-            msg="${USER}, your personal RStudio Server is available on <${blue}http://127.0.0.1:$(rserver_port)${undo}>.\n"
+            msg="${msg}  <${blue}http://127.0.0.1:$(rserver_port)${undo}>\n"
 	fi
     else
         hostname=$(rserver_hostname)
@@ -1140,10 +1174,10 @@ function display_access_instructions {
         if [[ ${localport} == "port" ]]; then
 	    localport=$port
 	fi
-        msg="${USER}, your personal RStudio Server is available on <${blue}http://127.0.0.1:${port}${undo}>.\n"
+        msg="${msg}  <${blue}http://127.0.0.1:${port}${undo}>\n"
 
 	if [[ -n ${SSH_CLIENT} ]] || [[ -n ${SSH_CONNECTION} ]] || [[ -n ${SSH_TTY} ]]; then
-	msg="${msg}\nImportantly, if you are running from a remote machine without direct access to ${hostname}, you need to set up SSH port forwarding first, which you can do by running:\n\\n  ${blue}ssh -L ${localport}:${hostname}:${port} ${USER}@$(find_login_host)${undo}\n\nin a second terminal from you local computer.\n"
+	msg="${msg}\nImportantly, if you are running from a remote machine without direct access to ${hostname}, you need to set up SSH port forwarding first, which you can do by running:\n\\n  ${blue}ssh -L ${localport}:${hostname}:${port} ${USER}@$(find_login_host)${undo}\n\nin a second terminal from your local computer.\n"
         fi
     fi
     
@@ -1265,8 +1299,8 @@ elif [[ $action == "help" ]]; then
 elif [[ $action == "version" ]]; then
     if $full; then
         echo "rsc: $(version)"
-        echo "RStudio Server: $(rstudio-server version)"
-        echo "R: $(R --version | head -1 | sed 's/R version //')"
+        echo "RStudio Server: $(rserver_version_string)"
+        echo "R: $(r_version_string)"
     else
         version
     fi
@@ -1492,12 +1526,13 @@ elif [[ "${action}" == "wait" ]]; then
 elif [[ "${action}" == "start" ]]; then    
     ## Assert executables are available
     assert_executable R
+    assert_r
     assert_executable rserver
     assert_executable rsession
     if [[ "${port}" != "port4me" ]]; then
         assert_port_free "${port}"
     fi
-
+    
     if [[ "${RSC_PASSWORD}" == "random" ]]; then
         RSC_PASSWORD=$(openssl rand -base64 15)
         export RSC_PASSWORD
