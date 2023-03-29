@@ -2,6 +2,10 @@
 
 ## Version (development version)
 
+### New Features
+
+ * `rsc start` now reports on the RStudio Server and R versions.
+
 ### Miscellaneous
 
  * `rsc start` now makes sure that also R is a working state, before
