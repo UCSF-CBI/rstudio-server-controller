@@ -77,7 +77,9 @@ To launch your personal RStudio Server instance, call:
 
 ```sh
 $ rsc start
-alice, your personal RStudio Server is available on <http://127.0.0.1:20612>.
+alice, your personal RStudio Server 2022.07.2-576 running R 4.2.2 is available on:
+
+  <http://127.0.0.1:20612>
 
 Any R session started times out after being idle for 120 minutes.
 WARNING: You now have 10 minutes, until 2023-02-20 23:30:33+01:00, to connect
@@ -96,7 +98,9 @@ e.g. <kbd>Ctrl-C</kbd>:
 
 ```sh
  $ rsc start
-alice, your personal RStudio Server is available on <http://127.0.0.1:20612>.
+alice, your personal RStudio Server 2022.07.2-576 running R 4.2.2 is available on:
+
+  <http://127.0.0.1:20612>
 
 Any R session started times out after being idle for 120 minutes.
 WARNING: You now have 10 minutes, until 2023-02-20 23:30:33+01:00, to connect
@@ -166,7 +170,9 @@ If we launch `rsc` on the remote server, we will get:
 
 ```sh
 [alice@server ~]$ rsc start
-alice, your personal RStudio Server is available on <http://127.0.0.1:20612>.
+alice, your personal RStudio Server 2022.07.2-576 running R 4.2.2 is available on:
+
+  <http://127.0.0.1:20612>
 
 Importantly, if you are running from a remote machine without direct access
 to server.myuniv.org, you need to set up SSH port forwarding first, which you
@@ -214,7 +220,9 @@ instructions:
 
 ```sh
 [alice@server ~]$ rsc start
-alice, your personal RStudio Server is available on <http://127.0.0.1:20612>.
+alice, your personal RStudio Server 2022.07.2-576 running R 4.2.2 is available on:
+
+  <http://127.0.0.1:20612>
 
 Importantly, if you are running from a remote machine without direct access
 to server.myuniv.org, you need to set up SSH port forwarding first, which you
@@ -256,7 +264,9 @@ port 20612 several times before, so we will try that this time too:
 [ab@local ~]$ ssh -L 20612:server.myuniv.org:20612 alice@login.myuniv.org
 [alice@login ~]$ ssh -l alice server.myuniv.org
 [alice@server ~]$ rsc start --port=20612
-alice, your personal RStudio Server is available on <http://127.0.0.1:20612>.
+alice, your personal RStudio Server 2022.07.2-576 running R 4.2.2 is available on:
+
+  <http://127.0.0.1:20612>
 
 Importantly, if you are running from a remote machine without direct access
 to server.myuniv.org, you need to set up SSH port forwarding first, which you
@@ -288,7 +298,9 @@ it launches the RStudio Server;
 ```sh
 [ab@local ~]$ ssh -l alice server.myuniv.org
 [alice@server ~]$ rsc start --revtunnel=ab@local.myuniv.org:20612
-alice, your personal RStudio Server is available on <http://127.0.0.1:20612>.
+alice, your personal RStudio Server 2022.07.2-576 running R 4.2.2 is available on:
+
+  <http://127.0.0.1:20612>
 
 Any R session started times out after being idle for 120 minutes.
 WARNING: You now have 10 minutes, until 2023-02-20 23:30:33+01:00, to connect
@@ -321,12 +333,12 @@ As before, the RStudio Server is available at
 
 ```sh
 $ cd /path/to/software
-$ curl -L -O https://github.com/UCSF-CBI/rstudio-server-controller/archive/refs/tags/0.12.0.tar.gz
-$ tar xf 0.12.0.tar.gz
-$ PATH=/path/to/softwarerstudio-server-controller-0.12.0/bin:$PATH
+$ curl -L -O https://github.com/UCSF-CBI/rstudio-server-controller/archive/refs/tags/0.13.0.tar.gz
+$ tar xf 0.13.0.tar.gz
+$ PATH=/path/to/softwarerstudio-server-controller-0.13.0/bin:$PATH
 $ export PATH
 $ rsc --version
-0.12.0
+0.13.0
 ```
 
 To verify that the tool can find R and the RStudio Server executables,
@@ -334,7 +346,7 @@ call:
 
 ```sh
 $ rsc --version --full
-rsc: 0.12.0
+rsc: 0.13.0
 RStudio Server: 2022.07.2-576 (Spotted Wakerobin) for Linux
 R: 4.2.2 (2022-10-31) -- "Innocent and Trusting"
 ```
