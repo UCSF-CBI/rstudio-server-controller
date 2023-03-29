@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.12.0-9000
+### Version: 0.12.0-9001
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1143,7 +1143,7 @@ function display_access_instructions {
         msg="${USER}, your personal RStudio Server is available on <${blue}http://127.0.0.1:${port}${undo}>.\n"
 
 	if [[ -n ${SSH_CLIENT} ]] || [[ -n ${SSH_CONNECTION} ]] || [[ -n ${SSH_TTY} ]]; then
-	msg="${msg}\nImportantly, if you are running from a remote machine without direct access to ${hostname}, you need to set up SSH port forwarding first, which you can do by running:\n\\n  ${blue}ssh -L ${localport}:${hostname}:${port} ${USER}@$(find_login_host)${undo}\n\nin a second terminal from you local computer.\n"
+	msg="${msg}\nImportantly, if you are running from a remote machine without direct access to ${hostname}, you need to set up SSH port forwarding first, which you can do by running:\n\\n  ${blue}ssh -L ${localport}:${hostname}:${port} ${USER}@$(find_login_host)${undo}\n\nin a second terminal from your local computer.\n"
         fi
     fi
     
