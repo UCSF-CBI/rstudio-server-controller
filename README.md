@@ -333,12 +333,12 @@ As before, the RStudio Server is available at
 
 ```sh
 $ cd /path/to/software
-$ curl -L -O https://github.com/UCSF-CBI/rstudio-server-controller/archive/refs/tags/0.13.0.tar.gz
-$ tar xf 0.13.0.tar.gz
-$ PATH=/path/to/softwarerstudio-server-controller-0.13.0/bin:$PATH
+$ curl -L -O https://github.com/UCSF-CBI/rstudio-server-controller/archive/refs/tags/0.13.1.tar.gz
+$ tar xf 0.13.1.tar.gz
+$ PATH=/path/to/softwarerstudio-server-controller-0.13.1/bin:$PATH
 $ export PATH
 $ rsc --version
-0.13.0
+0.13.1
 ```
 
 To verify that the tool can find R and the RStudio Server executables,
@@ -346,9 +346,9 @@ call:
 
 ```sh
 $ rsc --version --full
-rsc: 0.13.0
-RStudio Server: 2022.07.2-576 (Spotted Wakerobin) for Linux
-R: 4.2.2 (2022-10-31) -- "Innocent and Trusting"
+rsc: 0.13.1
+RStudio Server: 2022.07.2-576 (Spotted Wakerobin) for Linux [/path/to/rstudio-server/bin/rstudio-server]
+R: 4.2.2 (2022-10-31) -- "Innocent and Trusting" [/path/to/R/bin/R]
 ```
 
 

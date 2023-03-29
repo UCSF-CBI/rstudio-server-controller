@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.13.0
+### Version: 0.13.1
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -769,11 +769,15 @@ function rsession_status {
 # rserver utilities
 # -------------------------------------------------------------------------
 function rserver_version_string {
-    rstudio-server version
+    rstudio-server version 2> /dev/null || echo "<not found>"
 }
 
 function rserver_version {
     rserver_version_string | sed -E 's/ .*//'
+}
+
+function rserver_path {
+    command -v rstudio-server || echo "<not found>"
 }
 
 function wait_for_rserver {
@@ -1048,7 +1052,7 @@ function launch_rserver_monitor {
 # -------------------------------------------------------------------------
 function assert_r {
     assert_executable R
-    
+
     R --version > /dev/null || error "The R installation appears broken. Calling 'R --version' fails"
     
     R --help > /dev/null || error "The R installation appears broken. Calling 'R --help' fails"
@@ -1058,11 +1062,19 @@ function assert_r {
 
 
 function r_version_string {
-    R --version | head -1 | sed 's/R version //'
+    if command -v R > /dev/null; then
+        R --version | head -1 | sed 's/R version //'
+    else
+        echo "<not found>"
+    fi
 }
 
 function r_version {
-    r_version_string | sed 's/ .*//'
+    r_version_string | sed 's/ .*//' || echo "<not found>"
+}
+
+function r_path {
+    command -v R || echo "<not found>"
 }
 
 
@@ -1299,8 +1311,8 @@ elif [[ $action == "help" ]]; then
 elif [[ $action == "version" ]]; then
     if $full; then
         echo "rsc: $(version)"
-        echo "RStudio Server: $(rserver_version_string)"
-        echo "R: $(r_version_string)"
+        echo "RStudio Server: $(rserver_version_string) [$(rserver_path)]"
+        echo "R: $(r_version_string) [$(r_path)]"
     else
         version
     fi
