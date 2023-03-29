@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.12.0-9001
+### Version: 0.12.0-9002
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1035,6 +1035,20 @@ function launch_rserver_monitor {
 
 
 # -------------------------------------------------------------------------
+# R utils
+# -------------------------------------------------------------------------
+function assert_R {
+    assert_executable R
+    
+    R --version > /dev/null || error "The R installation appears broken. Calling 'R --version' fails"
+    
+    R --help > /dev/null || error "The R installation appears broken. Calling 'R --help' fails"
+
+    R --vanilla -e 42 > /dev/null  || error "The R installation appears broken. Calling 'R --vanilla -e 42' fails"
+}
+
+
+# -------------------------------------------------------------------------
 # SSH reverse-tunnel connection
 # -------------------------------------------------------------------------
 function ssh_revtunnel_pid_file {
@@ -1492,12 +1506,13 @@ elif [[ "${action}" == "wait" ]]; then
 elif [[ "${action}" == "start" ]]; then    
     ## Assert executables are available
     assert_executable R
+    assert_R
     assert_executable rserver
     assert_executable rsession
     if [[ "${port}" != "port4me" ]]; then
         assert_port_free "${port}"
     fi
-
+    
     if [[ "${RSC_PASSWORD}" == "random" ]]; then
         RSC_PASSWORD=$(openssl rand -base64 15)
         export RSC_PASSWORD
