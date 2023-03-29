@@ -1,6 +1,4 @@
-# rstudio-server-controller
-
-## Version (development version)
+## Version 0.13.0 [2023-03-29]
 
 ### New Features
 
