@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.13.1
+### Version: 0.13.1-9001
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -797,6 +797,14 @@ function wait_for_rserver {
     export _RSC_RSERVER_HOSTNAME_
     export _RSC_RSERVER_PORT_
 }    
+
+function assert_rserver_running {
+    mdebug "Checking that the 'rserver' process is still running ..."
+    if [[ $(rserver_status) == "not running" ]]; then
+        error "It looks like the RStudio Server failed during launch ['rserver' process (PID $(rserver_pid) on $(rserver_hostname)) no longer exists]"
+    fi
+    mdebug "Checking that the 'rserver' process is still running ... done"
+}
 
 function rserver_pid_file {
     local workdir
@@ -1580,7 +1588,7 @@ elif [[ "${action}" == "start" ]]; then
     [[ -z "${rs_pid}" ]] && error "RStudio Server failed to start for unknown reasons. One reason for this might be that the port (${port}) is already occupied"
     pids=("${rs_pid}")
     
-    ## Update 'port', in case it was 'port4me'
+    ## Update 'port', in case it 'port4me' was used
     port=$(rserver_port)
 
     ## Launch rserver monitor
@@ -1621,6 +1629,8 @@ elif [[ "${action}" == "start" ]]; then
         mdebug "Setting up reverse SSH tunnel ... done"
     fi
 
+    ## Check if RStudio Server failed during launch
+    assert_rserver_running
 
     ## Give instructions
     display_access_instructions
@@ -1632,6 +1642,9 @@ elif [[ "${action}" == "start" ]]; then
     if ${RSC_PASSWORD_ECHO:-false}; then
         message "Your password for this RStudio Server instance is: ${blue}${RSC_PASSWORD}${undo}"
     fi
+
+    ## Check if RStudio Server failed during launch (on last time)
+    assert_rserver_running
     
     mdebug "Waiting for background process (PIDs ${pids[*]}) to finish ..."
     wait "${pids[@]}"

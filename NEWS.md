@@ -1,3 +1,12 @@
+## Version (development version)
+
+### New Features
+
+ * `rsc start` now checks to see if the RStudio Server failed to
+   launch in order to give the user a slightly more informative error
+   message when there is a failure.
+ 
+
 ## Version 0.13.1 [2023-03-29]
 
 ### New Features
