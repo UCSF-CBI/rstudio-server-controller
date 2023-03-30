@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.13.1-9002
+### Version: 0.13.1-9003
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1654,6 +1654,9 @@ elif [[ "${action}" == "start" ]]; then
 
     ## Wait for RServer Studio HTTP interface to come up
     wait_for_rserver_http "${port}" || warn "RStudio Server is not responding on <http://127.0.0.1:${port}>, but let's try anyway"
+
+    ## Check if RStudio Server failed during launch
+    assert_rserver_running
 
     ## Give instructions
     display_access_instructions
