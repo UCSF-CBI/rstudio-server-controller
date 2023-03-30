@@ -816,13 +816,13 @@ function wait_for_rserver_http {
     port=$1
     launch_timeout=${_RSC_RSERVER_LAUNCH_TIMEOUT_:-10.0}
 
-    mdebug "Waiting for 'reserver' to respond on HTTP ..."
+    mdebug "Waiting for 'rserver' to respond on HTTP ..."
     mdebug "- timeout: ${launch_timeout} seconds"
     url="http://127.0.0.1:${port}"
     timeout "${launch_timeout}" bash -c "while true; do if curl --silent --head '${url}' > /dev/null; then exit 0; fi; sleep 0.2; done"
     res=$?
     mdebug "- result: ${res}"
-    mdebug "Waiting for 'reserver' to respond on HTTP ... done"
+    mdebug "Waiting for 'rserver' to respond on HTTP ... done"
     return "${res}"
 }
 
