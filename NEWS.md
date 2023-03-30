@@ -1,3 +1,16 @@
+## Version 0.13.2 [2023-03-30]
+
+### New Features
+
+ * `rsc start` now waits up to 10 seconds for the RStudio Server to
+   respond on 'http://127.0.0.1:<port>'. If it fails to respond, a
+   informative warning is generated. It then continues to assert that
+   the server process is still running, before outputting the
+   instructions on how to connect.  This strategy should avoid
+   outputting instructions that doesn't work if the RStudio Server
+   fails to launch for one reason or the other.
+ 
+
 ## Version 0.13.1 [2023-03-29]
 
 ### New Features
