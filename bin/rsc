@@ -95,26 +95,31 @@ source "${incl}/system.sh"
 # =========================================================================
 # Utility functions
 # =========================================================================
-## If the length of '$HOME/.config' is 40 characters or more, we get an
-## 'ERROR Unexpected exception: File name too long [system:36]; LOGGED
+## If the length of the default
+## '$server_data_dir/rstudio-rserver/session-server-rpc.socket', where
+## server_data_="$HOME/.config/rsc/run/a", is 108 symbols or more, we get
+## an 'ERROR Unexpected exception: File name too long [system:36]; LOGGED
 ## FROM: int main(int, char* const*) src/cpp/server/ServerMain.cpp:941'.
 ## This errors occurs in
 ## <https://github.com/rstudio/rstudio/blob/09de542e287bdbfb6e90babf439eb1e2f9658f05/src/cpp/server/session/ServerSessionRpc.cpp#L229>
 ## when serverRpcSocketPath() returns a FilePath with an absolute path
-## longer than 108 characters, e.g. /a/very/long/path/to/home/alice/.config/rsc/var/run/rstudio-server/rstudio-rserver/session-server-rpc.socket
+## longer than 107 characters. Thus, if '$server_data_dir' has more than
+## 65 characters, we hit this bug.  Using the default, this means that
+## user with a $HOME folder with more than 47 characters will be affected
+## by this bug.
 ## /HB 2023-04-17
-post_mortem_too_long_config_dir() {
+post_mortem_too_long_server_data_dir() {
     local path
-    path=$(config_dir)
-    if [[ ${#path} -ge 40 ]]; then
-        echo "Post-mortem analysis: The RStudio Server Controller configuration folder ($path) has ${#path} characters. A configuration folder with more than 40 characters will likely not work with RStudio Server version after 2022.02.4-500. Here we are using version $(rserver_version). Try setting 'export _RSC_RSERVER_DATA_DIR_=\"\$(mktemp -d)\"' before calling 'rsc start' as a workaround."
+    path=$(rserver_data_dir)
+    if [[ ${#path} -ge 66 ]]; then
+        echo "Post-mortem analysis: The RStudio Server 'server-data-dir' folder ($path) has ${#path} characters, which is more than 65 and will therefore not work with RStudio Server version after 2022.02.4-500. Try setting 'export _RSC_RSERVER_DATA_DIR_=\"\$(mktemp -d)\"' before calling 'rsc start' as a workaround."
     fi
 }
 
 function rsc_error {
     local msg extra
     msg="$* This happened with rsc $(version), RStudio Server $(rserver_version_string) [$(rserver_path)], and R $(r_version_string) [$(r_path)]."
-    extra=$(post_mortem_too_long_config_dir)
+    extra=$(post_mortem_too_long_server_data_dir)
     if [[ -n ${extra} ]]; then
         msg="${msg} ${extra}"
     fi
@@ -880,7 +885,7 @@ function rserver_data_dir {
         ## WORKAROUND: This is needed to so that
         ## secure_dir "$(dirname "$(rserver_data_dir)")"
         ## is guaranteed to work, i.e. we need to append a sub folder
-        path=${path}/secure
+        path=${path}/a
     fi
     
     mdebug "rserver_data_dir(): ${path}"
