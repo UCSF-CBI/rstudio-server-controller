@@ -1,6 +1,9 @@
 ## Version (development version)
 
- * ...
+### New Features
+
+ * When the RStudio Server fails to launch, troubleshooting
+   information related to known problems is part of the error message.
  
 
 ## Version 0.13.2 [2023-03-30]
