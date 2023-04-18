@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.13.4-9000
+### Version: 0.13.4-9001
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -227,7 +227,7 @@ function make_config_dir {
     local datadir
     
     path=$(config_dir)
-    mkdir -p "${path}"/{run,tmp,var/lib/rstudio-server}
+    mkdir -p "${path}"/{lib,run,tmp}
     secure_dir "${path}"
     
     datadir=$(rserver_data_dir)
@@ -372,7 +372,8 @@ function make_database_conf {
     assert_dir_exists "${workdir}"
     {
         echo "provider=sqlite"
-        echo "directory=${workdir}/var/lib/rstudio-server"
+        ## Default: /var/lib/rstudio-server
+        echo "directory=${workdir}/lib"
     } > "${workdir}/database.conf"
 }
 
@@ -870,7 +871,8 @@ function rserver_data_dir {
 
     if [[ -z ${_RSC_RSERVER_DATA_DIR_} ]]; then
         workdir=$(config_dir)
-        path="${workdir}/var/run/rstudio-server"
+        ## Default: /var/run/rstudio-server
+        path="${workdir}/run"
     else
         mdebug "_RSC_RSERVER_DATA_DIR_=${_RSC_RSERVER_DATA_DIR_}"
         path=${_RSC_RSERVER_DATA_DIR_:?}
