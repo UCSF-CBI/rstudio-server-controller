@@ -1,6 +1,16 @@
 ## Version (development version)
 
- * ...
+### New Features
+
+ * Now the default path to the internal RStudio Server data directory
+   can be configured via environment variable
+   `_RSC_RSERVER_DATA_DIR_`. This can be used as a workaround when the
+   default data directory path is too long, which results in error
+   `[rserver] ERROR Unexpected exception: File name too long
+   [system:36]; LOGGED FROM: int main(int, char* const*)
+   src/cpp/server/ServerMain.cpp:1033`. If this, happens, setting
+   `export _RSC_RSERVER_DATA_DIR_=$(mktemp -d)` before calling `rsc
+   start` should work around the error.
 
 
 ## Version 0.13.3 [2023-04-17]
