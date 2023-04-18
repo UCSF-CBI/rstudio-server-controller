@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.13.3
+### Version: 0.13.4
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -107,13 +107,13 @@ post_mortem_too_long_config_dir() {
     local path
     path=$(config_dir)
     if [[ ${#path} -ge 40 ]]; then
-        echo "Post-mortem analysis: The RStudio Server Controller configuration folder ($path) has ${#path} characters. A configuration folder with more than 40 characters will likely not work with RStudio Server version after 2022.02.4-500. Here we are using version $(rserver_version)."
+        echo "Post-mortem analysis: The RStudio Server Controller configuration folder ($path) has ${#path} characters. A configuration folder with more than 40 characters will likely not work with RStudio Server version after 2022.02.4-500. Here we are using version $(rserver_version). Try setting 'export _RSC_RSERVER_DATA_DIR_=\"\$(mktemp -d)\"' before calling 'rsc start' as a workaround."
     fi
 }
 
 function rsc_error {
     local msg extra
-    msg="$* This happend with rsc $(version), RStudio Server $(rserver_version_string) [$(rserver_path)], and R $(r_version_string) [$(r_path)]."
+    msg="$* This happened with rsc $(version), RStudio Server $(rserver_version_string) [$(rserver_path)], and R $(r_version_string) [$(r_path)]."
     extra=$(post_mortem_too_long_config_dir)
     if [[ -n ${extra} ]]; then
         msg="${msg} ${extra}"
@@ -212,21 +212,31 @@ function config_dir {
 ## Because of this, it is important that ${config_dir} is private (700) to
 ## the user who lanched 'rsc'. However, to be on the safe side, we're
 ## setting this for everything recursively.
-function secure_config_dir {
+function secure_dir {
     local path
-    mdebug "secure_config_dir() ..."
+    mdebug "secure_dir() ..."
     path=${1:-$(config_dir)}
-    [[ -z "${path}" ]] && error "secure_config_dir() requires a folder as first argument"
+    [[ -z "${path}" ]] && error "secure_dir() requires a folder as first argument"
     mdebug " - config_dir='${path}'"
     [[ -d "${path}" ]] && chmod -R 700 "${path}"
-    mdebug "secure_config_dir() ... done"
+    mdebug "secure_dir() ... done"
 }
 
 function make_config_dir {
     local path
+    local datadir
+    
     path=$(config_dir)
-    mkdir -p "${path}"/{run,tmp,var/lib/rstudio-server,/var/run/rstudio-server}
-    secure_config_dir "${path}"
+    mkdir -p "${path}"/{run,tmp,var/lib/rstudio-server}
+    secure_dir "${path}"
+    
+    datadir=$(rserver_data_dir)
+    mkdir -p "${datadir}"
+    secure_dir "${datadir}"
+
+    ## Secure parent folder of the rserver data directory, because RStudio
+    ## Server will change the permissions on the data directory itself.
+    secure_dir "$(dirname "${datadir}")"
 }
 
 
@@ -368,11 +378,14 @@ function make_database_conf {
 
 function make_rserver_conf {
     local workdir
+    local datadir
     local port
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
     port=${1:?}
 
+    datadir=$(rserver_data_dir)
+    
     if [[ "${port}" == "port4me" ]]; then
         port=$(PORT4ME_TOOL=rsc port4me 2>&1)
         relay_condition "${port}"
@@ -409,7 +422,7 @@ function make_rserver_conf {
         echo "server-daemonize=0"
 
         ## Folder where RStudio Server writes run-time state
-        echo "server-data-dir=${workdir}/var/run/rstudio-server"
+        echo "server-data-dir=${datadir}"
 
         ## Run 'rserver' as this user
         echo "server-user=${USER:?}"
@@ -733,9 +746,9 @@ END
 
 
 function rsession_pid_file {
-    local workdir
-    workdir=$(config_dir)
-    echo "${workdir}/var/run/rstudio-server/rstudio-rsession/${USER}-d.pid"
+    local datadir
+    datadir=$(rserver_data_dir)
+    echo "${datadir}/rstudio-rsession/${USER}-d.pid"
 }
 
 function rsession_pid {
@@ -849,6 +862,28 @@ function wait_for_rserver_http {
     mdebug "- result: ${res}"
     mdebug "Waiting for 'rserver' to respond on HTTP ... done"
     return "${res}"
+}
+
+function rserver_data_dir {
+    local path
+    local workdir
+
+    if [[ -z ${_RSC_RSERVER_DATA_DIR_} ]]; then
+        workdir=$(config_dir)
+        path="${workdir}/var/run/rstudio-server"
+    else
+        mdebug "_RSC_RSERVER_DATA_DIR_=${_RSC_RSERVER_DATA_DIR_}"
+        path=${_RSC_RSERVER_DATA_DIR_:?}
+        
+        ## WORKAROUND: This is needed to so that
+        ## secure_dir "$(dirname "$(rserver_data_dir)")"
+        ## is guaranteed to work, i.e. we need to append a sub folder
+        path=${path}/secure
+    fi
+    
+    mdebug "rserver_data_dir(): ${path}"
+           
+    echo "${path}"           
 }
 
 function rserver_pid_file {
@@ -1627,7 +1662,7 @@ elif [[ "${action}" == "start" ]]; then
     
     launch_rserver
     wait_for_rserver
-    secure_config_dir
+    secure_dir
     
     rs_pid="$(rserver_pid)"
     [[ -z "${rs_pid}" ]] && error "RStudio Server failed to start for unknown reasons. One reason for this might be that the port (${port}) is already occupied"
