@@ -77,12 +77,12 @@ To launch your personal RStudio Server instance, call:
 
 ```sh
 $ rsc start
-alice, your personal RStudio Server 2022.07.2-576 running R 4.2.2 is available on:
+alice, your personal RStudio Server 2023.03.0+386 running R 4.2.3 is available on:
 
   <http://127.0.0.1:20612>
 
 Any R session started times out after being idle for 120 minutes.
-WARNING: You now have 10 minutes, until 2023-02-20 23:30:33+01:00, to connect
+WARNING: You now have 10 minutes, until 2023-04-17 17:30:33+01:00, to connect
 and log in to the RStudio Server before everything times out.
 ```
 
@@ -98,12 +98,12 @@ e.g. <kbd>Ctrl-C</kbd>:
 
 ```sh
  $ rsc start
-alice, your personal RStudio Server 2022.07.2-576 running R 4.2.2 is available on:
+alice, your personal RStudio Server 2023.03.0+386 running R 4.2.3 is available on:
 
   <http://127.0.0.1:20612>
 
 Any R session started times out after being idle for 120 minutes.
-WARNING: You now have 10 minutes, until 2023-02-20 23:30:33+01:00, to connect
+WARNING: You now have 10 minutes, until 2023-04-17 17:30:33+01:00, to connect
 and log in to the RStudio Server before everything times out.
 ^C
 Received a SIGINT signal
@@ -170,7 +170,7 @@ If we launch `rsc` on the remote server, we will get:
 
 ```sh
 [alice@server ~]$ rsc start
-alice, your personal RStudio Server 2022.07.2-576 running R 4.2.2 is available on:
+alice, your personal RStudio Server 2023.03.0+386 running R 4.2.3 is available on:
 
   <http://127.0.0.1:20612>
 
@@ -183,7 +183,7 @@ can do by running:
 in a second terminal from you local computer.
 
 Any R session started times out after being idle for 120 minutes.
-WARNING: You now have 10 minutes, until 2023-02-20 23:30:33+01:00, to connect
+WARNING: You now have 10 minutes, until 2023-04-17 17:30:33+01:00, to connect
 and log in to the RStudio Server before everything times out.
 ```
 
@@ -220,7 +220,7 @@ instructions:
 
 ```sh
 [alice@server ~]$ rsc start
-alice, your personal RStudio Server 2022.07.2-576 running R 4.2.2 is available on:
+alice, your personal RStudio Server 2023.03.0+386 running R 4.2.3 is available on:
 
   <http://127.0.0.1:20612>
 
@@ -233,7 +233,7 @@ can do by running:
 in a second terminal from you local computer.
 
 Any R session started times out after being idle for 120 minutes.
-WARNING: You now have 10 minutes, until 2023-02-20 23:30:33+01:00, to connect
+WARNING: You now have 10 minutes, until 2023-04-17 17:30:33+01:00, to connect
 and log in to the RStudio Server before everything times out.
 ```
 
@@ -264,7 +264,7 @@ port 20612 several times before, so we will try that this time too:
 [ab@local ~]$ ssh -L 20612:server.myuniv.org:20612 alice@login.myuniv.org
 [alice@login ~]$ ssh -l alice server.myuniv.org
 [alice@server ~]$ rsc start --port=20612
-alice, your personal RStudio Server 2022.07.2-576 running R 4.2.2 is available on:
+alice, your personal RStudio Server 2023.03.0+386 running R 4.2.3 is available on:
 
   <http://127.0.0.1:20612>
 
@@ -277,7 +277,7 @@ can do by running:
 in a second terminal from you local computer.
 
 Any R session started times out after being idle for 120 minutes.
-WARNING: You now have 10 minutes, until 2023-02-20 23:30:33+01:00, to connect
+WARNING: You now have 10 minutes, until 2023-04-17 17:30:33+01:00, to connect
 and log in to the RStudio Server before everything times out.
 ```
 
@@ -298,12 +298,12 @@ it launches the RStudio Server;
 ```sh
 [ab@local ~]$ ssh -l alice server.myuniv.org
 [alice@server ~]$ rsc start --revtunnel=ab@local.myuniv.org:20612
-alice, your personal RStudio Server 2022.07.2-576 running R 4.2.2 is available on:
+alice, your personal RStudio Server 2023.03.0+386 running R 4.2.3 is available on:
 
   <http://127.0.0.1:20612>
 
 Any R session started times out after being idle for 120 minutes.
-WARNING: You now have 10 minutes, until 2023-02-20 23:30:33+01:00, to connect
+WARNING: You now have 10 minutes, until 2023-04-17 17:30:33+01:00, to connect
 and log in to the RStudio Server before everything times out.
 ```
 
@@ -333,12 +333,12 @@ As before, the RStudio Server is available at
 
 ```sh
 $ cd /path/to/software
-$ curl -L -O https://github.com/UCSF-CBI/rstudio-server-controller/archive/refs/tags/0.13.2.tar.gz
-$ tar xf 0.13.2.tar.gz
-$ PATH=/path/to/softwarerstudio-server-controller-0.13.2/bin:$PATH
+$ curl -L -O https://github.com/UCSF-CBI/rstudio-server-controller/archive/refs/tags/0.13.3.tar.gz
+$ tar xf 0.13.3.tar.gz
+$ PATH=/path/to/softwarerstudio-server-controller-0.13.3/bin:$PATH
 $ export PATH
 $ rsc --version
-0.13.2
+0.13.3
 ```
 
 To verify that the tool can find R and the RStudio Server executables,
@@ -346,9 +346,9 @@ call:
 
 ```sh
 $ rsc --version --full
-rsc: 0.13.2
-RStudio Server: 2022.07.2-576 (Spotted Wakerobin) for Linux [/path/to/rstudio-server/bin/rstudio-server]
-R: 4.2.2 (2022-10-31) -- "Innocent and Trusting" [/path/to/R/bin/R]
+rsc: 0.13.3
+RStudio Server: 2023.03.0+386 (Cherry Blossom) for Linux [/path/to/rstudio-server/bin/rstudio-server]
+R: 4.2.3 (2023-03-15) -- "Shortstop Beagle" [/path/to/R/bin/R]
 ```
 
 
