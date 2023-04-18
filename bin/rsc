@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.13.2
+### Version: 0.13.3
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -95,6 +95,31 @@ source "${incl}/system.sh"
 # =========================================================================
 # Utility functions
 # =========================================================================
+## If the length of '$HOME/.config' is 40 characters or more, we get an
+## 'ERROR Unexpected exception: File name too long [system:36]; LOGGED
+## FROM: int main(int, char* const*) src/cpp/server/ServerMain.cpp:941'.
+## This errors occurs in
+## <https://github.com/rstudio/rstudio/blob/09de542e287bdbfb6e90babf439eb1e2f9658f05/src/cpp/server/session/ServerSessionRpc.cpp#L229>
+## when serverRpcSocketPath() returns a FilePath with an absolute path
+## longer than 108 characters, e.g. /a/very/long/path/to/home/alice/.config/rsc/var/run/rstudio-server/rstudio-rserver/session-server-rpc.socket
+## /HB 2023-04-17
+post_mortem_too_long_config_dir() {
+    local path
+    path=$(config_dir)
+    if [[ ${#path} -ge 40 ]]; then
+        echo "Post-mortem analysis: The RStudio Server Controller configuration folder ($path) has ${#path} characters. A configuration folder with more than 40 characters will likely not work with RStudio Server version after 2022.02.4-500. Here we are using version $(rserver_version)."
+    fi
+}
+
+function rsc_error {
+    local msg extra
+    msg="$* This happend with rsc $(version), RStudio Server $(rserver_version_string) [$(rserver_path)], and R $(r_version_string) [$(r_path)]."
+    extra=$(post_mortem_too_long_config_dir)
+    if [[ -n ${extra} ]]; then
+        msg="${msg} ${extra}"
+    fi
+    error "$msg"
+}
 
 # -------------------------------------------------------------------------
 # Authentication utilities
@@ -801,7 +826,7 @@ function wait_for_rserver {
 function assert_rserver_running {
     mdebug "Checking that the 'rserver' process is still running ..."
     if [[ $(rserver_status) == "not running" ]]; then
-        error "It looks like the RStudio Server failed during launch ['rserver' process (PID $(rserver_pid) on $(rserver_hostname)) no longer exists]"
+        rsc_error "It looks like the RStudio Server failed during launch ['rserver' process (PID $(rserver_pid) on $(rserver_hostname)) no longer exists]."
     fi
     mdebug "Checking that the 'rserver' process is still running ... done"
 }
