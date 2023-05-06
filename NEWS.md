@@ -1,3 +1,11 @@
+## Version 0.13.5 [2023-05-06]
+
+### Bug Fixes
+
+ * Shorten the path lengths of the RStudio Server `server-data-dir` and
+   database `directory` folders by 17 characters.
+
+
 ## Version 0.13.4 [2023-04-17]
 
 ### New Features
