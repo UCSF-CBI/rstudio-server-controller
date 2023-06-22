@@ -77,7 +77,7 @@ To launch your personal RStudio Server instance, call:
 
 ```sh
 $ rsc start
-alice, your personal RStudio Server 2023.03.0+386 running R 4.2.3 is available on:
+alice, your personal RStudio Server 2023.03.0+386 running R 4.3.1 is available on:
 
   <http://127.0.0.1:20612>
 
@@ -98,7 +98,7 @@ e.g. <kbd>Ctrl-C</kbd>:
 
 ```sh
  $ rsc start
-alice, your personal RStudio Server 2023.03.0+386 running R 4.2.3 is available on:
+alice, your personal RStudio Server 2023.03.0+386 running R 4.3.1 is available on:
 
   <http://127.0.0.1:20612>
 
@@ -170,7 +170,7 @@ If we launch `rsc` on the remote server, we will get:
 
 ```sh
 [alice@server ~]$ rsc start
-alice, your personal RStudio Server 2023.03.0+386 running R 4.2.3 is available on:
+alice, your personal RStudio Server 2023.03.0+386 running R 4.3.1 is available on:
 
   <http://127.0.0.1:20612>
 
@@ -220,7 +220,7 @@ instructions:
 
 ```sh
 [alice@server ~]$ rsc start
-alice, your personal RStudio Server 2023.03.0+386 running R 4.2.3 is available on:
+alice, your personal RStudio Server 2023.03.0+386 running R 4.3.1 is available on:
 
   <http://127.0.0.1:20612>
 
@@ -264,7 +264,7 @@ port 20612 several times before, so we will try that this time too:
 [ab@local ~]$ ssh -L 20612:server.myuniv.org:20612 alice@login.myuniv.org
 [alice@login ~]$ ssh -l alice server.myuniv.org
 [alice@server ~]$ rsc start --port=20612
-alice, your personal RStudio Server 2023.03.0+386 running R 4.2.3 is available on:
+alice, your personal RStudio Server 2023.03.0+386 running R 4.3.1 is available on:
 
   <http://127.0.0.1:20612>
 
@@ -298,7 +298,7 @@ it launches the RStudio Server;
 ```sh
 [ab@local ~]$ ssh -l alice server.myuniv.org
 [alice@server ~]$ rsc start --revtunnel=ab@local.myuniv.org:20612
-alice, your personal RStudio Server 2023.03.0+386 running R 4.2.3 is available on:
+alice, your personal RStudio Server 2023.03.0+386 running R 4.3.1 is available on:
 
   <http://127.0.0.1:20612>
 
@@ -333,12 +333,12 @@ As before, the RStudio Server is available at
 
 ```sh
 $ cd /path/to/software
-$ curl -L -O https://github.com/UCSF-CBI/rstudio-server-controller/archive/refs/tags/0.13.5.tar.gz
-$ tar xf 0.13.5.tar.gz
-$ PATH=/path/to/softwarerstudio-server-controller-0.13.5/bin:$PATH
+$ curl -L -O https://github.com/UCSF-CBI/rstudio-server-controller/archive/refs/tags/0.13.6.tar.gz
+$ tar xf 0.13.6.tar.gz
+$ PATH=/path/to/softwarerstudio-server-controller-0.13.6/bin:$PATH
 $ export PATH
 $ rsc --version
-0.13.5
+0.13.6
 ```
 
 To verify that the tool can find R and the RStudio Server executables,
@@ -346,9 +346,9 @@ call:
 
 ```sh
 $ rsc --version --full
-rsc: 0.13.5
+rsc: 0.13.6
 RStudio Server: 2023.03.0+386 (Cherry Blossom) for Linux [/path/to/rstudio-server/bin/rstudio-server]
-R: 4.2.3 (2023-03-15) -- "Shortstop Beagle" [/path/to/R/bin/R]
+R: 4.3.1 (2023-06-16) -- "Shortstop Beagle" [/path/to/R/bin/R]
 ```
 
 
