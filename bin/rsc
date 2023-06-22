@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.13.5
+### Version: 0.13.6
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1148,11 +1148,11 @@ function launch_rserver_monitor {
 function assert_r {
     assert_executable R
 
-    R --version > /dev/null || error "The R installation appears broken. Calling 'R --version' fails"
+    out=$(R --version) || error "The R installation appears broken. Calling 'R --version' failed [${out}]"
     
-    R --help > /dev/null || error "The R installation appears broken. Calling 'R --help' fails"
+    out=$(R --help) || error "The R installation appears broken. Calling 'R --help' failed [${out}]"
 
-    R --vanilla -e 42 > /dev/null  || error "The R installation appears broken. Calling 'R --vanilla -e 42' fails"
+    out=$(R --vanilla -e 42) || error "The R installation appears broken. Calling 'R --vanilla -e 42' failed [${out}]"
 }
 
 

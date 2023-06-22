@@ -1,3 +1,12 @@
+## Version 0.13.6 [2023-06-22]
+
+### Miscellaneous
+
+ * `rsc start` now reports also on the underlying error message if one
+   of the assertion tests for the R installation being functional
+   fails.
+
+
 ## Version 0.13.5 [2023-05-06]
 
 ### Bug Fixes
