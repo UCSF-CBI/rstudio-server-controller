@@ -1,4 +1,4 @@
-## Version (development version)
+## Version 0.13.7 [2023-10-04]
 
 ### Miscellaneous
 
