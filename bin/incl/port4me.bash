@@ -8,9 +8,14 @@
 #'
 #' - PORT4ME_USER   : The name of the current user (default: ${USER})
 #' - PORT4ME_TOOL   : The name of the software tool (optional)
+#' - PORT4ME_PREPEND: Ports to be considered first (optional)
 #' - PORT4ME_INCLUDE: Ports to be considered (default: 1024-65535)
 #' - PORT4ME_EXCLUDE: Ports to be excluded (optional)
-#' - PORT4ME_PREPEND: Ports to be considered first (optional)
+#' - PORT4ME_EXCLUDE_UNSAFE:
+#'                    Ports to be excluded because they are considered
+#'                    unsafe (defaults: {chrome},{firefox})
+#' - PORT4ME_EXCLUDE_UNSAFE_CHROME: Ports blocked by the Chrome browser
+#' - PORT4ME_EXCLUDE_UNSAFE_FIREFOX: Ports blocked by the Firefox browser
 #' - PORT4ME_SKIP   : Number of ports to skip in the set of ports
 #'                    considered after applying prepended, included,
 #'                    and excluded (optional)
@@ -24,14 +29,25 @@
 #' PORT4ME_EXCLUDE=8787 port4me
 #' PORT4ME_PREPEND=4001-4003 port4me
 #' PORT4ME_LIST=5 port4me
-#' PORT4ME_TEST=4321 port4me
+#' PORT4ME_TEST=4321 port4me && echo "free" || echo "taken"
 #'
-#' Version: 0.4.0-9004
-#' Copyright: Henrik Bengtsson (2022)
-#' License: ISC
+#' Version: 0.6.0
+#' Copyright: Henrik Bengtsson (2022-2023)
+#' License: MIT
 #' Source code: https://github.com/HenrikBengtsson/port4me
 declare -i LCG_SEED
 export LCG_SEED
+
+PORT4ME_EXCLUDE_UNSAFE=${PORT4ME_EXCLUDE_UNSAFE:-"{chrome},{firefox}"}
+export PORT4ME_EXCLUDE_UNSAFE
+
+## Source: https://chromium.googlesource.com/chromium/src.git/+/refs/heads/master/net/base/port_util.cc
+## Last updated: 2022-10-24
+PORT4ME_EXCLUDE_UNSAFE_CHROME=${PORT4ME_EXCLUDE_UNSAFE_CHROME:-"1,7,9,11,13,15,17,19,20,21,22,23,25,37,42,43,53,69,77,79,87,95,101,102,103,104,109,110,111,113,115,117,119,123,135,137,139,143,161,179,389,427,465,512,513,514,515,526,530,531,532,540,548,554,556,563,587,601,636,989,990,993,995,1719,1720,1723,2049,3659,4045,5060,5061,6000,6566,6665,6666,6667,6668,6669,6697,10080"}
+
+## Source: https://www-archive.mozilla.org/projects/netlib/portbanning#portlist
+## Last updated: 2022-10-24
+PORT4ME_EXCLUDE_UNSAFE_FIREFOX=${PORT4ME_EXCLUDE_UNSAFE_FIREFOX:-"1,7,9,11,13,15,17,19,20,21,22,23,25,37,42,43,53,77,79,87,95,101,102,103,104,109,110,111,113,115,117,119,123,135,139,143,179,389,465,512,513,514,515,526,530,531,532,540,556,563,587,601,636,993,995,2049,4045,6000"}
 
 _p4m_error() {
     >&2 echo "ERROR: $1"
@@ -45,11 +61,11 @@ _p4m_error() {
 #' openable=$?
 #'
 #' Requirements:
-#' * either 'nc' or 'ss'
+#' * either 'nc', 'netstat', or 'ss'
 PORT4ME_PORT_COMMAND=
 _p4m_can_port_be_opened() {
     local -i port=${1:?}
-    local cmds=(nc ss)
+    local cmds=(nc netstat ss)
     local cmd
     
     (( port < 1 || port > 65535 )) && _p4m_error "Port is out of range [1,65535]: ${port}"
@@ -72,6 +88,10 @@ _p4m_can_port_be_opened() {
         fi
     elif [[ ${PORT4ME_PORT_COMMAND} == "ss" ]]; then
         if ss -H -l -n src :"$port" | grep -q -E ":$port\b"; then
+            return 1
+        fi
+    elif [[ ${PORT4ME_PORT_COMMAND} == "netstat" ]]; then
+        if netstat -n -l -t | grep -q -E "^tcp\b[^:]+:$port\b"; then
             return 1
         fi
     fi
@@ -105,17 +125,21 @@ _p4m_string_to_uint() {
     printf "%d" $hash
 }
 
+
 _p4m_parse_ports() {
     local spec=${1:?}
     local specs
     local -a ports
-
-    ## Prune input
+    
+    ## Prune and pre-parse input
+    spec=${spec//\{chrome\}/${PORT4ME_EXCLUDE_UNSAFE_CHROME}}
+    spec=${spec//\{firefox\}/${PORT4ME_EXCLUDE_UNSAFE_FIREFOX}}
     spec=${spec//,/ }
     spec=${spec//+( )/ }
     spec=${spec## }
     spec=${spec%% }
     spec=${spec// /$'\n'}
+    spec=$(sort -n -u <<< "${spec}")
 
     ## Split input into lines
     mapfile -t specs <<< "${spec}"
@@ -190,9 +214,23 @@ port4me() {
         return $?
     fi
     
-    mapfile -t exclude < <(_p4m_parse_ports "${PORT4ME_EXCLUDE},${PORT4ME_EXCLUDE_SITE}")
+    mapfile -t exclude < <(_p4m_parse_ports "${PORT4ME_EXCLUDE},${PORT4ME_EXCLUDE_SITE},${PORT4ME_EXCLUDE_UNSAFE}")
     mapfile -t include < <(_p4m_parse_ports "${PORT4ME_INCLUDE},${PORT4ME_INCLUDE_SITE}")
     mapfile -t prepend < <(_p4m_parse_ports "${PORT4ME_PREPEND},${PORT4ME_PREPEND_SITE}")
+    if ${PORT4ME_DEBUG:-false}; then
+        {
+            echo "PORT4ME_EXCLUDE=${PORT4ME_EXCLUDE}"
+            echo "PORT4ME_EXCLUDE_SITE=${PORT4ME_EXCLUDE_SITE}"
+            echo "PORT4ME_EXCLUDE_UNSAFE=${PORT4ME_EXCLUDE_UNSAFE}"
+            echo "PORT4ME_INCLUDE=${PORT4ME_INCLUDE}"
+            echo "PORT4ME_INCLUDE_SITE=${PORT4ME_INCLUDE_SITE}"
+            echo "PORT4ME_PREPEND=${PORT4ME_PREPEND}"
+            echo "PORT4ME_PREPEND_SITE=${PORT4ME_PREPEND_SITE}"
+            echo "Ports to prepend: [n=${#prepend}] ${prepend[*]}"
+            echo "Ports to include: [n=${#include}] ${include[*]}"
+            echo "Ports to exclude: [n=${#exclude}] ${exclude[*]}"
+        } >&2
+    fi
 
     if (( list > 0 )); then
         max_tries=${list}
@@ -205,11 +243,20 @@ port4me() {
     while (( tries < max_tries )); do
         if (( ${#prepend[@]} > 0 )); then
             port=${prepend[0]}
+            ${PORT4ME_DEBUG:-false} && >&2 printf "Port prepended: %d\n" "$port"
             (( port < 1 || port > 65535 )) && _p4m_error "Prepended port out of range [1,65535]: ${port}"
             prepend=("${prepend[@]:1}") ## drop first element
         else
             _p4m_lcg > /dev/null
+            
+            ## Skip?
+            if (( LCG_SEED < 1024 || LCG_SEED > 65535 )); then
+              ${PORT4ME_DEBUG:-false} && >&2 printf "Skip to next, because LCG_SEED is out of range: %d\n" "$LCG_SEED"
+              continue
+            fi
+            
             port=${LCG_SEED:?}
+            ${PORT4ME_DEBUG:-false} && >&2 printf "Port drawn: %d\n" "$port"
         fi
 
         ## Skip?
@@ -226,10 +273,8 @@ port4me() {
                 ${PORT4ME_DEBUG:-false} && >&2 printf "Port not included: %d\n" "$port"
                 continue
             fi
-        elif (( LCG_SEED < 1024 || LCG_SEED > 65535 )); then
-            continue
         fi
-
+        
         tries=$(( tries + 1 ))
         count=$((count + 1))
 

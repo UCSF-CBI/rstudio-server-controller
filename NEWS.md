@@ -1,3 +1,14 @@
+## Version 0.13.7 [2023-10-04]
+
+### Miscellaneous
+
+ * `rsc start` attempts to infer the login hostname from ``etc/hosts`,
+   if it only finds an IP number at first.
+
+ * `rsc start` now uses [port4me] 0.6.0, which is the most recent
+   version, for identifying a free TCP port.
+ 
+
 ## Version 0.13.6 [2023-06-22]
 
 ### Miscellaneous
