@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.13.6-9000
+### Version: 0.13.6-9001
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -554,7 +554,14 @@ function find_login_host_via_who {
         ## Extract the hostname
         bfr=$(echo "${bfr}" | sed -E 's/(.*[[:space:]]+[(]|[)][[:space:]]*)//g')
         mdebug "4. ${bfr}"
-    fi        
+        ## If hostname is an IP number, try to identify hostname
+	if grep -q -E "^[[:digit:]]+[.][[:digit:]]+[.][[:digit:]]+[.][[:digit:]]+$" <<< "${bfr}"; then
+	    if [[ -f /etc/hosts ]] && grep -q -E "\b${bfr}\b" /etc/hosts; then
+		bfr=$(grep -E "\b${bfr}\b" /etc/hosts | sed -E "s/\b${bfr}\b//g" | sed -E 's/[[:space:]]+/ /g' | sed -E 's/(^ | $)//g' | cut -d ' ' -f 1)
+	    fi
+            mdebug "5. ${bfr}"
+        fi
+    fi
     echo "${bfr}"
 }
 

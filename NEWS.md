@@ -1,6 +1,9 @@
 ## Version (development version)
 
- * ...
+### Miscellaneous
+
+ * `rsc start` attempts to infer the login hostname from ``etc/hosts`,
+   if it only finds an IP number at first.
 
 
 ## Version 0.13.6 [2023-06-22]
