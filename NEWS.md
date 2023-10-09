@@ -1,3 +1,10 @@
+## Version 0.13.9 [2023-10-09]
+
+### Bug Fixes
+
+ * Previous bug fix did not work; the time-out error never took place.
+   
+
 ## Version 0.13.8 [2023-10-09]
 
 ### Bug Fixes
