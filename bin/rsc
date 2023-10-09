@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.13.7
+### Version: 0.13.7-9001
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -445,6 +445,12 @@ function make_rserver_conf {
 # -------------------------------------------------------------------------
 # Misc. utilities
 # -------------------------------------------------------------------------
+function ssh_timeout {
+    local timeout=${RSC_SSH_TIMEOUT:-15}
+    assert_integer "${timeout}"
+    echo "${timeout}"
+}
+
 function parse_revtunnel {
     local spec
     local hostname
@@ -469,6 +475,7 @@ function check_pid {
     local hostname
     local pid_exists
     local asterisk
+    local timeout
 
     ## If 'pid' is assigned an empty value, then it becomes pid=0,
     ## because we declared it as an integer above.
@@ -486,9 +493,9 @@ function check_pid {
             mdebug "- Checking /proc/${pid} on current machine (${hostname})"
             [[ -d "/proc/${pid}" ]] && pid_exists=true
         elif ${ssh}; then
-            mdebug "- Checking /proc/${pid} on ${hostname} over SSH"
+            mdebug "- Checking /proc/${pid} on ${hostname} over SSH ($(ssh_timeout)-second timeout)"
             #shellcheck disable=SC2029
-            res=$(ssh "${hostname}" "[[ -d '/proc/${pid}' ]] && echo true || echo false") || error "Failed to check process PID ${pid} on ${hostname} over SSH"
+            res=$(ssh -o ConnectTimeout="$(ssh_timeout)" "${hostname}" "[[ -d '/proc/${pid}' ]] && echo true || echo false" 2>&1) || error "Failed to check process PID ${pid} on ${hostname} over SSH. Reason was: ${res}"
             [[ "${res}" == "true" ]] && pid_exists=true
         else
             mdebug "- Skipping check of /proc/${pid} on ${hostname}, because --no-ssh"
@@ -1707,12 +1714,12 @@ elif [[ "${action}" == "start" ]]; then
 
         pid_file=$(ssh_revtunnel_pid_file)
         if $dryrun; then
-            echo "DRYRUN: ssh -N -R \"${rev_spec}\" \"${rev_hostname}\""
+            echo "DRYRUN: ssh -o ConnectTimeout="$(ssh_timeout)" -N -R \"${rev_spec}\" \"${rev_hostname}\""
             sleep 60 &
         else
-            mdebug "ssh -N -R \"${rev_spec}\" \"${rev_hostname}\""
+            mdebug "ssh -o ConnectTimeout="$(ssh_timeout)" -N -R \"${rev_spec}\" \"${rev_hostname}\""
             printf "%s\n%s\n" "${rev_hostname}" "${rev_port}" > "$(ssh_revtunnel_spec_file)"
-            ssh -N -R "${rev_spec}" "${rev_hostname}" &
+            ssh -o ConnectTimeout="$(ssh_timeout)" -N -R "${rev_spec}" "${rev_hostname}" &
         fi
         ssh_pid=$!
         echo "${ssh_pid}" > "${pid_file}"
