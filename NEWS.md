@@ -1,3 +1,12 @@
+## Version 0.13.8 [2023-10-09]
+
+### Bug Fixes
+
+ * `rsc start` and `rsc status` would stall if the RStudio Server was
+   previously running on another host and that host no longer responds
+   on SSH.  Now it will timeout with an informative error message.
+ 
+
 ## Version 0.13.7 [2023-10-04]
 
 ### Miscellaneous
