@@ -1,3 +1,5 @@
+check: shellcheck spelling
+
 shellcheck:
 	(cd bin; \
 	   shellcheck --shell=bash --external-sources -- incl/*.sh; \
