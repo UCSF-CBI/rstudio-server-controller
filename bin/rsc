@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.13.8
+### Version: 0.13.9
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -313,6 +313,7 @@ function remove_stray_pid_file {
     local -i pid
     local rserver_hostname
     local what
+
     what=${1:?}
 
     mdebug "remove_stray_pid_file(what='${what}'):"
@@ -359,7 +360,9 @@ function remove_stray_pid_file {
     mdebug " - hostname=$(hostname)"
 
     ## If this process is not running, remove the PID file
-    if [[ -z $(check_pid "${pid}" "${rserver_hostname}") ]]; then
+    pid=$(check_pid "${pid}" "${rserver_hostname}")
+    relay_condition "${pid}"
+    if [[ -z ${pid} ]]; then
         rm "${pid_file}"
         warn "Detected a stray PID file (${pid_file}). This file was removed, because it referred to a ${what} process (PID ${pid} on ${rserver_hostname}) which is no longer running."
         return 0
@@ -612,6 +615,7 @@ function rs_process_status {
     ## Check if PID is still active?
     if [[ ${pid} -ne 0 ]]; then
         pid=$(check_pid "${pid}" "${hostname}")
+        relay_condition "${pid}"
     fi
 
     
