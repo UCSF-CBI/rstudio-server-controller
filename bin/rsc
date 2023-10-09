@@ -1714,10 +1714,10 @@ elif [[ "${action}" == "start" ]]; then
 
         pid_file=$(ssh_revtunnel_pid_file)
         if $dryrun; then
-            echo "DRYRUN: ssh -o ConnectTimeout="$(ssh_timeout)" -N -R \"${rev_spec}\" \"${rev_hostname}\""
+            echo "DRYRUN: ssh -o ConnectTimeout=\"$(ssh_timeout)\" -N -R \"${rev_spec}\" \"${rev_hostname}\""
             sleep 60 &
         else
-            mdebug "ssh -o ConnectTimeout="$(ssh_timeout)" -N -R \"${rev_spec}\" \"${rev_hostname}\""
+            mdebug "ssh -o ConnectTimeout=\"$(ssh_timeout)\" -N -R \"${rev_spec}\" \"${rev_hostname}\""
             printf "%s\n%s\n" "${rev_hostname}" "${rev_port}" > "$(ssh_revtunnel_spec_file)"
             ssh -o ConnectTimeout="$(ssh_timeout)" -N -R "${rev_spec}" "${rev_hostname}" &
         fi
