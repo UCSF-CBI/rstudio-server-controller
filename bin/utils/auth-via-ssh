@@ -53,6 +53,9 @@ IFS='' read -r password
 # Escape all dollar symbols ('$')
 password="${password//\$/\\$}"
 
+# Escape double quotation marks ('"')
+password="${password//\"/\\\"}"
+
 command expect <<EOF
 eval spawn ssh -o PreferredAuthentications=password -o NumberOfPasswordPrompts=1 -l "$USER" "${RSC_AUTH_SSH_HOST}" "echo true"
 expect "password"

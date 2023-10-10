@@ -42,6 +42,9 @@ if command -v expect &> /dev/null; then
 
     # Escape all dollar symbols ('$')
     password="${password//\$/\\$}"
+
+    # Escape double quotation marks ('"')
+    password="${password//\"/\\\"}"
     
     ## WORKAROUND: Not all 'su' versions support being called
     ## from within a script. Because of this, we use expect'
