@@ -12,7 +12,7 @@
 ## * expect (https://www.nist.gov/services-resources/software/expect)
 ## * ssh
 ##
-## Author: Henrik Bengtsson (2021)
+## Author: Henrik Bengtsson (2021-2023)
 set -o nounset
 
 function debug() {
@@ -50,10 +50,16 @@ fi
 ## Read password from standard input
 IFS='' read -r password
 
+# Escape all dollar symbols ('$')
+password="${password//\$/\\$}"
+
+# Escape double quotation marks ('"')
+password="${password//\"/\\\"}"
+
 command expect <<EOF
 eval spawn ssh -o PreferredAuthentications=password -o NumberOfPasswordPrompts=1 -l "$USER" "${RSC_AUTH_SSH_HOST}" "echo true"
 expect "password"
-send "${password}\n"
+send -- "${password}\n"
 set wait_result  [wait]
 ## check if it is an OS error or a return code from our command
 ## index 2 should be -1 for OS error, 0 for command return code
