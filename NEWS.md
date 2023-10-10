@@ -1,6 +1,14 @@
 ## Version (development version)
 
- * ...
+### Bug Fixes
+
+ * Authentication methods `--auto=auth-via-su` (default) and
+   `--auto=auth-via-ssh` did not handle passwords starting with a
+   hyphen (`-`) or that contained one or more dollar signs (`$`), if
+   and only if, the `expect` command was installed on the system.  A
+   user who entered such as password in the 'Sign in to RStudio' panel
+   would always get an `Invalid authentication (incorrect password)`
+   error.
 
 
 ## Version 0.13.9 [2023-10-09]
