@@ -1,5 +1,12 @@
 ## Version (development version)
 
+### New Features
+
+ * Now `rsc` produces an informative warning whenever it needs to SSH
+   into another host to check whether a specific process is running
+   there or not.  This helps clarifying why users without SSH key-pair
+   authentication setup have to enter their account password.
+
 ### Miscellaneous
 
  * Report also on the current host when `rsc` fails.

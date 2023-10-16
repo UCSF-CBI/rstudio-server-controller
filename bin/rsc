@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.13.10-9001
+### Version: 0.13.10-9002
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -497,6 +497,7 @@ function check_pid {
             [[ -d "/proc/${pid}" ]] && pid_exists=true
         elif ${ssh}; then
             mdebug "- Checking /proc/${pid} on ${hostname} over SSH ($(ssh_timeout)-second timeout)"
+            mwarn "Needs to SSH to ${hostname} to check whether process ${pid} is still alive. If you don't have SSH key authentication set up, you will be asked to enter your account password below."
             #shellcheck disable=SC2029
             res=$(ssh -o ConnectTimeout="$(ssh_timeout)" "${hostname}" "[[ -d '/proc/${pid}' ]] && echo true || echo false" 2>&1) || error "Failed to check process PID ${pid} on ${hostname} over SSH. Reason was: ${res}"
             [[ "${res}" == "true" ]] && pid_exists=true
