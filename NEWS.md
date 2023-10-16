@@ -1,3 +1,20 @@
+## Version 0.14.0 [2023-10-16]
+
+### New Features
+
+ * If `rsc start` finds an `.RData` file, it will warn that R might
+   fail to launch if the file is very large.
+
+ * Now `rsc` produces an informative warning whenever it needs to SSH
+   into another host to check whether a specific process is running
+   there or not.  This helps clarifying why users without SSH key-pair
+   authentication setup have to enter their account password.
+
+### Miscellaneous
+
+ * Report also on the current host when `rsc` fails.
+ 
+
 ## Version 0.13.10 [2023-10-10]
 
 ### Bug Fixes
