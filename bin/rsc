@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.13.10-9000
+### Version: 0.13.10-9001
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -118,7 +118,7 @@ post_mortem_too_long_server_data_dir() {
 
 function rsc_error {
     local msg extra
-    msg="$* This happened with rsc $(version), RStudio Server $(rserver_version_string) [$(rserver_path)], and R $(r_version_string) [$(r_path)]."
+    msg="$* This happened with rsc $(version) [running on $(hostname)], RStudio Server $(rserver_version_string) [$(rserver_path)], and R $(r_version_string) [$(r_path)]."
     extra=$(post_mortem_too_long_server_data_dir)
     if [[ -n ${extra} ]]; then
         msg="${msg} ${extra}"

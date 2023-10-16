@@ -1,6 +1,8 @@
 ## Version (development version)
 
- * ...
+### Miscellaneous
+
+ * Report also on the current host when `rsc` fails.
  
 
 ## Version 0.13.10 [2023-10-10]
