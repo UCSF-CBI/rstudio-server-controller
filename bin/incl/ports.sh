@@ -17,7 +17,12 @@ function assert_port {
     fi
 }
 
-function assert_port_free {
-    assert_port "${1}"
-    PORT4ME_TEST="$1" port4me || error "Port is already in use on $(hostname): ${1}"
+function is_port_free {
+    assert_port "${1:?}"
+    PORT4ME_TEST="$1" port4me
 }
+
+function assert_port_free {
+    is_port_free "${1:?}" || error "Port is already in use on $(hostname): ${1}"
+}
+

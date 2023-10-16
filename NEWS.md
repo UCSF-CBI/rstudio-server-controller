@@ -1,3 +1,10 @@
+## Version 0.14.1 [2023-10-16]
+
+### Miscellaneous
+
+ * `rsc start` reports also on the port used, if it fails.
+
+
 ## Version 0.14.0 [2023-10-16]
 
 ### New Features
