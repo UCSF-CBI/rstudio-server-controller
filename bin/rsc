@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.14.0
+### Version: 0.14.0-9001
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -862,10 +862,24 @@ function wait_for_rserver {
 }    
 
 function assert_rserver_running {
+    local info
+    local port
+    
     mdebug "Checking that the 'rserver' process is still running ..."
     if [[ $(rserver_status) == "not running" ]]; then
-        rsc_error "It looks like the RStudio Server failed during launch ['rserver' process (PID $(rserver_pid) on $(rserver_hostname)) no longer exists]."
+        info="'rserver' process (PID $(rserver_pid) on $(rserver_hostname)) no longer exists"
+        port=$(rserver_port)
+        if [[ -n "${port}" ]]; then
+            info="${info}; attempted to use TCP port ${port}"
+            if is_port_free "${port}"; then
+                info="${info}, which is available"
+            else
+                info="${info}, which is not available"
+            fi
+        fi
+        rsc_error "It looks like the RStudio Server failed during launch [${info}]."
     fi
+    
     mdebug "Checking that the 'rserver' process is still running ... done"
 }
 
