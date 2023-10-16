@@ -2,6 +2,9 @@
 
 ### New Features
 
+ * If `rsc start` finds an `.RData` file, it will warn that R might
+   fail to launch if the file is very large.
+
  * Now `rsc` produces an informative warning whenever it needs to SSH
    into another host to check whether a specific process is running
    there or not.  This helps clarifying why users without SSH key-pair
