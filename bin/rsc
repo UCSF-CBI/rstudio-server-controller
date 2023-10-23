@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.14.1-9000
+### Version: 0.14.1-9001
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -487,7 +487,7 @@ function check_pid {
     
     ## Output PID if there is such a process, otherwise output nothing
     mdebug "check_pid(pid=${pid}, hostname=${hostname}) ..."
-
+    
     pid_exists=false
     asterisk=false
     if [[ ${pid} -ne 0 ]]; then
@@ -496,10 +496,11 @@ function check_pid {
             mdebug "- Checking /proc/${pid} on current machine (${hostname})"
             [[ -d "/proc/${pid}" ]] && pid_exists=true
         elif ${ssh}; then
-            mdebug "- Checking /proc/${pid} on ${hostname} over SSH ($(ssh_timeout)-second timeout)"
             mwarn "Needs to SSH to ${hostname} to check whether process ${pid} is still alive. If you don't have SSH key authentication set up, you will be asked to enter your account password below."
+            mdebug "- Checking /proc/${pid} on ${hostname} over SSH ($(ssh_timeout)-second timeout)"
             #shellcheck disable=SC2029
             res=$(ssh -o ConnectTimeout="$(ssh_timeout)" "${hostname}" "[[ -d '/proc/${pid}' ]] && echo true || echo false" 2>&1) || error "Failed to check process PID ${pid} on ${hostname} over SSH. Reason was: ${res}"
+            relay_condition "${res}"
             [[ "${res}" == "true" ]] && pid_exists=true
         else
             mdebug "- Skipping check of /proc/${pid} on ${hostname}, because --no-ssh"
@@ -566,10 +567,10 @@ function find_login_host_via_who {
         bfr=$(echo "${bfr}" | sed -E 's/(.*[[:space:]]+[(]|[)][[:space:]]*)//g')
         mdebug "4. ${bfr}"
         ## If hostname is an IP number, try to identify hostname
-	if grep -q -E "^[[:digit:]]+[.][[:digit:]]+[.][[:digit:]]+[.][[:digit:]]+$" <<< "${bfr}"; then
-	    if [[ -f /etc/hosts ]] && grep -q -E "\b${bfr}\b" /etc/hosts; then
-		bfr=$(grep -E "\b${bfr}\b" /etc/hosts | sed -E "s/\b${bfr}\b//g" | sed -E 's/[[:space:]]+/ /g' | sed -E 's/(^ | $)//g' | cut -d ' ' -f 1)
-	    fi
+        if grep -q -E "^[[:digit:]]+[.][[:digit:]]+[.][[:digit:]]+[.][[:digit:]]+$" <<< "${bfr}"; then
+            if [[ -f /etc/hosts ]] && grep -q -E "\b${bfr}\b" /etc/hosts; then
+                bfr=$(grep -E "\b${bfr}\b" /etc/hosts | sed -E "s/\b${bfr}\b//g" | sed -E 's/[[:space:]]+/ /g' | sed -E 's/(^ | $)//g' | cut -d ' ' -f 1)
+            fi
             mdebug "5. ${bfr}"
         fi
     fi
@@ -1321,17 +1322,17 @@ function display_access_instructions {
             msg="${msg}  <${blue}http://$(ssh_revtunnel_hostname):$(ssh_revtunnel_port)${undo}>\n"
         elif on_local_machine; then
             msg="${msg}  <${blue}http://127.0.0.1:$(rserver_port)${undo}>\n"
-	fi
+        fi
     else
         hostname=$(rserver_hostname)
         port=$(rserver_port)
         if [[ ${localport} == "port" ]]; then
-	    localport=$port
-	fi
+            localport=$port
+        fi
         msg="${msg}  <${blue}http://127.0.0.1:${port}${undo}>\n"
 
-	if [[ -n ${SSH_CLIENT} ]] || [[ -n ${SSH_CONNECTION} ]] || [[ -n ${SSH_TTY} ]]; then
-	msg="${msg}\nImportantly, if you are running from a remote machine without direct access to ${hostname}, you need to set up SSH port forwarding first, which you can do by running:\n\\n  ${blue}ssh -L ${localport}:${hostname}:${port} ${USER}@$(find_login_host)${undo}\n\nin a second terminal from your local computer.\n"
+        if [[ -n ${SSH_CLIENT} ]] || [[ -n ${SSH_CONNECTION} ]] || [[ -n ${SSH_TTY} ]]; then
+            msg="${msg}\nImportantly, if you are running from a remote machine without direct access to ${hostname}, you need to set up SSH port forwarding first, which you can do by running:\n\\n  ${blue}ssh -L ${localport}:${hostname}:${port} ${USER}@$(find_login_host)${undo}\n\nin a second terminal from your local computer.\n"
         fi
     fi
     
