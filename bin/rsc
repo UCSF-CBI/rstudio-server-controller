@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.14.1-9001
+### Version: 0.14.1-9002
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -479,6 +479,8 @@ function check_pid {
     local pid_exists
     local asterisk
     local timeout
+    local res
+    local okay
 
     ## If 'pid' is assigned an empty value, then it becomes pid=0,
     ## because we declared it as an integer above.
@@ -499,8 +501,15 @@ function check_pid {
             mwarn "Needs to SSH to ${hostname} to check whether process ${pid} is still alive. If you don't have SSH key authentication set up, you will be asked to enter your account password below."
             mdebug "- Checking /proc/${pid} on ${hostname} over SSH ($(ssh_timeout)-second timeout)"
             #shellcheck disable=SC2029
-            res=$(ssh -o ConnectTimeout="$(ssh_timeout)" "${hostname}" "[[ -d '/proc/${pid}' ]] && echo true || echo false" 2>&1) || error "Failed to check process PID ${pid} on ${hostname} over SSH. Reason was: ${res}"
-            relay_condition "${res}"
+            res=$(ssh -o ConnectTimeout="$(ssh_timeout)" "${hostname}" "[[ -d '/proc/${pid}' ]] && echo true || echo false" 2>&1)
+            okay=$?
+            mdebug "- Result: ${res}"
+            mdebug "- Exit code: ${okay}"
+            if [[ ${okay} -ne 0 ]]; then
+                ## Remove empty leading lines
+                res=$(sed -e '/./,$!d' <<< "${res}")
+                error "Failed to check process PID ${pid} on ${hostname} over SSH. Reason was: ${res}"
+            fi
             [[ "${res}" == "true" ]] && pid_exists=true
         else
             mdebug "- Skipping check of /proc/${pid} on ${hostname}, because --no-ssh"
