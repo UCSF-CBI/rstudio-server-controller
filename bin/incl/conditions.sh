@@ -104,9 +104,7 @@ function message {
 
 
 function relay_condition {
-    local bfr=${1:?}
-#    local traceback
-    
+    local bfr=${1}
     mdebug "relay_condition() ..."
     for cond in "WARNING" "ERROR"; do
         bfr=$(sed -n "/${cond}:/,\$p" <<< "${1}")
@@ -123,3 +121,7 @@ function relay_condition {
     mdebug "relay_condition() ... done"
 }
 
+
+function prune_debug {
+    sed '/DEBUG:/,$d' <<< "${1}"
+}
