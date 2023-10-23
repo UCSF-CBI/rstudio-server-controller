@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.14.1-9002
+### Version: 0.14.1-9003
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -313,6 +313,8 @@ function remove_stray_pid_file {
     local -i pid
     local rserver_hostname
     local what
+    local res
+    local -i okay
 
     what=${1:?}
 
@@ -360,8 +362,13 @@ function remove_stray_pid_file {
     mdebug " - hostname=$(hostname)"
 
     ## If this process is not running, remove the PID file
-    pid=$(check_pid "${pid}" "${rserver_hostname}")
-    relay_condition "${pid}"
+    warn_if_check_pid_needs_ssh "${rserver_hostname}"
+    res=$(check_pid "${pid}" "${rserver_hostname}" 2>&1)
+    okay=$?
+    mdebug " - checkpid() output: ${res}"
+    mdebug " - checkpid() exit code: ${okay}"
+    relay_condition "${res}"
+    pid=${res}
     if [[ -z ${pid} ]]; then
         rm "${pid_file}"
         warn "Detected a stray PID file (${pid_file}). This file was removed, because it referred to a ${what} process (PID ${pid} on ${rserver_hostname}) which is no longer running."
@@ -473,6 +480,14 @@ function parse_revtunnel {
     echo "${port}"
 }
 
+function warn_if_check_pid_needs_ssh {
+    local hostname
+    hostname=${1:-?}
+    if ${ssh} && [[ "${hostname}" != "$(hostname)" ]]; then
+        mwarn "Needs to SSH to ${hostname} to check whether process ${pid} is still alive. If you don't have SSH key authentication set up, you will be asked to enter your account password below."
+    fi
+ }
+
 function check_pid {
     local -i pid
     local hostname
@@ -480,7 +495,7 @@ function check_pid {
     local asterisk
     local timeout
     local res
-    local okay
+    local -i okay
 
     ## If 'pid' is assigned an empty value, then it becomes pid=0,
     ## because we declared it as an integer above.
@@ -489,7 +504,7 @@ function check_pid {
     
     ## Output PID if there is such a process, otherwise output nothing
     mdebug "check_pid(pid=${pid}, hostname=${hostname}) ..."
-    
+
     pid_exists=false
     asterisk=false
     if [[ ${pid} -ne 0 ]]; then
@@ -498,7 +513,6 @@ function check_pid {
             mdebug "- Checking /proc/${pid} on current machine (${hostname})"
             [[ -d "/proc/${pid}" ]] && pid_exists=true
         elif ${ssh}; then
-            mwarn "Needs to SSH to ${hostname} to check whether process ${pid} is still alive. If you don't have SSH key authentication set up, you will be asked to enter your account password below."
             mdebug "- Checking /proc/${pid} on ${hostname} over SSH ($(ssh_timeout)-second timeout)"
             #shellcheck disable=SC2029
             res=$(ssh -o ConnectTimeout="$(ssh_timeout)" "${hostname}" "[[ -d '/proc/${pid}' ]] && echo true || echo false" 2>&1)
@@ -622,9 +636,12 @@ function rs_process_status {
     hostname=${2}
     
     mdebug "rs_process_status(pid=${pid}, hostname=${hostname}):"
+
+    warn_if_ssh_needed "${hostname}"
     
     ## Check if PID is still active?
     if [[ ${pid} -ne 0 ]]; then
+	warn_if_check_pid_needs_ssh "${hostname}"
         pid=$(check_pid "${pid}" "${hostname}")
         relay_condition "${pid}"
     fi
