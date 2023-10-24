@@ -33,10 +33,10 @@ function error {
     echo -e "${msg}"
 
     if ${TRACEBACK_ON_ERROR}; then
-       echo -e "${gray}Traceback:"
-       for ((ii = 1; ii < "${#BASH_LINENO[@]}"; ii++ )); do
-           printf "%d: %s() on line #%s in %s\\n" "$ii" "${FUNCNAME[$ii]}" "${BASH_LINENO[$((ii-1))]}" "${BASH_SOURCE[$ii]}"
-       done
+        echo -e "${gray}Traceback:"
+        for ((ii = 1; ii < "${#BASH_LINENO[@]}"; ii++ )); do
+            printf "%d: %s() on line #%s in %s\\n" "$ii" "${FUNCNAME[$ii]}" "${BASH_LINENO[$((ii-1))]}" "${BASH_SOURCE[$ii]}"
+        done
     fi
 
     if [[ -n "${ON_ERROR}" ]]; then
@@ -104,7 +104,24 @@ function message {
 
 
 function relay_condition {
-    grep -q -E "^ERROR: " <<< "${1}" && error "${1#ERROR: }"
-    grep -q -E "^WARNING: " <<< "${1}" && warn "${1#WARNING: }"
+    local bfr=${1}
+    mdebug "relay_condition() ..."
+    for cond in "WARNING" "ERROR"; do
+        bfr=$(sed -n "/${cond}:/,\$p" <<< "${1}")
+        if grep -q -E "${cond}: " <<< "${bfr}"; then
+            # traceback=$(sed -n '/Traceback:/,$p' <<< "${bfr}")
+	    
+	    ## Drop traceback
+            bfr=$(sed '/Traceback:/,$d' <<< "${bfr}")
+	    
+	    [[ ${cond} == "WARNING" ]] && warn  "${bfr#WARNING: }"
+	    [[ ${cond} == "ERROR"   ]] && error "${bfr#ERROR: }"
+	fi
+    done
+    mdebug "relay_condition() ... done"
 }
 
+
+function prune_debug {
+    sed '/DEBUG:/,$d' <<< "${1}"
+}

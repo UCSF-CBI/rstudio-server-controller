@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.14.1
+### Version: 0.14.2
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -270,7 +270,9 @@ function acquire_lock_file {
 
     lockfile=${workdir}/pid.lock
     if [[ -f "${lockfile}" ]]; then
-        error "${USER}, another RStudio Server instance of yours is already running on $(rserver_hostname) on this system. Call '${blue}rsc status --full${undo}' for details on how to reconnect. If you want to start a new instance, please terminate the existing one first by calling '${blue}rsc stop${undo}' from that machine."
+	msg="${USER}, another RStudio Server instance of yours is already running on $(rserver_hostname) on this system. Call '${blue}rsc status --full${undo}' for details on how to reconnect. If you want to start a new instance, please terminate the existing one first by calling '${blue}rsc stop${undo}' from that machine."
+	msg="${msg} As a last resort, for instance, if that machine is no longer available or down for maintenance, try ${blue}rsc reset --force${undo}."
+        error "${msg}"
     fi
     echo "${PPID}" > "${lockfile}"
 }
@@ -313,6 +315,8 @@ function remove_stray_pid_file {
     local -i pid
     local rserver_hostname
     local what
+    local res
+    local -i okay
 
     what=${1:?}
 
@@ -360,8 +364,13 @@ function remove_stray_pid_file {
     mdebug " - hostname=$(hostname)"
 
     ## If this process is not running, remove the PID file
-    pid=$(check_pid "${pid}" "${rserver_hostname}")
-    relay_condition "${pid}"
+    warn_if_check_pid_needs_ssh "${rserver_hostname}"
+    res=$(check_pid "${pid}" "${rserver_hostname}" 2>&1)
+    okay=$?
+    mdebug " - checkpid() exit code: ${okay}"
+    relay_condition "${res}"
+    res=$(prune_debug "${res}")
+    pid=${res}
     if [[ -z ${pid} ]]; then
         rm "${pid_file}"
         warn "Detected a stray PID file (${pid_file}). This file was removed, because it referred to a ${what} process (PID ${pid} on ${rserver_hostname}) which is no longer running."
@@ -473,12 +482,22 @@ function parse_revtunnel {
     echo "${port}"
 }
 
+function warn_if_check_pid_needs_ssh {
+    local hostname
+    hostname=${1:-?}
+    if ${ssh} && [[ "${hostname}" != "$(hostname)" ]]; then
+        mwarn "Needs to SSH to ${hostname} to check whether process ${pid} is still alive. If you don't have SSH key authentication set up, you will be asked to enter your account password below."
+    fi
+ }
+
 function check_pid {
     local -i pid
     local hostname
     local pid_exists
     local asterisk
     local timeout
+    local res
+    local -i okay
 
     ## If 'pid' is assigned an empty value, then it becomes pid=0,
     ## because we declared it as an integer above.
@@ -497,9 +516,16 @@ function check_pid {
             [[ -d "/proc/${pid}" ]] && pid_exists=true
         elif ${ssh}; then
             mdebug "- Checking /proc/${pid} on ${hostname} over SSH ($(ssh_timeout)-second timeout)"
-            mwarn "Needs to SSH to ${hostname} to check whether process ${pid} is still alive. If you don't have SSH key authentication set up, you will be asked to enter your account password below."
             #shellcheck disable=SC2029
-            res=$(ssh -o ConnectTimeout="$(ssh_timeout)" "${hostname}" "[[ -d '/proc/${pid}' ]] && echo true || echo false" 2>&1) || error "Failed to check process PID ${pid} on ${hostname} over SSH. Reason was: ${res}"
+            res=$(ssh -o ConnectTimeout="$(ssh_timeout)" "${hostname}" "[[ -d '/proc/${pid}' ]] && echo true || echo false" 2>&1)
+            okay=$?
+            mdebug "- Result: ${res}"
+            mdebug "- Exit code: ${okay}"
+            if [[ ${okay} -ne 0 ]]; then
+                ## Remove empty leading lines
+                res=$(sed -e '/./,$!d' <<< "${res}")
+                error "Failed to check process PID ${pid} on ${hostname} over SSH. Reason was: ${res}"
+            fi
             [[ "${res}" == "true" ]] && pid_exists=true
         else
             mdebug "- Skipping check of /proc/${pid} on ${hostname}, because --no-ssh"
@@ -566,10 +592,10 @@ function find_login_host_via_who {
         bfr=$(echo "${bfr}" | sed -E 's/(.*[[:space:]]+[(]|[)][[:space:]]*)//g')
         mdebug "4. ${bfr}"
         ## If hostname is an IP number, try to identify hostname
-	if grep -q -E "^[[:digit:]]+[.][[:digit:]]+[.][[:digit:]]+[.][[:digit:]]+$" <<< "${bfr}"; then
-	    if [[ -f /etc/hosts ]] && grep -q -E "\b${bfr}\b" /etc/hosts; then
-		bfr=$(grep -E "\b${bfr}\b" /etc/hosts | sed -E "s/\b${bfr}\b//g" | sed -E 's/[[:space:]]+/ /g' | sed -E 's/(^ | $)//g' | cut -d ' ' -f 1)
-	    fi
+        if grep -q -E "^[[:digit:]]+[.][[:digit:]]+[.][[:digit:]]+[.][[:digit:]]+$" <<< "${bfr}"; then
+            if [[ -f /etc/hosts ]] && grep -q -E "\b${bfr}\b" /etc/hosts; then
+                bfr=$(grep -E "\b${bfr}\b" /etc/hosts | sed -E "s/\b${bfr}\b//g" | sed -E 's/[[:space:]]+/ /g' | sed -E 's/(^ | $)//g' | cut -d ' ' -f 1)
+            fi
             mdebug "5. ${bfr}"
         fi
     fi
@@ -608,15 +634,20 @@ function rs_process_status {
     local pid_info
     local pid_stats
     local tmp
+    local res
     pid=${1}
     hostname=${2}
     
     mdebug "rs_process_status(pid=${pid}, hostname=${hostname}):"
-    
+
     ## Check if PID is still active?
     if [[ ${pid} -ne 0 ]]; then
-        pid=$(check_pid "${pid}" "${hostname}")
-        relay_condition "${pid}"
+	warn_if_check_pid_needs_ssh "${hostname}"
+        res=$(check_pid "${pid}" "${rserver_hostname}" 2>&1)
+        okay=$?
+        relay_condition "${res}"
+        res=$(prune_debug "${res}")
+        pid=${res}
     fi
 
     
@@ -1321,17 +1352,17 @@ function display_access_instructions {
             msg="${msg}  <${blue}http://$(ssh_revtunnel_hostname):$(ssh_revtunnel_port)${undo}>\n"
         elif on_local_machine; then
             msg="${msg}  <${blue}http://127.0.0.1:$(rserver_port)${undo}>\n"
-	fi
+        fi
     else
         hostname=$(rserver_hostname)
         port=$(rserver_port)
         if [[ ${localport} == "port" ]]; then
-	    localport=$port
-	fi
+            localport=$port
+        fi
         msg="${msg}  <${blue}http://127.0.0.1:${port}${undo}>\n"
 
-	if [[ -n ${SSH_CLIENT} ]] || [[ -n ${SSH_CONNECTION} ]] || [[ -n ${SSH_TTY} ]]; then
-	msg="${msg}\nImportantly, if you are running from a remote machine without direct access to ${hostname}, you need to set up SSH port forwarding first, which you can do by running:\n\\n  ${blue}ssh -L ${localport}:${hostname}:${port} ${USER}@$(find_login_host)${undo}\n\nin a second terminal from your local computer.\n"
+        if [[ -n ${SSH_CLIENT} ]] || [[ -n ${SSH_CONNECTION} ]] || [[ -n ${SSH_TTY} ]]; then
+            msg="${msg}\nImportantly, if you are running from a remote machine without direct access to ${hostname}, you need to set up SSH port forwarding first, which you can do by running:\n\\n  ${blue}ssh -L ${localport}:${hostname}:${port} ${USER}@$(find_login_host)${undo}\n\nin a second terminal from your local computer.\n"
         fi
     fi
     

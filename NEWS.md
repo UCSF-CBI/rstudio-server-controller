@@ -1,3 +1,16 @@
+## Version 0.14.2 [2023-10-23]
+
+### Miscellaneous
+
+ * `rsc start`, `rsc stop`, `rsc status`, `rsc reset`, etc. give more
+   informative error messages when the machine where RStudio Server
+   was most recently running on is not longer available.
+ 
+ * `rsc start --force` suggests calling `rsc reset --force` as a last
+   resort if the machine, where RStudio Server was most recently
+   running on, is not longer available.
+ 
+
 ## Version 0.14.1 [2023-10-16]
 
 ### Miscellaneous
