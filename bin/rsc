@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.14.1-9004
+### Version: 0.14.1-9005
 ### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
 ### License: ISC
 
@@ -270,7 +270,9 @@ function acquire_lock_file {
 
     lockfile=${workdir}/pid.lock
     if [[ -f "${lockfile}" ]]; then
-        error "${USER}, another RStudio Server instance of yours is already running on $(rserver_hostname) on this system. Call '${blue}rsc status --full${undo}' for details on how to reconnect. If you want to start a new instance, please terminate the existing one first by calling '${blue}rsc stop${undo}' from that machine."
+	msg="${USER}, another RStudio Server instance of yours is already running on $(rserver_hostname) on this system. Call '${blue}rsc status --full${undo}' for details on how to reconnect. If you want to start a new instance, please terminate the existing one first by calling '${blue}rsc stop${undo}' from that machine."
+	msg="${msg} As a last resort, for instance, if that machine is no longer available or down for maintenance, try ${blue}rsc reset --force${undo}."
+        error "${msg}"
     fi
     echo "${PPID}" > "${lockfile}"
 }
