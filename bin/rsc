@@ -63,8 +63,8 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.14.2
-### Copyright: Henrik Bengtsson (2022-2023) and Harry Putnam (2022)
+### Version: 0.14.2-9001
+### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
 this="${BASH_SOURCE%/}"
@@ -1717,9 +1717,9 @@ elif [[ "${action}" == "start" ]]; then
     if [[ "${port}" != "port4me" ]]; then
         assert_port_free "${port}"
     fi
-    
+
     if [[ "${RSC_PASSWORD}" == "random" ]]; then
-        RSC_PASSWORD=$(openssl rand -base64 15)
+        RSC_PASSWORD=$(openssl rand -base64 15 | tr '+/' '-_')
         export RSC_PASSWORD
         RSC_PASSWORD_ECHO=${RSC_PASSWORD_ECHO:-true}
     fi

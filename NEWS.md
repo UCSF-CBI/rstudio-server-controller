@@ -1,3 +1,12 @@
+## Version (development version)
+
+### New Features
+
+ * `rsc start --password=random` now generates a password that can be
+   copied by double-clicking on it.  Technically, the password is now
+   in a Base64 URL-safe encoding, whereas in the past it was Base64.
+
+
 ## Version 0.14.2 [2023-10-23]
 
 ### Miscellaneous
