@@ -14,6 +14,9 @@ setup() {
     export XDG_CONFIG_HOME
     XDG_DATA_HOME=${_RSC_TEST_DIR_}
     export XDG_DATA_HOME
+
+    export RSC_AUTH="auth-via-env"
+    export RSC_PASSWORD="random"
 }
 
 teardown() {
@@ -97,8 +100,27 @@ teardown() {
     assert_success
 }
 
-#@test "rsc start --dryrun works" {
-#    rsc reset --force
-#    run rsc start --dryrun
-#    assert_success
-#}
+@test "rsc reset works" {
+    run rsc reset
+    assert_success
+}
+
+@test "rsc reset --force works" {
+    run rsc reset --force
+    assert_success
+}
+
+@test "rsc stop works" {
+    run rsc stop
+    assert_success
+}
+
+@test "rsc start --debug --dryrun works" {
+    run rsc start --debug --dryrun 2>&1
+    assert_failure
+    assert_output --partial "DRYRUN: rserver --config-file="
+    assert_output --partial "DRYRUN: rserver_monitor launched"
+    assert_output --partial "ERROR: It looks like the RStudio Server failed during launch"
+    assert_output --partial "Shutting down RStudio Server ..."
+    assert_output --partial "Shutting down RStudio Server ... done"
+}

@@ -1,6 +1,6 @@
-SHELL: bash
+SHELL=bash
 
-check: shellcheck test spelling
+check: shellcheck check-cli spelling
 
 assert_bats:
 	command -v "bats"
