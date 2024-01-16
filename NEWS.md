@@ -1,3 +1,24 @@
+## Version 0.15.0 [2024-01-16]
+
+### New Features
+
+ * Now `rsc config` reports also on `RSC_*` environment variables.
+ 
+ * The default name of the login hostname suggested in remote SSH
+   sessions can now be set via environment variable
+   `RSC_SSH_LOGIN_HOSTNAME`.  The default is still to infer it from
+   `who`.
+
+### Miscellaneous
+
+ * `rsc start --dryrun` is now shortened to 10 seconds.
+
+### Bug Fixes
+
+  * When adding option `--debug` to `rsc start` the RStudio Server
+    failed to launch.
+
+
 ## Version 0.14.4 [2024-01-16]
 
 ### Bug Fixes

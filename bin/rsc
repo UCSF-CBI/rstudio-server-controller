@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.14.4
+### Version: 0.15.0
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -315,7 +315,7 @@ function remove_stray_pid_file {
     local -i pid
     local rserver_hostname
     local what
-    local res
+    local -a res
     local -i okay
 
     what=${1:?}
@@ -365,13 +365,13 @@ function remove_stray_pid_file {
 
     ## If this process is not running, remove the PID file
     warn_if_check_pid_needs_ssh "${rserver_hostname}"
-    res=$(check_pid "${pid}" "${rserver_hostname}" 2>&1)
+    mapfile -t res < <(check_pid "${pid}" "${rserver_hostname}" 2>&1)
     okay=$?
-    mdebug " - checkpid() exit code: ${okay}"
-    relay_condition "${res}"
-    res=$(prune_debug "${res}")
-    pid=${res}
-    if [[ -z ${pid} ]]; then
+    mdebug " - checkpid('${pid}', '${rserver_hostname}') exit code: ${okay}"
+    relay_condition "${res[@]}"
+    mapfile -t res < <(prune_debug "${res[@]}")
+        
+    if [[ ${#res[@]} -eq 0 ]]; then
         rm "${pid_file}"
         warn "Detected a stray PID file (${pid_file}). This file was removed, because it referred to a ${what} process (PID ${pid} on ${rserver_hostname}) which is no longer running."
         return 0
@@ -530,8 +530,8 @@ function check_pid {
             #shellcheck disable=SC2029
             res=$(ssh -o ConnectTimeout="$(ssh_timeout)" "${hostname}" "[[ -d '/proc/${pid}' ]] && echo true || echo false" 2>&1)
             okay=$?
-            mdebug "- Result: ${res}"
             mdebug "- Exit code: ${okay}"
+            mdebug "- Result: ${res}"
             if [[ ${okay} -ne 0 ]]; then
                 ## Remove empty leading lines
                 res=$(sed -e '/./,$!d' <<< "${res}")
@@ -616,12 +616,16 @@ function find_login_host_via_who {
 function find_login_host {
     local host
     local full
-    host=${LOGIN_HOSTNAME}
-    
+
+    ## 1. Use 'RSC_SSH_LOGIN_HOSTNAME', if set
+    host=${RSC_SSH_LOGIN_HOSTNAME}
+
+    ## 2. Otherwise, infer from 'who'
     if [[ -z "${host}" ]]; then
         host=$(find_login_host_via_who)
     fi
     
+    ## 3. Fall back to template instructions
     if [[ -z "${host}" ]]; then
         host="<login-machine>"
     fi
@@ -632,6 +636,7 @@ function find_login_host {
             host=$(echo "${full}" | cut -d ' ' -f 1)
         fi
     fi
+    
     echo "${host}"
 }
 
@@ -645,7 +650,8 @@ function rs_process_status {
     local pid_info
     local pid_stats
     local tmp
-    local res
+    local -i okay
+    local -a res
     pid=${1}
     hostname=${2}
     
@@ -654,13 +660,16 @@ function rs_process_status {
     ## Check if PID is still active?
     if [[ ${pid} -ne 0 ]]; then
 	warn_if_check_pid_needs_ssh "${hostname}"
-        res=$(check_pid "${pid}" "${rserver_hostname}" 2>&1)
+        mapfile -t res < <(check_pid "${pid}" "${rserver_hostname}" 2>&1)
         okay=$?
-        relay_condition "${res}"
-        res=$(prune_debug "${res}")
-        pid=${res}
+        mdebug " - checkpid('${pid}', '${rserver_hostname}') exit code: ${okay}"
+        mapfile -t res < <(prune_debug "${res[@]}")
+        if [[ -n "${res[0]}" ]]; then
+            pid="${res[0]}"
+        else
+            pid=0
+        fi
     fi
-
     
     if [[ ${pid} -ne 0 ]]; then
         pid_info="PID ${pid}"
@@ -687,7 +696,7 @@ function rsession_timeout {
     local timeout
     local bfr
     timeout=${RSC_RSESSION_TIMEOUT}
-
+    
     if [[ -z "${timeout}" ]]; then
         ## The default is 120 minutes (2 hours)
         timeout=120
@@ -1054,7 +1063,7 @@ function launch_rserver {
     mdebug "rserver --config-file=\"${workdir}/rserver.conf\" &"
     if $dryrun; then
         echo "DRYRUN: rserver --config-file=\"${workdir}/rserver.conf\""
-        sleep 60 &
+        sleep 10 &
     else
         rserver --config-file="${workdir}/rserver.conf" &
     fi
@@ -1205,7 +1214,7 @@ function launch_rserver_monitor {
     pid_file=$(rserver_monitor_pid_file)
     if $dryrun; then
         echo "DRYRUN: rserver_monitor launched"
-        sleep 60 &
+        sleep 10 &
     else
         rserver_monitor &
     fi
@@ -1405,7 +1414,6 @@ ssh=${RSC_SSH:-true}
 ## behavior prevents R from seeing, for instance, environment variables
 ## set by a job scheduler.
 rsession_inherit_env_pattern=${RSC_ENV_PATTERN:-"^.+$"}
-    
 
 # Parse command-line options
 while [[ $# -gt 0 ]]; do
@@ -1540,6 +1548,15 @@ mdebug "auth: ${auth}"
 mdebug "RSC_AUTH_ARG_2: ${RSC_AUTH_ARG_2}"
 mdebug "revtunnel: [n=${#revtunnel[@]}] ${revtunnel[*]}"
 mdebug "ssh: ${ssh}"
+mdebug "RSC_AUTH: ${RSC_AUTH:-<not set>}"
+mdebug "RSC_ENV_PATTERN: ${RSC_ENV_PATTERN:-<not set>}"
+mdebug "RSC_LOCALPORT: ${RSC_LOCALPORT:-<not set>}"
+mdebug "RSC_PORT: ${RSC_PORT:-<not set>}"
+mdebug "RSC_RSERVER_TIMEOUT: ${RSC_RSERVER_TIMEOUT:-<not set>}"
+mdebug "RSC_RSESSION_TIMEOUT: ${RSC_RSESSION_TIMEOUT:-<not set>}"
+mdebug "RSC_SSH: ${RSC_SSH:-<not set>}"
+mdebug "RSC_SSH_LOGIN_HOSTNAME: ${RSC_SSH_LOGIN_HOSTNAME:-<not set>}"
+mdebug "RSC_SSH_TIMEOUT: ${RSC_SSH_TIMEOUT:-<not set>}"
 mdebug "args: [n=${#args[@]}] ${args[*]}"
 
 ## Enable terminal colors, if supported
@@ -1558,6 +1575,23 @@ fi
 if [[ "${action}" == "config" ]]; then
     files=()
 
+    echo "RStudio Server Controller Settings:"
+    echo "RSC_AUTH: ${RSC_AUTH:-<not set>}"
+    echo "RSC_ENV_PATTERN: ${RSC_ENV_PATTERN:-<not set>}"
+    echo "RSC_LOCALPORT: ${RSC_LOCALPORT:-<not set>}"
+    value=${RSC_PASSWORD:-<not set>}
+    if [[ ${value} != "<not set>" ]] && [[ ${value} != "random" ]]; then
+        value="<masked>"
+    fi
+    echo "RSC_PASSWORD: ${value}"
+    echo "RSC_PORT: ${RSC_PORT:-<not set>}"
+    echo "RSC_RSERVER_TIMEOUT: ${RSC_RSERVER_TIMEOUT:-<not set>}"
+    echo "RSC_RSESSION_TIMEOUT: ${RSC_RSESSION_TIMEOUT:-<not set>}"
+    echo "RSC_SSH: ${RSC_SSH:-<not set>}"
+    echo "RSC_SSH_LOGIN_HOSTNAME: ${RSC_SSH_LOGIN_HOSTNAME:-<not set>}"
+    echo "RSC_SSH_TIMEOUT: ${RSC_SSH_TIMEOUT:-<not set>}"
+    
+    echo 
     echo "RStudio Server Controller Storage:"
     echo "XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-<not set>}"
     
@@ -1802,7 +1836,7 @@ elif [[ "${action}" == "start" ]]; then
         pid_file=$(ssh_revtunnel_pid_file)
         if $dryrun; then
             echo "DRYRUN: ssh -o ConnectTimeout=\"$(ssh_timeout)\" -N -R \"${rev_spec}\" \"${rev_hostname}\""
-            sleep 60 &
+            sleep 10 &
         else
             mdebug "ssh -o ConnectTimeout=\"$(ssh_timeout)\" -N -R \"${rev_spec}\" \"${rev_hostname}\""
             printf "%s\n%s\n" "${rev_hostname}" "${rev_port}" > "$(ssh_revtunnel_spec_file)"
