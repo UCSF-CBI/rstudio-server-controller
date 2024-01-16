@@ -1,6 +1,11 @@
 ## Version (development version)
 
- * ...
+### Bug Fixes
+
+ * `rsc start` would generate obscure errors such as `ports.sh: line
+   15: [[:` and `port4me.bash: line 275: 3: Bad file descriptor`.
+   This was due to a teeny, but critical bug in **port4me**
+   0.7.0. Fixed by updating to new **port4me** 0.7.1.
  
 
 ## Version 0.14.3 [2024-01-15]
