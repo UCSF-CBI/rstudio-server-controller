@@ -115,6 +115,17 @@ teardown() {
     assert_success
 }
 
+
+@test "rsc start --dryrun works" {
+    run rsc start --dryrun 2>&1
+    assert_failure
+    assert_output --partial "DRYRUN: rserver --config-file="
+    assert_output --partial "DRYRUN: rserver_monitor launched"
+    assert_output --partial "ERROR: It looks like the RStudio Server failed during launch"
+    assert_output --partial "Shutting down RStudio Server ..."
+    assert_output --partial "Shutting down RStudio Server ... done"
+}
+
 @test "rsc start --debug --dryrun works" {
     run rsc start --debug --dryrun 2>&1
     assert_failure

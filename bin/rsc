@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.14.4-9002
+### Version: 0.14.4-9003
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -315,7 +315,7 @@ function remove_stray_pid_file {
     local -i pid
     local rserver_hostname
     local what
-    local res
+    local -a res
     local -i okay
 
     what=${1:?}
@@ -365,13 +365,13 @@ function remove_stray_pid_file {
 
     ## If this process is not running, remove the PID file
     warn_if_check_pid_needs_ssh "${rserver_hostname}"
-    res=$(check_pid "${pid}" "${rserver_hostname}" 2>&1)
+    mapfile -t res < <(check_pid "${pid}" "${rserver_hostname}" 2>&1)
     okay=$?
-    mdebug " - checkpid() exit code: ${okay}"
-    relay_condition "${res}"
-    res=$(prune_debug "${res}")
-    pid=${res}
-    if [[ -z ${pid} ]]; then
+    mdebug " - checkpid('${pid}', '${rserver_hostname}') exit code: ${okay}"
+    relay_condition "${res[@]}"
+    mapfile -t res < <(prune_debug "${res[@]}")
+        
+    if [[ ${#res[@]} -eq 0 ]]; then
         rm "${pid_file}"
         warn "Detected a stray PID file (${pid_file}). This file was removed, because it referred to a ${what} process (PID ${pid} on ${rserver_hostname}) which is no longer running."
         return 0
@@ -530,8 +530,8 @@ function check_pid {
             #shellcheck disable=SC2029
             res=$(ssh -o ConnectTimeout="$(ssh_timeout)" "${hostname}" "[[ -d '/proc/${pid}' ]] && echo true || echo false" 2>&1)
             okay=$?
-            mdebug "- Result: ${res}"
             mdebug "- Exit code: ${okay}"
+            mdebug "- Result: ${res}"
             if [[ ${okay} -ne 0 ]]; then
                 ## Remove empty leading lines
                 res=$(sed -e '/./,$!d' <<< "${res}")
@@ -650,8 +650,8 @@ function rs_process_status {
     local pid_info
     local pid_stats
     local tmp
-    local res
     local -i okay
+    local -a res
     pid=${1}
     hostname=${2}
     
@@ -660,13 +660,16 @@ function rs_process_status {
     ## Check if PID is still active?
     if [[ ${pid} -ne 0 ]]; then
 	warn_if_check_pid_needs_ssh "${hostname}"
-        res=$(check_pid "${pid}" "${rserver_hostname}" 2>&1)
+        mapfile -t res < <(check_pid "${pid}" "${rserver_hostname}" 2>&1)
         okay=$?
-        relay_condition "${res}"
-        res=$(prune_debug "${res}")
-        pid=${res}
+        mdebug " - checkpid('${pid}', '${rserver_hostname}') exit code: ${okay}"
+        mapfile -t res < <(prune_debug "${res[@]}")
+        if [[ -n "${res[0]}" ]]; then
+            pid="${res[0]}"
+        else
+            pid=0
+        fi
     fi
-
     
     if [[ ${pid} -ne 0 ]]; then
         pid_info="PID ${pid}"
@@ -1060,7 +1063,7 @@ function launch_rserver {
     mdebug "rserver --config-file=\"${workdir}/rserver.conf\" &"
     if $dryrun; then
         echo "DRYRUN: rserver --config-file=\"${workdir}/rserver.conf\""
-        sleep 60 &
+        sleep 10 &
     else
         rserver --config-file="${workdir}/rserver.conf" &
     fi
@@ -1211,7 +1214,7 @@ function launch_rserver_monitor {
     pid_file=$(rserver_monitor_pid_file)
     if $dryrun; then
         echo "DRYRUN: rserver_monitor launched"
-        sleep 60 &
+        sleep 10 &
     else
         rserver_monitor &
     fi
@@ -1833,7 +1836,7 @@ elif [[ "${action}" == "start" ]]; then
         pid_file=$(ssh_revtunnel_pid_file)
         if $dryrun; then
             echo "DRYRUN: ssh -o ConnectTimeout=\"$(ssh_timeout)\" -N -R \"${rev_spec}\" \"${rev_hostname}\""
-            sleep 60 &
+            sleep 10 &
         else
             mdebug "ssh -o ConnectTimeout=\"$(ssh_timeout)\" -N -R \"${rev_spec}\" \"${rev_hostname}\""
             printf "%s\n%s\n" "${rev_hostname}" "${rev_port}" > "$(ssh_revtunnel_spec_file)"

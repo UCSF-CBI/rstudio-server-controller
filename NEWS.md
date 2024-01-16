@@ -9,6 +9,15 @@
    `RSC_SSH_LOGIN_HOSTNAME`.  The default is still to infer it from
    `who`.
 
+### Miscellaneous
+
+ * `rsc start --dryrun` is now shortened to 10 seconds.
+
+### Bug Fixes
+
+  * When adding option `--debug` to `rsc start` the RStudio Server
+    failed to launch.
+
 
 ## Version 0.14.4 [2024-01-16]
 
