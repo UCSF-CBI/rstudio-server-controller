@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.14.4
+### Version: 0.14.4-9001
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -616,12 +616,16 @@ function find_login_host_via_who {
 function find_login_host {
     local host
     local full
-    host=${LOGIN_HOSTNAME}
-    
+
+    ## 1. Use 'RSC_SSH_LOGIN_HOSTNAME', if set
+    host=${RSC_SSH_LOGIN_HOSTNAME}
+
+    ## 2. Otherwise, infer from 'who'
     if [[ -z "${host}" ]]; then
         host=$(find_login_host_via_who)
     fi
     
+    ## 3. Fall back to template instructions
     if [[ -z "${host}" ]]; then
         host="<login-machine>"
     fi
@@ -632,6 +636,7 @@ function find_login_host {
             host=$(echo "${full}" | cut -d ' ' -f 1)
         fi
     fi
+    
     echo "${host}"
 }
 
@@ -687,7 +692,7 @@ function rsession_timeout {
     local timeout
     local bfr
     timeout=${RSC_RSESSION_TIMEOUT}
-
+    
     if [[ -z "${timeout}" ]]; then
         ## The default is 120 minutes (2 hours)
         timeout=120
@@ -1405,7 +1410,6 @@ ssh=${RSC_SSH:-true}
 ## behavior prevents R from seeing, for instance, environment variables
 ## set by a job scheduler.
 rsession_inherit_env_pattern=${RSC_ENV_PATTERN:-"^.+$"}
-    
 
 # Parse command-line options
 while [[ $# -gt 0 ]]; do
@@ -1540,6 +1544,15 @@ mdebug "auth: ${auth}"
 mdebug "RSC_AUTH_ARG_2: ${RSC_AUTH_ARG_2}"
 mdebug "revtunnel: [n=${#revtunnel[@]}] ${revtunnel[*]}"
 mdebug "ssh: ${ssh}"
+mdebug "RSC_AUTH: ${RSC_AUTH:-<not set>}"
+mdebug "RSC_ENV_PATTERN: ${RSC_ENV_PATTERN:-<not set>}"
+mdebug "RSC_LOCALPORT: ${RSC_LOCALPORT:-<not set>}"
+mdebug "RSC_PORT: ${RSC_PORT:-<not set>}"
+mdebug "RSC_RSERVER_TIMEOUT: ${RSC_RSERVER_TIMEOUT:-<not set>}"
+mdebug "RSC_RSESSION_TIMEOUT: ${RSC_RSESSION_TIMEOUT:-<not set>}"
+mdebug "RSC_SSH: ${RSC_SSH:-<not set>}"
+mdebug "RSC_SSH_LOGIN_HOSTNAME: ${RSC_SSH_LOGIN_HOSTNAME:-<not set>}"
+mdebug "RSC_SSH_TIMEOUT: ${RSC_SSH_TIMEOUT:-<not set>}"
 mdebug "args: [n=${#args[@]}] ${args[*]}"
 
 ## Enable terminal colors, if supported
@@ -1558,6 +1571,23 @@ fi
 if [[ "${action}" == "config" ]]; then
     files=()
 
+    echo "RStudio Server Controller Settings:"
+    echo "RSC_AUTH: ${RSC_AUTH:-<not set>}"
+    echo "RSC_ENV_PATTERN: ${RSC_ENV_PATTERN:-<not set>}"
+    echo "RSC_LOCALPORT: ${RSC_LOCALPORT:-<not set>}"
+    value=${RSC_PASSWORD:-<not set>}
+    if [[ ${value} != "<not set>" ]] && [[ ${value} != "random" ]]; then
+        value="<masked>"
+    fi
+    echo "RSC_PASSWORD: ${value}"
+    echo "RSC_PORT: ${RSC_PORT:-<not set>}"
+    echo "RSC_RSERVER_TIMEOUT: ${RSC_RSERVER_TIMEOUT:-<not set>}"
+    echo "RSC_RSESSION_TIMEOUT: ${RSC_RSESSION_TIMEOUT:-<not set>}"
+    echo "RSC_SSH: ${RSC_SSH:-<not set>}"
+    echo "RSC_SSH_LOGIN_HOSTNAME: ${RSC_SSH_LOGIN_HOSTNAME:-<not set>}"
+    echo "RSC_SSH_TIMEOUT: ${RSC_SSH_TIMEOUT:-<not set>}"
+    
+    echo 
     echo "RStudio Server Controller Storage:"
     echo "XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-<not set>}"
     
