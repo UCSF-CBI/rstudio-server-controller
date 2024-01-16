@@ -1,3 +1,19 @@
+## Version 0.14.3 [2024-01-15]
+
+### New Features
+
+ * `rsc start --password=random` now generates a password that can be
+   copied by double-clicking on it.  Technically, the password is now
+   in a Base64 URL-safe encoding, whereas in the past it was Base64.
+
+### Bug Fixes
+
+ * `rsc start` would something fail to identified a TCP port as
+    non-available, which resulted in an error from RStudio Server
+    failing to launch. Fixed problem by updating to **port4me** 0.7.0
+    internally.
+ 
+
 ## Version 0.14.2 [2023-10-23]
 
 ### Miscellaneous
