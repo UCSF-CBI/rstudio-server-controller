@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.14.3
+### Version: 0.14.4
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -298,7 +298,7 @@ function remove_stray_lockfile {
     mdebug "remove_stray_lockfile() ..."
     
     ## Nothing to do?
-    [[ ! -f "${lockfile}" ]] || [[ -n "$(rserver_pid true)" ]] || [[ -n "$(rsession_pid true)" ]] || [[ -n "$(ssh_revtunnel_pid true)" ]] && return 0;
+    [[ ! -f "${lockfile}" ]] || [[ -n "$(rserver_pid true)" ]] || [[ -n "$(rsession_pid true)" ]] || [[ -n "$(ssh_revtunnel_pid true)" ]] && { mdebug "remove_stray_lockfile() ... done"; return 0; }
     
     ## Here we know that there's neither a rserver PID nor a rsession PID
     rm "${lockfile}"
@@ -398,16 +398,25 @@ function make_rserver_conf {
     local workdir
     local datadir
     local port
+
+    mdebug "make_rserver_conf() ..."
+    
     workdir=$(config_dir)
     assert_dir_exists "${workdir}"
     port=${1:?}
+    mdebug " - workdir=${workdir}"
+    mdebug " - port=${port}"
 
     datadir=$(rserver_data_dir)
     
     if [[ "${port}" == "port4me" ]]; then
+        mdebug "port4me() ..."
         port=$(PORT4ME_TOOL=rsc port4me 2>&1)
         relay_condition "${port}"
+        mdebug "port4me() ... done"
     fi
+    
+    mdebug "port=${port}"
     assert_port_free "${port}"
 
     {
@@ -451,6 +460,8 @@ function make_rserver_conf {
         ## The web port for the RStudio Server
         echo "www-port=${port:?}"
     } > "${workdir}/rserver.conf"
+    
+    mdebug "make_rserver_conf() ... done"
 }
 
 
@@ -1536,10 +1547,12 @@ term_colors enable
 
 ## Remove any stray files
 if ! ${force}; then
+    mdebug "Removing stray files ..."
     remove_stray_pid_file rserver
     remove_stray_pid_file rsession
     remove_stray_pid_file rserver_monitor
     remove_stray_lockfile
+    mdebug "Removing stray files ... done"
 fi    
 
 if [[ "${action}" == "config" ]]; then
@@ -1709,11 +1722,14 @@ elif [[ "${action}" == "wait" ]]; then
     rserver_hostname
     rserver_port
 elif [[ "${action}" == "start" ]]; then    
+    mdebug "Assert sufficient software setup ..."
     ## Assert executables are available
     assert_executable R
     assert_r
     assert_executable rserver
     assert_executable rsession
+    mdebug "Assert sufficient software setup ... done"
+    
     if [[ "${port}" != "port4me" ]]; then
         assert_port_free "${port}"
     fi
@@ -1729,11 +1745,13 @@ elif [[ "${action}" == "start" ]]; then
     make_config_dir
     acquire_lock_file
     
+    mdebug "Setup RStudio Server configurations ..."
     make_database_conf
     make_rserver_conf "${port}"
     make_rsession_envs
     make_rsession_sh
     make_rsession_conf
+    mdebug "Setup RStudio Server configurations ... done"
 
     mdebug "PID for rsc (this process): $$"
 
