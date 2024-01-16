@@ -1,4 +1,17 @@
-check: shellcheck spelling
+SHELL: bash
+
+check: shellcheck test spelling
+
+assert_bats:
+	command -v "bats"
+	echo "BATS_SUPPORT_HOME=$${BATS_SUPPORT_HOME:?}"
+	echo "BATS_ASSERT_HOME=$${BATS_ASSERT_HOME:?}"
+
+assert_rstudio:
+	command -v "rserver"
+
+check-cli: assert_bats assert_rstudio
+	(cd tests/; PATH="../bin:$${PATH}" bats *.bats)
 
 shellcheck:
 	(cd bin; \
