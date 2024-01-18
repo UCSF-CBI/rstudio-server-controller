@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.15.0-9001
+### Version: 0.15.0-9002
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -305,12 +305,24 @@ function remove_stray_lockfile {
     lockfile=${workdir}/pid.lock
 
     mdebug "remove_stray_lockfile() ..."
+    mdebug "- file: ${lockfile} [$(file_info "${lockfile}")]"
     
     ## Nothing to do?
-    [[ ! -f "${lockfile}" ]] || [[ -n "$(rserver_pid true)" ]] || [[ -n "$(rsession_pid true)" ]] || [[ -n "$(ssh_revtunnel_pid true)" ]] && { mdebug "remove_stray_lockfile() ... done"; return 0; }
+    if [[ ! -f "${lockfile}" ]]; then
+        mdebug "remove_stray_lockfile() ... done"
+        return 0
+    fi
+
+    ## Is 'rserver', 'rsession', or an SSH reverse tunnel running?
+    if [[ -n "$(rserver_pid true)" ]] || [[ -n "$(rsession_pid true)" ]] || [[ -n "$(ssh_revtunnel_pid true)" ]]; then
+        mdebug "- skipping: detected an 'rserver', 'rsession', or an SSH reverse tunnel process running"
+        mdebug "remove_stray_lockfile() ... done"
+        return 0
+    fi
     
     ## Here we know that there's neither a rserver PID nor a rsession PID
     rm "${lockfile}"
+    
     warn "Detected a stray lock file (${lockfile}). This file was removed, because there was no evidence that another instance was running on this system (no PID files for neither 'rserver' nor 'rsession' were found)."
 
     mdebug "remove_stray_lockfile() ... done"
@@ -1571,6 +1583,7 @@ mdebug "args: [n=${#args[@]}] ${args[*]}"
 ## Enable terminal colors, if supported
 term_colors enable
 
+
 ## Remove any stray files
 if ! ${force}; then
     mdebug "Removing stray files ..."
@@ -1708,7 +1721,7 @@ elif [[ "${action}" == "status" ]]; then
         workdir=$(config_dir)
         lockfile=${workdir}/pid.lock
         if [[ -f "${lockfile}" ]]; then
-            echo "lock file: exists (${lockfile} [$(file_info "${file}")])"
+            echo "lock file: exists (${lockfile} [$(file_info "${lockfile}")])"
         else
             echo "lock file: does not exist"
         fi
