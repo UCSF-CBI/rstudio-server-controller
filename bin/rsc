@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.15.0
+### Version: 0.15.0-9001
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -248,8 +248,17 @@ function make_config_dir {
 # -------------------------------------------------------------------------
 # RStudio Server configuration file
 # -------------------------------------------------------------------------
+function rstudio_config_home {
+    local path
+    path=${RSTUDIO_CONFIG_HOME}
+    if [[ -z ${path} ]]; then
+        path=${XDG_CONFIG_HOME:-$HOME/.config}/rstudio
+    fi
+    echo "${path}"
+}
+
 # Source: https://docs.rstudio.com/ide/server-pro/r_sessions/workspace_management.html#storage-location-customization
-function rstudio_config_dir {
+function rstudio_data_home {
     local path
     path=${RSTUDIO_DATA_HOME}
     if [[ -z ${path} ]]; then
@@ -1593,41 +1602,42 @@ if [[ "${action}" == "config" ]]; then
     
     echo 
     echo "RStudio Server Controller Storage:"
-    echo "XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-<not set>}"
+    echo "XDG_CONFIG_HOME: ${XDG_CONFIG_HOME:-<not set>}"
     
     workdir=$(config_dir)
-    echo "config-dir=${workdir}"
+    echo "config-dir: ${workdir}"
 
-    echo "lockfile=${workdir}/pid.lock"
+    file=${workdir}/pid.lock
+    echo "lockfile: ${file} [$(file_info "${file}")]"
 
     file=${workdir}/rserver.conf
-    echo "config-file=${file}"
+    echo "config-file: ${file} [$(file_info "${file}")]"
     files+=("${file}")
 
     file=${workdir}/rsession.conf
-    echo "config-file=${file}"
+    echo "config-file: ${file} [$(file_info "${file}")]"
     files+=("${file}")
 
     file=${workdir}/rsession.sh
-    echo "rsession-sh-file=${file}"
+    echo "rsession-sh-file: ${file} [$(file_info "${file}")]"
     files+=("${file}")
 
     file=${workdir}/rserver.sh
-    echo "rserver-sh-file=${file}"
+    echo "rserver-sh-file: ${file} [$(file_info "${file}")]"
     files+=("${file}")
 
     file=${workdir}/rserver.hostname
-    echo "rserver-sh-file=${file}"
+    echo "rserver-sh-file: ${file} [$(file_info "${file}")]"
     files+=("${file}")
 
     file=${workdir}/rserver.port
-    echo "rserver-sh-file=${file}"
+    echo "rserver-sh-file: ${file} [$(file_info "${file}")]"
     files+=("${file}")
 
-    echo "rserver-pid-file=$(rserver_pid_file)"
-    echo "rsession-pid-file=$(rsession_pid_file)"
-    echo "rsession-log-file=${workdir}/rsession.log"
-    echo "rserver-monitor-pid-file=$(rserver_monitor_pid_file)"
+    echo "rserver-pid-file: $(rserver_pid_file) [$(file_info "${file}")]"
+    echo "rsession-pid-file: $(rsession_pid_file) [$(file_info "${file}")]"
+    echo "rsession-log-file: ${workdir}/rsession.log [$(file_info "${file}")]"
+    echo "rserver-monitor-pid-file: $(rserver_monitor_pid_file) [$(file_info "${file}")]"
 
     if $full; then
         echo
@@ -1642,11 +1652,24 @@ if [[ "${action}" == "config" ]]; then
     fi
 
     echo 
+    echo "RStudio User Configuration:"
+    echo "XDG_CONFIG_HOME: ${XDG_CONFIG_HOME:-<not set>}"
+    echo "RSTUDIO_CONFIG_HOME: ${RSTUDIO_CONFIG_HOME:-<not set>}"
+    workdir=$(rstudio_config_home)
+    echo "RStudio config home: ${workdir}"
+    file=${workdir}/rstudio-prefs.json    
+    echo "RStudio user preferences: ${file} [$(file_info "${file}")]"
+    if $full && [[ -f "${file}" ]]; then
+        cat "${file}"
+        echo
+    fi     
+    
+    echo 
     echo "RStudio User State Storage:"
-    echo "XDG_DATA_HOME=${XDG_DATA_HOME:-<not set>}"
-    echo "RSTUDIO_DATA_HOME=${RSTUDIO_DATA_HOME:-<not set>}"
-    workdir=$(rstudio_config_dir)
-    echo "RStudio config folder=${workdir}"
+    echo "XDG_DATA_HOME: ${XDG_DATA_HOME:-<not set>}"
+    echo "RSTUDIO_DATA_HOME: ${RSTUDIO_DATA_HOME:-<not set>}"
+    workdir=$(rstudio_data_home)
+    echo "RStudio data home: ${workdir}"
     if $full && [[ -d "${workdir}" ]]; then
         du --human-readable --si --summarize "${workdir}"/*
         if [[ -d "${workdir}"/sessions/active/ ]]; then
@@ -1685,7 +1708,7 @@ elif [[ "${action}" == "status" ]]; then
         workdir=$(config_dir)
         lockfile=${workdir}/pid.lock
         if [[ -f "${lockfile}" ]]; then
-            echo "lock file: exists (${lockfile})"
+            echo "lock file: exists (${lockfile} [$(file_info "${file}")])"
         else
             echo "lock file: does not exist"
         fi
