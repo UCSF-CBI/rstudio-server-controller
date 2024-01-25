@@ -5,7 +5,8 @@
  * `rsc config` now also reports on RStudio User Configuration,
    e.g. the user preferences `rstudio-prefs.json` file.
    
- * `rsc config` now reports on file sizes and modification timestamps.
+ * `rsc config` and `rsc status` now report on file sizes and
+   modification timestamps.
 
 
 ## Version 0.15.0 [2024-01-16]
