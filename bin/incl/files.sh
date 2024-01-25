@@ -42,3 +42,18 @@ function wait_for_file {
     done
     [[ -f "${file}" ]] || error "Waited for file ${file}, but gave up after ${maxseconds} seconds"
 }
+
+function file_info {
+    local file=${1:?}
+    local -i size
+    local timestamp
+    
+    if [[ -f "${file}" ]]; then
+        size=$(stat --format="%s" "${file}")
+        timestamp=$(stat --format="%Y" "${file}")
+        timestamp=$(date -d "@${timestamp}" "+%F %T")
+        echo "${size} bytes; ${timestamp})"
+    else
+        echo "<not available>"
+    fi
+}
