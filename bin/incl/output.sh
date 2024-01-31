@@ -47,14 +47,6 @@ function merror {
     _exit 1
 }
 
-function mwarn {
-    {
-        _tput setaf 3 ## yellow
-        echo "WARNING: $*"
-        _tput sgr0    ## reset
-    } 1>&2
-}
-
 function minfo {
     if ! $verbose; then
         return

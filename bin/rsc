@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.15.1-9001
+### Version: 0.15.1-9002
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -518,7 +518,7 @@ function warn_if_check_pid_needs_ssh {
     local hostname
     hostname=${1:-?}
     if ${ssh} && [[ "${hostname}" != "$(hostname)" ]]; then
-        mwarn "Needs to SSH to ${hostname} to check whether process ${pid} is still alive. If you don't have SSH key authentication set up, you will be asked to enter your account password below."
+        warn "Needs to SSH to ${hostname} to check whether process ${pid} is still alive. If you don't have SSH key authentication set up, you will be asked to enter your account password below."
     fi
  }
 
@@ -1204,7 +1204,7 @@ function rserver_monitor {
             if [[ $(rsession_status) == "not running" ]]; then
                 state="wait_and_terminate_rserver"
                 endtime=$((SECONDS + (60 * $(rserver_timeout)) ))
-                mwarn "The RStudio Server (PID $(rserver_pid)) will time out in $(rserver_timeout) minutes on $(date --rfc-3339=seconds --date="+$(rserver_timeout) minutes"), unless a new R session is started"
+                warn "The RStudio Server (PID $(rserver_pid)) will time out in $(rserver_timeout) minutes on $(date --rfc-3339=seconds --date="+$(rserver_timeout) minutes"), unless a new R session is started"
             fi
         elif [[ "${state}" == "wait_and_terminate_rserver" ]]; then
             ## Reset or check countdown watch?
@@ -1214,7 +1214,7 @@ function rserver_monitor {
             else
                 mdebug "rserver_monitor(): countdown clock: $((endtime - SECONDS)) seconds"
                 if [[ ${SECONDS} -gt ${endtime} ]]; then
-                    mwarn "The RStudio Server (PID $(rserver_pid)) was shut down on $(date --rfc-3339=seconds) after $(rserver_timeout) minutes without an active R session"
+                    warn "The RStudio Server (PID $(rserver_pid)) was shut down on $(date --rfc-3339=seconds) after $(rserver_timeout) minutes without an active R session"
                     terminate_rserver
                     terminate_ssh_revtunnel
                 fi
@@ -1539,10 +1539,10 @@ fi
 ## Validate 'port':
 if [[ "${port}" == "random" ]]; then
     port="port4me"
-    mwarn "--port=random is deprecated in favor of --port=port4me (default)"
+    warn "--port=random is deprecated in favor of --port=port4me (default)"
 elif [[ "${port}" == "uid" ]]; then
     port="port4me"
-    mwarn "--port=uid is deprecated in favor of --port=port4me (default)"
+    warn "--port=uid is deprecated in favor of --port=port4me (default)"
 elif [[ "${port}" != "port4me" ]]; then
     assert_port "${port}"
 fi
@@ -1842,7 +1842,7 @@ elif [[ "${action}" == "start" ]]; then
 
     rdata=$(find_RData)
     if [[ -f "${rdata}" ]]; then
-        mwarn "Detected ${rdata} [$(stat -c "%s" "${rdata}") bytes]. It will be loaded by R during startup. If this file is very large, R might fail to launch."
+        warn "Detected ${rdata} [$(stat -c "%s" "${rdata}") bytes]. It will be loaded by R during startup. If this file is very large, R might fail to launch."
     fi
     
     launch_rserver
@@ -1908,7 +1908,7 @@ elif [[ "${action}" == "start" ]]; then
 
     message "Any R session started times out after being idle for $(rsession_timeout) minutes."
  
-    mwarn "You now have $(rserver_timeout) minutes, until $(date --rfc-3339=seconds --date="+$(rserver_timeout) minutes"), to connect and log in to the RStudio Server before everything times out."
+    warn "You now have $(rserver_timeout) minutes, until $(date --rfc-3339=seconds --date="+$(rserver_timeout) minutes"), to connect and log in to the RStudio Server before everything times out."
 
     if ${RSC_PASSWORD_ECHO:-false}; then
         message "Your password for this RStudio Server instance is: ${blue}${RSC_PASSWORD}${undo}"
