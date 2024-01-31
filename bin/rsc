@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.15.1-9002
+### Version: 0.15.1-9003
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1483,7 +1483,7 @@ while [[ $# -gt 0 ]]; do
         value=${1//--[[:alpha:]]*=}
         mdebug "Key-value option '$1' parsed to key='${key}', value='${value}'"
         if [[ -z ${value} ]]; then
-            merror "Option '--${key}' must not be empty"
+            error "Option '--${key}' must not be empty"
         fi
         if [[ "${key}" == "port" ]]; then
             port=${value}
@@ -1504,7 +1504,7 @@ while [[ $# -gt 0 ]]; do
             [[ -z "${value}" ]] && error "Option '--revtunnel' must not be empty"
             mapfile -t revtunnel < <(parse_revtunnel "${value}")
         else
-            merror "Unknown option: $1"
+            error "Unknown option: $1"
         fi
     ## Additional options to be appended (rarely needed)
     else

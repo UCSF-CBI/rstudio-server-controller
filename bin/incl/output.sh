@@ -35,18 +35,6 @@ function mdebug0 {
     } 1>&2
 }
 
-function merror {
-    local info
-    {
-        info="$(basename "$0") $(version)"
-        [[ -n $info ]] && info=" [$info]"
-        _tput setaf 1 ## red
-        echo "ERROR: $*$info"
-        _tput sgr0    ## reset
-    } 1>&2
-    _exit 1
-}
-
 function minfo {
     if ! $verbose; then
         return
