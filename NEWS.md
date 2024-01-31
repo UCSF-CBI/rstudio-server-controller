@@ -1,6 +1,8 @@
 ## Version (development version)
 
- * ...
+### New Features
+
+ * `rsc status` now warns about stray 'rsession' processes.
  
 
 ## Version 0.15.1 [2024-01-25]

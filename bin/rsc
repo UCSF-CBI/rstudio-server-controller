@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.15.1-9000
+### Version: 0.15.1-9001
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1707,8 +1707,10 @@ elif [[ "${action}" == "log" ]]; then
 elif [[ "${action}" == "status" ]]; then
     mdebug "rsc status ..."
     if [[ -z ${field} ]]; then
-        status="rserver: $(rserver_status)\n"
-        status="${status}rsession: $(rsession_status)\n"
+        status_rserver=$(rserver_status)
+        status_rsession=$(rsession_status)
+        status="rserver: ${status_rserver}\n"
+        status="${status}rsession: ${status_rsession}\n"
         status="${status}rserver monitor: $(rserver_monitor_status)\n"
         status="${status}SSH reverse tunnel (optional): $(ssh_revtunnel_status)"
         
@@ -1726,6 +1728,11 @@ elif [[ "${action}" == "status" ]]; then
             echo "lock file: does not exist"
         fi
 
+        ## Warn about stray 'rsession' processes
+        if [[ ${status_rserver} == "not running" ]] && [[ ${status_rsession} != "not running" ]]; then
+            warn "Detected stray 'rsession' processes. These cannot be recovered. Use 'rsc stop' to terminate them"
+        fi
+        
         ## Display info on how to reconnect?
         if $full; then
             res=$(rs_process_status "$(rserver_pid true)" "$(rserver_hostname)")
