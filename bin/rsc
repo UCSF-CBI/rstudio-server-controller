@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.15.1-9003
+### Version: 0.15.1-9004
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -897,6 +897,30 @@ function terminate_rsession {
 
 function rsession_status {
     rs_process_status "$(rsession_pid true)" "$(rserver_hostname)"
+}    
+
+function assert_no_rsession {
+    local action
+    local -i pid
+    local -i pids
+    local call
+    local msg
+    local workdir
+
+    action=${1:-error}
+    workdir=$(config_dir)
+    
+    mdebug "assert_no_rsession(action='$1') ..."
+
+    if [[ $(rsession_status) != "not running" ]]; then
+       if [[ $(rserver_status) == "not running" ]]; then
+           error "Detected stray 'rsession' processes. Use 'rsc stop' to terminate them"
+       else
+           error "[INTERNAL] Detected unexpected 'rsession' processes"
+       fi
+    fi
+
+    mdebug "assert_no_rsession(action='$1') ... done"
 }    
 
 
@@ -1806,6 +1830,11 @@ elif [[ "${action}" == "start" ]]; then
     assert_executable rserver
     assert_executable rsession
     mdebug "Assert sufficient software setup ... done"
+
+    ## Assert that there is no rserver and rsession processes
+    ## created by rsc currently running
+    assert_no_rserver
+    assert_no_rsession
     
     if [[ "${port}" != "port4me" ]]; then
         assert_port_free "${port}"
@@ -1832,8 +1861,10 @@ elif [[ "${action}" == "start" ]]; then
 
     mdebug "PID for rsc (this process): $$"
 
-    ## Assert that there is no rserver process created by rsc running
+    ## Assert that there is no rserver and rsession processes
+    ## created by rsc currently running (one more time, just in case)
     assert_no_rserver
+    assert_no_rsession
     
     ## Shutdown nicely
     mdebug "Registering 'trap shutdown EXIT', which perform cleanups"
