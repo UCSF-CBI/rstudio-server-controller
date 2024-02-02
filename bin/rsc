@@ -1833,8 +1833,8 @@ elif [[ "${action}" == "start" ]]; then
 
     ## Assert that there is no rserver and rsession processes
     ## created by rsc currently running
-    assert_no_rserver
-    assert_no_rsession
+    assert_no_rserver error
+    assert_no_rsession error
     
     if [[ "${port}" != "port4me" ]]; then
         assert_port_free "${port}"
@@ -1863,8 +1863,8 @@ elif [[ "${action}" == "start" ]]; then
 
     ## Assert that there is no rserver and rsession processes
     ## created by rsc currently running (one more time, just in case)
-    assert_no_rserver
-    assert_no_rsession
+    assert_no_rserver error
+    assert_no_rsession error
     
     ## Shutdown nicely
     mdebug "Registering 'trap shutdown EXIT', which perform cleanups"
