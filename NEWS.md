@@ -1,3 +1,13 @@
+## Version 0.16.0 [2024-02-01]
+
+### New Features
+
+ * Now `rsc start` asserts that there are no stray 'rsession'
+   processes running.
+ 
+ * Now `rsc status` warns about stray 'rsession' processes.
+ 
+
 ## Version 0.15.1 [2024-01-25]
 
 ### New Features

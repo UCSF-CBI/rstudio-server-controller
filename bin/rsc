@@ -63,7 +63,7 @@
 ###  rsc config --full
 ###  rsc log
 ###
-### Version: 0.15.1
+### Version: 0.16.0
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -518,7 +518,7 @@ function warn_if_check_pid_needs_ssh {
     local hostname
     hostname=${1:-?}
     if ${ssh} && [[ "${hostname}" != "$(hostname)" ]]; then
-        mwarn "Needs to SSH to ${hostname} to check whether process ${pid} is still alive. If you don't have SSH key authentication set up, you will be asked to enter your account password below."
+        warn "Needs to SSH to ${hostname} to check whether process ${pid} is still alive. If you don't have SSH key authentication set up, you will be asked to enter your account password below."
     fi
  }
 
@@ -899,6 +899,30 @@ function rsession_status {
     rs_process_status "$(rsession_pid true)" "$(rserver_hostname)"
 }    
 
+function assert_no_rsession {
+    local action
+    local -i pid
+    local -i pids
+    local call
+    local msg
+    local workdir
+
+    action=${1:-error}
+    workdir=$(config_dir)
+    
+    mdebug "assert_no_rsession(action='$1') ..."
+
+    if [[ $(rsession_status) != "not running" ]]; then
+       if [[ $(rserver_status) == "not running" ]]; then
+           error "Detected stray 'rsession' processes. Use 'rsc stop' to terminate them"
+       else
+           error "[INTERNAL] Detected unexpected 'rsession' processes"
+       fi
+    fi
+
+    mdebug "assert_no_rsession(action='$1') ... done"
+}    
+
 
 # -------------------------------------------------------------------------
 # rserver utilities
@@ -1204,7 +1228,7 @@ function rserver_monitor {
             if [[ $(rsession_status) == "not running" ]]; then
                 state="wait_and_terminate_rserver"
                 endtime=$((SECONDS + (60 * $(rserver_timeout)) ))
-                mwarn "The RStudio Server (PID $(rserver_pid)) will time out in $(rserver_timeout) minutes on $(date --rfc-3339=seconds --date="+$(rserver_timeout) minutes"), unless a new R session is started"
+                warn "The RStudio Server (PID $(rserver_pid)) will time out in $(rserver_timeout) minutes on $(date --rfc-3339=seconds --date="+$(rserver_timeout) minutes"), unless a new R session is started"
             fi
         elif [[ "${state}" == "wait_and_terminate_rserver" ]]; then
             ## Reset or check countdown watch?
@@ -1214,7 +1238,7 @@ function rserver_monitor {
             else
                 mdebug "rserver_monitor(): countdown clock: $((endtime - SECONDS)) seconds"
                 if [[ ${SECONDS} -gt ${endtime} ]]; then
-                    mwarn "The RStudio Server (PID $(rserver_pid)) was shut down on $(date --rfc-3339=seconds) after $(rserver_timeout) minutes without an active R session"
+                    warn "The RStudio Server (PID $(rserver_pid)) was shut down on $(date --rfc-3339=seconds) after $(rserver_timeout) minutes without an active R session"
                     terminate_rserver
                     terminate_ssh_revtunnel
                 fi
@@ -1483,7 +1507,7 @@ while [[ $# -gt 0 ]]; do
         value=${1//--[[:alpha:]]*=}
         mdebug "Key-value option '$1' parsed to key='${key}', value='${value}'"
         if [[ -z ${value} ]]; then
-            merror "Option '--${key}' must not be empty"
+            error "Option '--${key}' must not be empty"
         fi
         if [[ "${key}" == "port" ]]; then
             port=${value}
@@ -1504,7 +1528,7 @@ while [[ $# -gt 0 ]]; do
             [[ -z "${value}" ]] && error "Option '--revtunnel' must not be empty"
             mapfile -t revtunnel < <(parse_revtunnel "${value}")
         else
-            merror "Unknown option: $1"
+            error "Unknown option: $1"
         fi
     ## Additional options to be appended (rarely needed)
     else
@@ -1539,10 +1563,10 @@ fi
 ## Validate 'port':
 if [[ "${port}" == "random" ]]; then
     port="port4me"
-    mwarn "--port=random is deprecated in favor of --port=port4me (default)"
+    warn "--port=random is deprecated in favor of --port=port4me (default)"
 elif [[ "${port}" == "uid" ]]; then
     port="port4me"
-    mwarn "--port=uid is deprecated in favor of --port=port4me (default)"
+    warn "--port=uid is deprecated in favor of --port=port4me (default)"
 elif [[ "${port}" != "port4me" ]]; then
     assert_port "${port}"
 fi
@@ -1707,8 +1731,10 @@ elif [[ "${action}" == "log" ]]; then
 elif [[ "${action}" == "status" ]]; then
     mdebug "rsc status ..."
     if [[ -z ${field} ]]; then
-        status="rserver: $(rserver_status)\n"
-        status="${status}rsession: $(rsession_status)\n"
+        status_rserver=$(rserver_status)
+        status_rsession=$(rsession_status)
+        status="rserver: ${status_rserver}\n"
+        status="${status}rsession: ${status_rsession}\n"
         status="${status}rserver monitor: $(rserver_monitor_status)\n"
         status="${status}SSH reverse tunnel (optional): $(ssh_revtunnel_status)"
         
@@ -1726,6 +1752,11 @@ elif [[ "${action}" == "status" ]]; then
             echo "lock file: does not exist"
         fi
 
+        ## Warn about stray 'rsession' processes
+        if [[ ${status_rserver} == "not running" ]] && [[ ${status_rsession} != "not running" ]]; then
+            warn "Detected stray 'rsession' processes. These cannot be recovered. Use 'rsc stop' to terminate them"
+        fi
+        
         ## Display info on how to reconnect?
         if $full; then
             res=$(rs_process_status "$(rserver_pid true)" "$(rserver_hostname)")
@@ -1799,6 +1830,11 @@ elif [[ "${action}" == "start" ]]; then
     assert_executable rserver
     assert_executable rsession
     mdebug "Assert sufficient software setup ... done"
+
+    ## Assert that there is no rserver and rsession processes
+    ## created by rsc currently running
+    assert_no_rserver error
+    assert_no_rsession error
     
     if [[ "${port}" != "port4me" ]]; then
         assert_port_free "${port}"
@@ -1825,8 +1861,10 @@ elif [[ "${action}" == "start" ]]; then
 
     mdebug "PID for rsc (this process): $$"
 
-    ## Assert that there is no rserver process created by rsc running
-    assert_no_rserver
+    ## Assert that there is no rserver and rsession processes
+    ## created by rsc currently running (one more time, just in case)
+    assert_no_rserver error
+    assert_no_rsession error
     
     ## Shutdown nicely
     mdebug "Registering 'trap shutdown EXIT', which perform cleanups"
@@ -1835,7 +1873,7 @@ elif [[ "${action}" == "start" ]]; then
 
     rdata=$(find_RData)
     if [[ -f "${rdata}" ]]; then
-        mwarn "Detected ${rdata} [$(stat -c "%s" "${rdata}") bytes]. It will be loaded by R during startup. If this file is very large, R might fail to launch."
+        warn "Detected ${rdata} [$(stat -c "%s" "${rdata}") bytes]. It will be loaded by R during startup. If this file is very large, R might fail to launch."
     fi
     
     launch_rserver
@@ -1901,7 +1939,7 @@ elif [[ "${action}" == "start" ]]; then
 
     message "Any R session started times out after being idle for $(rsession_timeout) minutes."
  
-    mwarn "You now have $(rserver_timeout) minutes, until $(date --rfc-3339=seconds --date="+$(rserver_timeout) minutes"), to connect and log in to the RStudio Server before everything times out."
+    warn "You now have $(rserver_timeout) minutes, until $(date --rfc-3339=seconds --date="+$(rserver_timeout) minutes"), to connect and log in to the RStudio Server before everything times out."
 
     if ${RSC_PASSWORD_ECHO:-false}; then
         message "Your password for this RStudio Server instance is: ${blue}${RSC_PASSWORD}${undo}"
