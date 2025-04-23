@@ -75,7 +75,9 @@
 ###  rsc reset --force
 ###  rsc reset --which=sessions
 ###
-### Version: 0.17.0
+### {{SEE_ALSO}}
+###
+### Version: 0.18.0
 ### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
 ### License: ISC
 
@@ -135,7 +137,10 @@ function rsc_error {
     if [[ -n ${extra} ]]; then
         msg="${msg} ${extra}"
     fi
-    error "$msg"
+    if [[ -n ${RSC_HELP_URL} ]]; then
+        msg="${msg} See also <${RSC_HELP_URL}>, which may have additional details on and suggestions how to solve this."
+    fi
+    error "${msg}"
 }
 
 # -------------------------------------------------------------------------
@@ -293,7 +298,7 @@ function acquire_lock_file {
     if [[ -f "${lockfile}" ]]; then
 	msg="${USER}, another RStudio Server instance of yours is already running on $(rserver_hostname) on this system. Call '${blue}rsc status --full${undo}' for details on how to reconnect. If you want to start a new instance, please terminate the existing one first by calling '${blue}rsc stop${undo}' from that machine."
 	msg="${msg} As a last resort, for instance, if that machine is no longer available or down for maintenance, try ${blue}rsc reset --force${undo}."
-        error "${msg}"
+        rsc_error "${msg}"
     fi
     echo "${PPID}" > "${lockfile}"
     assert_file_is_not_empty "${lockfile}"
@@ -575,7 +580,7 @@ function check_pid {
             if [[ ${okay} -ne 0 ]]; then
                 ## Remove empty leading lines
                 res=$(sed -e '/./,$!d' <<< "${res}")
-                error "Failed to check process PID ${pid} on ${hostname} over SSH. Reason was: ${res}"
+                rsc_error "Failed to check process PID ${pid} on ${hostname} over SSH. Reason was: ${res}"
             fi
             [[ "${res}" == "true" ]] && pid_exists=true
         else
@@ -961,7 +966,7 @@ function assert_no_rsession {
        if [[ $(rserver_status) == "not running" ]]; then
            error "Detected stray 'rsession' processes. Use 'rsc stop' to terminate them"
        else
-           error "[INTERNAL] Detected unexpected 'rsession' processes"
+           rsc_error "[INTERNAL] Detected unexpected 'rsession' processes"
        fi
     fi
 
@@ -1483,6 +1488,18 @@ function display_access_instructions {
     message "\n${msg}"
 }
 
+function rsc_help {
+    local -a bfr
+    mapfile -t bfr < <(help "${@}")
+    if grep -q -F "{{SEE_ALSO}}" <<< "${bfr[@]}"; then
+        if [[ -n ${RSC_HELP_URL} ]]; then
+            mapfile -t bfr < <(printf "%s\n" "${bfr[@]}" | sed "s/{{SEE_ALSO}}/See also:\n * <${RSC_HELP_URL//\//\\/}>/")
+        else
+            mapfile -t bfr < <(printf "%s\n" "${bfr[@]}" | sed "/{{SEE_ALSO}}/{ N; d }")
+        fi
+    fi
+    printf "%s\n" "${bfr[@]}"
+}    
 
 # =========================================================================
 # MAIN
@@ -1622,10 +1639,10 @@ done
 
 ## --help should always be available prior to any validation errors
 if [[ -z $action ]]; then
-    help
+    rsc_help
     _exit 0
 elif [[ $action == "help" ]]; then
-    help full
+    rsc_help full
     _exit 0
 elif [[ $action == "version" ]]; then
     if $full; then
@@ -1882,7 +1899,7 @@ elif [[ "${action}" == "stop" ]]; then
     ## If running, make sure we're stopping from the correct machine
     if [[ -f "${lockfile}" ]] && [[ "$(hostname)" != "$(rserver_hostname)" ]]; then
 	file="${workdir}/rserver.hostname"
-        error "Stopping the RStudio Server can only be made from the machine ($(rserver_hostname)) where it was started from - not from $(hostname) [${file}: $(file_info "${file}")]"
+        rsc_error "Stopping the RStudio Server can only be made from the machine ($(rserver_hostname)) where it was started from - not from $(hostname) [${file}: $(file_info "${file}")]"
     fi
 
     ## Terminate rsession
@@ -2006,7 +2023,7 @@ elif [[ "${action}" == "start" ]]; then
     secure_dir
     
     rs_pid="$(rserver_pid)"
-    [[ -z "${rs_pid}" ]] && error "RStudio Server failed to start for unknown reasons. One reason for this might be that the port (${port}) is already occupied"
+    [[ -z "${rs_pid}" ]] && rsc_error "RStudio Server failed to start for unknown reasons. One reason for this might be that the port (${port}) is already occupied"
     pids=("${rs_pid}")
     
     ## Update 'port', in case it 'port4me' was used
@@ -2015,7 +2032,7 @@ elif [[ "${action}" == "start" ]]; then
     ## Launch rserver monitor
     launch_rserver_monitor
     pid="$(rserver_monitor_pid)"
-    [[ -z "${pid}" ]] && error "rserver monitor failed to start for unknown reasons"
+    [[ -z "${pid}" ]] && rsc_error "rserver monitor failed to start for unknown reasons"
     pids=("${pid}")
 
     ## Launch reverse SSH tunnel?

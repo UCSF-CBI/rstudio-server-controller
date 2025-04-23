@@ -1,3 +1,12 @@
+## Version 0.18.0 [2025-04-23]
+
+### New Features
+
+ * Add new environment argument `RSC_HELP_URL`, which if set will be
+   mentioned in the `--help` output as well as being appended to any
+   error messages produced.
+
+ 
 ## Version 0.17.0 [2024-11-10]
 
 ### New Features
