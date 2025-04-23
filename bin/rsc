@@ -77,8 +77,8 @@
 ###
 ### {{SEE_ALSO}}
 ###
-### Version: 0.18.0
-### Copyright: Henrik Bengtsson (2022-2024) and Harry Putnam (2022)
+### Version: 0.18.0-9000
+### Copyright: Henrik Bengtsson (2022-2025) and Harry Putnam (2022)
 ### License: ISC
 
 this="${BASH_SOURCE%/}"
