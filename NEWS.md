@@ -1,4 +1,4 @@
-## Version (development version)
+## Version 0.18.0 [2025-04-23]
 
 ### New Features
 
