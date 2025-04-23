@@ -1493,7 +1493,7 @@ function rsc_help {
     mapfile -t bfr < <(help "${@}")
     if grep -q -F "{{SEE_ALSO}}" <<< "${bfr[@]}"; then
         if [[ -n ${RSC_HELP_URL} ]]; then
-            mapfile -t bfr < <(printf "%s\n" "${bfr[@]}" | sed "s/{{SEE_ALSO}}/See also:\n * ${RSC_HELP_URL}/")
+            mapfile -t bfr < <(printf "%s\n" "${bfr[@]}" | sed "s/{{SEE_ALSO}}/See also:\n * <${RSC_HELP_URL//\//\\/}>/")
         else
             mapfile -t bfr < <(printf "%s\n" "${bfr[@]}" | sed "/{{SEE_ALSO}}/{ N; d }")
         fi
