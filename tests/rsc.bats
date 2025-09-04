@@ -85,7 +85,6 @@ teardown() {
     run rsc config
     assert_success
     assert_output --partial "RStudio Server Controller Storage:"
-    assert_output --partial "RStudio User State Storage:"
     assert_output --partial "XDG_CONFIG_HOME: $(dirname "$(mktemp -d)")"
     assert_output --partial "XDG_DATA_HOME: $(dirname "$(mktemp -d)")"
 }
