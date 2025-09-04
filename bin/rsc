@@ -77,7 +77,7 @@
 ###
 ### {{SEE_ALSO}}
 ###
-### Version: 0.18.0-9000
+### Version: 0.18.0-9001
 ### Copyright: Henrik Bengtsson (2022-2025) and Harry Putnam (2022)
 ### License: ISC
 
@@ -173,7 +173,7 @@ function validate_auth {
     local bin
     local res
     bin=$(auth_tool)
-    
+
     ## Validate correctness of auth-via-su executable (should return false)
     echo "" | RSC_AUTH_LOGFILE="" "${bin}" "${USER}" &> /dev/null
     res=$?
@@ -213,6 +213,42 @@ function parse_auth {
     fi
     echo "${file}"
     echo "${ext}"
+}
+
+
+function password_file {
+    local pathname
+    local create=${1:-true}
+    pathname=$(config_dir)/RSC_PASSWORD
+    
+    ## Create empty file, if missing?
+    if ${create} && [[ ! -f "${pathname}" ]]; then
+        touch "${pathname}"
+    fi
+    ## Always set it to a private (rw-------) file
+    if [[ -f "${pathname}" ]]; then
+        chmod -R 600 "${pathname}"
+    fi
+    echo "${pathname}"
+}
+
+function display_random_password {
+    if ! ${RSC_PASSWORD_RANDOM:-false}; then
+        error "Environment variable RSC_PASSWORD_RANDOM is not true"
+    elif [[ -z ${RSC_PASSWORD} ]]; then
+        error "Environment variable RSC_PASSWORD is not set"
+    fi
+
+    ## Is it safe to output the password? That is, is standard output
+    ## going only to the terminal? Or, could it be that stdout (FD = 1)
+    ## is redirected?
+    ## TODO: Detect also splits (e.g. by 'tee') /HB 2025-09-04
+    if [ -t 1 ]; then
+        message "Your password for this RStudio Server instance is: ${blue}${RSC_PASSWORD}${undo}"
+    else
+        echo "${RSC_PASSWORD}" > "$(password_file)"
+        message "\nTo see your password for this RStudio Server instance, call:\n\n  rsc password\n\nin an interactive shell."
+    fi
 }
 
 
@@ -1136,8 +1172,16 @@ function rserver_url {
 }
 
 function terminate_rserver {
+    local file
     mdebug "terminate_rserver() ..."
     terminate_pid "$(rserver_pid)"
+    
+    ## Remove temporary password file, if it exists
+    file=$(password_file false)
+    if [[ -f "${file}" ]]; then
+        rm "${file}"
+    fi
+    
     mdebug "terminate_rserver() ... done"
 }
 
@@ -1567,6 +1611,8 @@ while [[ $# -gt 0 ]]; do
         if [[ ${#which[@]} -eq 0 ]]; then
             which=(rsc)
         fi
+    elif [[ "$1" == "password" ]]; then
+        action="$1"
     elif [[ "$1" == "config" ]]; then
         action="$1"
         ## 'rsc config' defaults to --which="rsc,rstudio,sessions"
@@ -1964,6 +2010,16 @@ elif [[ "${action}" == "wait" ]]; then
     wait_for_rserver    
     rserver_hostname
     rserver_port
+elif [[ "${action}" == "password" ]]; then
+    if [ ! -t 1 ]; then
+        >&2 error "You cannot not view your one-time temporary random password when the output is redirected. Did you call 'rsc password > tmp.out'?"
+    fi
+    file="$(password_file false)"
+    if [[ ! -f "${file}" ]]; then
+        >&2 error "There is no one-time temporary random password on file. Have you already viewed your password?"
+    fi
+    message "Your password for this RStudio Server instance is: ${blue}$(cat "${file}")${undo}"
+    rm "${file}"
 elif [[ "${action}" == "start" ]]; then    
     mdebug "Assert sufficient software setup ..."
     ## Assert executables are available
@@ -1985,7 +2041,10 @@ elif [[ "${action}" == "start" ]]; then
     if [[ "${RSC_PASSWORD}" == "random" ]]; then
         RSC_PASSWORD=$(openssl rand -base64 15 | tr '+/' '-_')
         export RSC_PASSWORD
-        RSC_PASSWORD_ECHO=${RSC_PASSWORD_ECHO:-true}
+        RSC_PASSWORD_RANDOM=true
+        export RSC_PASSWORD_RANDOM
+        RSC_PASSWORD_FILE=$(password_file false)
+        export RSC_PASSWORD_FILE
     fi
     
     validate_auth
@@ -2085,8 +2144,8 @@ elif [[ "${action}" == "start" ]]; then
  
     warn "You now have $(rserver_timeout) minutes, until $(date --rfc-3339=seconds --date="+$(rserver_timeout) minutes"), to connect and log in to the RStudio Server before everything times out."
 
-    if ${RSC_PASSWORD_ECHO:-false}; then
-        message "Your password for this RStudio Server instance is: ${blue}${RSC_PASSWORD}${undo}"
+    if ${RSC_PASSWORD_RANDOM:-false}; then
+        display_random_password
     fi
 
     ## Check if RStudio Server failed during launch (on last time)
