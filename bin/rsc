@@ -77,7 +77,7 @@
 ###
 ### {{SEE_ALSO}}
 ###
-### Version: 0.18.0-9001
+### Version: 0.18.0-9002
 ### Copyright: Henrik Bengtsson (2022-2025) and Harry Putnam (2022)
 ### License: ISC
 
@@ -230,25 +230,6 @@ function password_file {
         chmod -R 600 "${pathname}"
     fi
     echo "${pathname}"
-}
-
-function display_random_password {
-    if ! ${RSC_PASSWORD_RANDOM:-false}; then
-        error "Environment variable RSC_PASSWORD_RANDOM is not true"
-    elif [[ -z ${RSC_PASSWORD} ]]; then
-        error "Environment variable RSC_PASSWORD is not set"
-    fi
-
-    ## Is it safe to output the password? That is, is standard output
-    ## going only to the terminal? Or, could it be that stdout (FD = 1)
-    ## is redirected?
-    ## TODO: Detect also splits (e.g. by 'tee') /HB 2025-09-04
-    if [ -t 1 ]; then
-        message "Your password for this RStudio Server instance is: ${blue}${RSC_PASSWORD}${undo}"
-    else
-        echo "${RSC_PASSWORD}" > "$(password_file)"
-        message "\nTo see your password for this RStudio Server instance, call:\n\n  rsc password\n\nin an interactive shell."
-    fi
 }
 
 
@@ -2145,7 +2126,17 @@ elif [[ "${action}" == "start" ]]; then
     warn "You now have $(rserver_timeout) minutes, until $(date --rfc-3339=seconds --date="+$(rserver_timeout) minutes"), to connect and log in to the RStudio Server before everything times out."
 
     if ${RSC_PASSWORD_RANDOM:-false}; then
-        display_random_password
+        ## Is it safe to output the password? That is, is standard output
+        ## ending up only in the terminal and nowhere else? For instance,
+        ## standard output (FD = 1) my be redirected or split (e.g. 'tee')
+        ## to, say, a log file, which we don't control and which might be
+        ## readable by other users.
+        if [ -t 1 ]; then
+            message "Your password for this RStudio Server instance is: ${blue}${RSC_PASSWORD}${undo}"
+        else
+            echo "${RSC_PASSWORD}" > "$(password_file)"
+            message "\nTo see your password for this RStudio Server instance, call:\n\n  rsc password\n\nin an interactive shell."
+        fi
     fi
 
     ## Check if RStudio Server failed during launch (on last time)
