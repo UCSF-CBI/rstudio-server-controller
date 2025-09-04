@@ -16,7 +16,7 @@
 ## * expect (https://www.nist.gov/services-resources/software/expect)
 ## * ssh
 ##
-## Author: Henrik Bengtsson (2021)
+## Author: Henrik Bengtsson (2021-2025)
 
 function debug() {
     if [[ -z ${RSC_AUTH_LOGFILE:-} ]]; then
@@ -51,6 +51,13 @@ read -r -s -p "Password: " password
 if [[ "${RSC_PASSWORD}" != "${password}" ]]; then
     debug "Invalid authentication (incorrect password)"
     exit 1
+fi
+
+# If it exists, remove private file holding a one-time password
+# at first the successful log
+if [[ -n ${RSC_PASSWORD_FILE} ]] && [[ -f "${RSC_PASSWORD_FILE}" ]]; then
+    debug "Removing file '${RSC_PASSWORD_FILE}'"
+    rm "${RSC_PASSWORD_FILE}"
 fi
 
 debug "Successful authentication"

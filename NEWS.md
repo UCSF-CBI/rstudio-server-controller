@@ -6,7 +6,61 @@
    running on another host, because SSH fails, it will use `ping` to
    check whether the host is up and give a more informative error
    message based on the outcome.
+
+
+## Version 0.19.0 [2025-09-04]
+
+### Security
+
+ * `rsc start --auth=auth-via-env --random-password` will no longer
+   display the randomly generated password, if output is redirected.
+   Instead, the user is asked to call `rsc password` to see it. This
+   is done to prevent the password ending up in, for instance, a log
+   file that is readable by other users on the same system.
+
+
+## Version 0.18.0 [2025-04-23]
+
+### New Features
+
+ * Add new environment argument `RSC_HELP_URL`, which if set will be
+   mentioned in the `--help` output as well as being appended to any
+   error messages produced.
+
+ 
+## Version 0.17.0 [2024-11-10]
+
+### New Features
+
+ * Add option `--which=<values>` for `rsc config`, which default to
+   `--which="rsc,rstudio,sessions"`, where `rsc` displays the RStudio
+   Server Controller settings, `rstudio` the RStudio configuration,
+   and `user` on the RStudio sessions storage.
    
+ * Add option `--which=<values>` for `rsc reset`, which default to
+   support for `rsc reset --which="rsc"`, which resets the RStudio
+   Server Controller settings.  If `sessions`, the user's RStudio
+   sessions folder (e.g. `~/.local/share/rstudio`) to a dated tar
+   file, and then remove that folder. This can be used as a last
+   resort when the RStudio Server gets stuck at "R is taking longer to
+   start than usual" after logging in.
+
+ * Add environment variable `RSC_RSESSION_TIMEOUT_SUSPEND` to control
+   whether a timed out R session should be suspended to disk. If `1`
+   (default), it will be suspended to disk, otherwise not.
+
+ * Now `rsc config` reports also on total directory sizes.
+
+### Bug Fixes
+
+ * `rsc reset` did not remove the internal `rserver.pid` and
+   `rserver_monitor.pid` files.
+
+ * `rsc config` reported on file sizes with a stray trailing parenthesis.
+ 
+
+## Version 0.16.2 [2024-08-21]
+
 ### Miscellaneous
 
  * Now `rsc log` and `rsc stop` give timestamp information on the
