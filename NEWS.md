@@ -1,4 +1,4 @@
-## Version (development version)
+## Version 0.19.0 [2025-09-04]
 
 ### Security
 
