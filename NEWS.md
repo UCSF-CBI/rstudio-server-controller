@@ -1,3 +1,14 @@
+## Version 0.19.0 [2025-09-04]
+
+### Security
+
+ * `rsc start --auth=auth-via-env --random-password` will no longer
+   display the randomly generated password, if output is redirected.
+   Instead, the user is asked to call `rsc password` to see it. This
+   is done to prevent the password ending up in, for instance, a log
+   file that is readable by other users on the same system.
+
+
 ## Version 0.18.0 [2025-04-23]
 
 ### New Features
