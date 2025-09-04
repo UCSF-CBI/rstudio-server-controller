@@ -1,3 +1,13 @@
+## Version (development version)
+
+### New Features
+
+ * When `rsc` fails to check if a previous RStudio Server session is
+   running on another host, because SSH fails, it will use `ping` to
+   check whether the host is up and give a more informative error
+   message based on the outcome.
+
+
 ## Version 0.19.0 [2025-09-04]
 
 ### Security

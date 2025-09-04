@@ -77,7 +77,7 @@
 ###
 ### {{SEE_ALSO}}
 ###
-### Version: 0.19.0
+### Version: 0.19.0-9001
 ### Copyright: Henrik Bengtsson (2022-2025) and Harry Putnam (2022)
 ### License: ISC
 
@@ -570,6 +570,8 @@ function check_pid {
     local asterisk
     local timeout
     local res
+    local -a bfr
+    local msg
     local -i okay
 
     ## If 'pid' is assigned an empty value, then it becomes pid=0,
@@ -596,6 +598,14 @@ function check_pid {
             mdebug "- Result: ${res}"
             if [[ ${okay} -ne 0 ]]; then
                 ## Remove empty leading lines
+                msg=$(sed -e '/./,$!d' <<< "${res}")
+                ## Does ping work?
+		if ping -c 1 -W 1 "${hostname}" > /dev/null; then
+		    msg="${msg} [${hostname} answers on ping]"
+		else
+		    msg="It looks like ${hostname} is down - it does not answers on ping, which is probably why SSH failed with: ${msg}"
+		fi
+                error "Failed to check process PID ${pid} on ${hostname} over SSH. Reason was: ${msg}"
                 res=$(sed -e '/./,$!d' <<< "${res}")
                 rsc_error "Failed to check process PID ${pid} on ${hostname} over SSH. Reason was: ${res}"
             fi
