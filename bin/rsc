@@ -77,7 +77,7 @@
 ###
 ### {{SEE_ALSO}}
 ###
-### Version: 0.19.0-9001
+### Version: 0.19.0-9002
 ### Copyright: Henrik Bengtsson (2022-2025) and Harry Putnam (2022)
 ### License: ISC
 
@@ -1749,16 +1749,6 @@ mdebug "args: [n=${#args[@]}] ${args[*]}"
 term_colors enable
 
 
-## Remove any stray files
-if ! ${force}; then
-    mdebug "Removing stray files ..."
-    remove_stray_pid_file rserver
-    remove_stray_pid_file rsession
-    remove_stray_pid_file rserver_monitor
-    remove_stray_lockfile
-    mdebug "Removing stray files ... done"
-fi
-
 if [[ "${action}" == "config" ]]; then
     for what in "${which[@]}"; do
         if [[ ${what} == "rsc" ]]; then
@@ -1871,6 +1861,7 @@ if [[ "${action}" == "config" ]]; then
         fi
         echo
     done                
+    exit 0
 elif [[ "${action}" == "log" ]]; then
     workdir=$(config_dir)
     file=${workdir}/rsession.log
@@ -1882,7 +1873,33 @@ elif [[ "${action}" == "log" ]]; then
     else
         echo "No rsession log file: ${file}"
     fi
-elif [[ "${action}" == "status" ]]; then
+    exit 0
+elif [[ "${action}" == "password" ]]; then
+    if [ ! -t 1 ]; then
+        >&2 error "You cannot not view your one-time temporary random password when the output is redirected. Did you call 'rsc password > tmp.out'?"
+    fi
+    file="$(password_file false)"
+    if [[ ! -f "${file}" ]]; then
+        >&2 error "There is no one-time temporary random password on file. Have you already viewed your password?"
+    fi
+    message "Your password for this RStudio Server instance is: ${blue}$(cat "${file}")${undo}"
+    rm "${file}"
+    exit 0
+fi
+
+
+## Remove any stray files
+if ! ${force}; then
+    mdebug "Removing stray files ..."
+    remove_stray_pid_file rserver
+    remove_stray_pid_file rsession
+    remove_stray_pid_file rserver_monitor
+    remove_stray_lockfile
+    mdebug "Removing stray files ... done"
+fi
+
+
+if [[ "${action}" == "status" ]]; then
     mdebug "rsc status ..."
     if [[ -z ${field} ]]; then
         status_rserver=$(rserver_status)
@@ -2001,16 +2018,6 @@ elif [[ "${action}" == "wait" ]]; then
     wait_for_rserver    
     rserver_hostname
     rserver_port
-elif [[ "${action}" == "password" ]]; then
-    if [ ! -t 1 ]; then
-        >&2 error "You cannot not view your one-time temporary random password when the output is redirected. Did you call 'rsc password > tmp.out'?"
-    fi
-    file="$(password_file false)"
-    if [[ ! -f "${file}" ]]; then
-        >&2 error "There is no one-time temporary random password on file. Have you already viewed your password?"
-    fi
-    message "Your password for this RStudio Server instance is: ${blue}$(cat "${file}")${undo}"
-    rm "${file}"
 elif [[ "${action}" == "start" ]]; then    
     mdebug "Assert sufficient software setup ..."
     ## Assert executables are available
