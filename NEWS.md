@@ -1,3 +1,19 @@
+## Version 0.20.0 [2025-09-04]
+
+### New Features
+
+ * When `rsc` fails to check if a previous RStudio Server session is
+   running on another host, because SSH fails, it will use `ping` to
+   check whether the host is up and give a more informative error
+   message based on the outcome.
+
+### Bug Fixes
+
+ * Now `rsc config`, `rsc log`, and `rsc password` work without
+   requiring SSH access to the host where the RStudio Server is, or
+   was, running.
+
+
 ## Version 0.19.0 [2025-09-04]
 
 ### Security
