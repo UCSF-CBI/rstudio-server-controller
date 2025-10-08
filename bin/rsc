@@ -77,7 +77,7 @@
 ###
 ### {{SEE_ALSO}}
 ###
-### Version: 0.20.0-9000
+### Version: 0.20.0-9001
 ### Copyright: Henrik Bengtsson (2022-2025) and Harry Putnam (2022)
 ### License: ISC
 
@@ -2072,7 +2072,7 @@ elif [[ "${action}" == "start" ]]; then
 
     rdata=$(find_RData)
     if [[ -f "${rdata}" ]]; then
-        warn "Detected ${rdata} [$(stat -c "%s" "${rdata}") bytes]. It will be loaded by R during startup. If this file is very large, R might fail to launch."
+        warn "Detected ${rdata} [$(stat -c "%s" "${rdata}") bytes]. It will be loaded by R during startup. If this file is very large, it might take a very long time for R to start, and it might even fail if there is not enough memory."
     fi
     
     launch_rserver
